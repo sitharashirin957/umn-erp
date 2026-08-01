@@ -17,20 +17,15 @@ import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc
 // --- Firebase Configuration ---
 // ... existing code ...
 // --- Firebase Configuration ---
+// ... existing code ...
+// --- Firebase Configuration ---
 const firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG || "{}");
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-// ... existing code ...  authDomain: "demo-project.firebaseapp.com",
-  projectId: "demo-project",
-  storageBucket: "demo-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef"
-};
-
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-erp-v1';
+// ... existing code ...const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
 const safeSearch = (val, term) => String(val || '').toLowerCase().includes(String(term || '').toLowerCase());
 const formatCurrency = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'SAR' }).format(Number(num) || 0);
