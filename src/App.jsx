@@ -15,8 +15,12 @@ import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken }
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, increment, setDoc } from 'firebase/firestore';
 
 // --- Firebase Configuration ---
-const firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG || "{}");  apiKey: "demo-key",
-  authDomain: "demo-project.firebaseapp.com",
+// ... existing code ...
+// --- Firebase Configuration ---
+const firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG || "{}");
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+// ... existing code ...  authDomain: "demo-project.firebaseapp.com",
   projectId: "demo-project",
   storageBucket: "demo-project.appspot.com",
   messagingSenderId: "123456789",
