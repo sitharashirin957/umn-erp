@@ -11,12 +11,12 @@ import {
   Sun, Moon
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, increment, setDoc } from 'firebase/firestore';
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
-  apiKey: "AIzaSyCSnYfmU7dcnVJE1BSHGEpkQQzQ1bGuBp0",
+  apiKey: "AIzaSyCSnYfmU7dCnVJE1BShGEpkQQzQ1bGuBp0",
   authDomain: "umn-erp.firebaseapp.com",
   projectId: "umn-erp",
   storageBucket: "umn-erp.firebasestorage.app",
@@ -24,10 +24,12 @@ const firebaseConfig = {
   appId: "1:483936934389:web:1fa1aec041b8bbbd9f68bc",
   measurementId: "G-48B872HZ6F"
 };
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-erp-v1';
+
 const safeSearch = (val, term) => String(val || '').toLowerCase().includes(String(term || '').toLowerCase());
 const formatCurrency = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'SAR' }).format(Number(num) || 0);
 const generateID = (prefix, length) => `${prefix}-${String(length + 1).padStart(5, '0')}`;
@@ -194,16 +196,17 @@ const App = () => {
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
     window.addEventListener('resize', handleResize);
+    
+    // Auth - Force Anonymous login to avoid token mismatches
     const initAuth = async () => {
       try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (err) { console.error("Auth error:", err); }
+        await signInAnonymously(auth);
+      } catch (err) { 
+        console.error("Auth error:", err); 
+      }
     };
     initAuth();
+    
     const unsubscribe = onAuthStateChanged(auth, setUser);
     return () => {
       window.removeEventListener('resize', handleResize);
@@ -556,6 +559,7 @@ const App = () => {
 
           <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar pb-32 relative">
             
+            {}
             {/* Dashboard Analytics */}
             {activeTab === 'dashboard' && (
               <div className="max-w-7xl mx-auto space-y-8 animate-fade-in-up">
@@ -719,6 +723,7 @@ const App = () => {
               </div>
             )}
 
+            {}
             {(activeTab === 'sales' || activeTab === 'purchases') && (
               <div className="max-w-7xl mx-auto space-y-6 animate-fade-in-up">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
@@ -1041,6 +1046,7 @@ const App = () => {
                 </div>
               </div>
 
+              {}
               {printDoc.type === 'ledger' ? (
                   <table className="w-full text-left border-collapse mb-12">
                     <thead className="bg-slate-50 border-y-2 border-slate-900">
@@ -1130,6 +1136,7 @@ const App = () => {
           </div>
         )}
 
+        {}
         {confirmDelete.isOpen && (
           <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4 no-print transition-all">
             <div className="max-w-md w-full bg-white dark:bg-[#1e293b] rounded-[2.5rem] p-10 shadow-2xl text-center border border-slate-200 dark:border-slate-800">
