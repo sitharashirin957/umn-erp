@@ -15,18 +15,19 @@ import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken }
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, increment, setDoc } from 'firebase/firestore';
 
 // --- Firebase Configuration ---
-// ... existing code ...
-// --- Firebase Configuration ---
-// ... existing code ...
-// --- Firebase Configuration ---
-const firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG || "{}");
+const firebaseConfig = {
+  apiKey: "AIzaSyCSnYfmU7dcnVJE1BSHGEpkQQzQ1bGuBp0",
+  authDomain: "umn-erp.firebaseapp.com",
+  projectId: "umn-erp",
+  storageBucket: "umn-erp.firebasestorage.app",
+  messagingSenderId: "483936934389",
+  appId: "1:483936934389:web:1fa1aec041b8bbbd9f68bc",
+  measurementId: "G-48B872HZ6F"
+};
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-erp-v1';
-// ... existing code ...const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
 const safeSearch = (val, term) => String(val || '').toLowerCase().includes(String(term || '').toLowerCase());
 const formatCurrency = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'SAR' }).format(Number(num) || 0);
 const generateID = (prefix, length) => `${prefix}-${String(length + 1).padStart(5, '0')}`;
