@@ -120,18 +120,30 @@ const exportToExcel = async (data, filename) => {
   window.XLSX.writeFile(wb, `${String(filename).toUpperCase()}_REPORT_${new Date().toISOString().split('T')[0]}.xlsx`);
 };
 
-const CompanyLogo = ({ collapsed, settings }) => (
-  <div className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} transition-all duration-300`}>
+const CompanyLogo = ({ collapsed, settings, setActiveTab, activeTab }) => (
+  <div 
+    onClick={() => setActiveTab('dashboard')}
+    className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} transition-all duration-300 cursor-pointer group`}
+    title="Go to Dashboard"
+  >
     {settings?.logo ? (
-      <img src={settings.logo} alt="Logo" className="w-10 h-10 rounded-2xl object-contain bg-white shadow-xl shadow-blue-900/10 dark:shadow-none border border-slate-200 dark:border-slate-700 shrink-0" />
+      <img 
+        key={`logo-${activeTab}`}
+        src={settings.logo} 
+        alt="Logo" 
+        className="w-10 h-10 rounded-2xl object-contain bg-white shadow-xl shadow-blue-900/10 dark:shadow-none border border-slate-200 dark:border-slate-700 shrink-0 animate-logo-pop group-hover:scale-105 transition-transform duration-300" 
+      />
     ) : (
-      <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-[#2563eb] to-[#4f46e5] shadow-lg shadow-indigo-500/30 border border-indigo-400/20 shrink-0">
+      <div 
+        key={`logo-${activeTab}`}
+        className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-[#2563eb] to-[#4f46e5] shadow-lg shadow-indigo-500/30 border border-indigo-400/20 shrink-0 animate-logo-pop group-hover:scale-105 transition-transform duration-300"
+      >
         <span className="relative text-white font-black text-xl tracking-tighter">M<span className="text-cyan-300">Y</span></span>
       </div>
     )}
     {!collapsed && (
       <div className="flex flex-col whitespace-nowrap overflow-hidden">
-        <span className="text-xl font-black text-slate-900 dark:text-white tracking-widest leading-none truncate w-40">{settings?.companyName || 'MY ERP'}</span>
+        <span className="text-xl font-black text-slate-900 dark:text-white tracking-widest leading-none truncate w-40 group-hover:text-blue-600 dark:group-hover:text-cyan-400 transition-colors">{settings?.companyName || 'MY ERP'}</span>
       </div>
     )}
   </div>
@@ -192,6 +204,14 @@ const App = () => {
   const [dbError, setDbError] = useState(false);
 
   const collapsed = isDesktop && !isSidebarHovered;
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
@@ -494,6 +514,19 @@ const App = () => {
           .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
           .custom-scrollbar::-webkit-scrollbar-thumb { background: ${isDarkMode ? '#334155' : '#cbd5e1'}; border-radius: 10px; }
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+          
+          /* New Animations */
+          @keyframes logoPop {
+            0% { transform: scale(0.5) rotate(-15deg); opacity: 0; }
+            60% { transform: scale(1.15) rotate(5deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+          }
+          .animate-logo-pop { animation: logoPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+          
+          @keyframes marquee {
+            0% { transform: translateX(0%); }
+            100% { transform: translateX(-50%); }
+          }
         `}</style>
 
         {/* --- Sidebar Navigation --- */}
@@ -505,7 +538,7 @@ const App = () => {
           `}
         >
           <div className="mb-10 mt-2 flex justify-between items-center">
-            <CompanyLogo collapsed={collapsed} settings={settings} />
+            <CompanyLogo collapsed={collapsed} settings={settings} setActiveTab={setActiveTab} activeTab={activeTab} />
             <button className="lg:hidden text-slate-400" onClick={() => setIsMobileMenuOpen(false)}><X size={24}/></button>
           </div>
           
@@ -551,7 +584,7 @@ const App = () => {
                 <Bell size={22}/>
                 <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-[#1e293b]"></span>
               </button>
-              <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/30">
+              <div onClick={() => setActiveTab('dashboard')} className="cursor-pointer hover:scale-110 transition-transform h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/30" title="Go to Dashboard">
                 {settings?.companyName ? settings.companyName.charAt(0).toUpperCase() : 'M'}
               </div>
             </div>
@@ -559,7 +592,6 @@ const App = () => {
 
           <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar pb-32 relative">
             
-            {}
             {/* Dashboard Analytics */}
             {activeTab === 'dashboard' && (
               <div className="max-w-7xl mx-auto space-y-8 animate-fade-in-up">
@@ -826,8 +858,20 @@ const App = () => {
             )}
           </div>
 
-          <footer className="w-full text-center py-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-t border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-md shrink-0 no-print">
-            © umnabeel 2026
+          {}
+          <footer className="w-full py-3 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-t border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-md shrink-0 no-print overflow-hidden relative group cursor-default">
+            <div className="absolute inset-0 flex items-center whitespace-nowrap animate-[marquee_20s_linear_infinite] group-hover:[animation-play-state:paused]">
+                <span className="mx-8">© UMNABEEL 2026</span>
+                <span className="mx-8 text-blue-500">CLOUD ERP SYSTEM</span>
+                <span className="mx-8">SECURE & SCALABLE</span>
+                <span className="mx-8 text-indigo-500">POWERED BY REACT</span>
+                <span className="mx-8">© UMNABEEL 2026</span>
+                <span className="mx-8 text-blue-500">CLOUD ERP SYSTEM</span>
+                <span className="mx-8">SECURE & SCALABLE</span>
+                <span className="mx-8 text-indigo-500">POWERED BY REACT</span>
+            </div>
+            {/* Invisible placeholder to maintain layout height */}
+            <div className="opacity-0 text-center w-full">© UMNABEEL 2026</div>
           </footer>
         </main>
 
@@ -1046,7 +1090,6 @@ const App = () => {
                 </div>
               </div>
 
-              {}
               {printDoc.type === 'ledger' ? (
                   <table className="w-full text-left border-collapse mb-12">
                     <thead className="bg-slate-50 border-y-2 border-slate-900">
