@@ -15,8 +15,7 @@ import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken }
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, increment, setDoc } from 'firebase/firestore';
 
 // --- Firebase Configuration ---
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-  apiKey: "demo-key",
+const firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG || "{}");  apiKey: "demo-key",
   authDomain: "demo-project.firebaseapp.com",
   projectId: "demo-project",
   storageBucket: "demo-project.appspot.com",
