@@ -15,7 +15,16 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, increment, setDoc } from 'firebase/firestore';
 
-const firebaseConfig = JSON.parse(__firebase_config);
+let firebaseConfig;
+try {
+  // Vite ൽ Environment Variables എടുക്കുന്നത് import.meta.env വഴിയാണ്
+  firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG);
+} catch (error) {
+  console.error("Firebase config parsing error. Check Vercel Environment Variables.", error);
+  // Fallback (വേണമെങ്കിൽ മാത്രം, അല്ലെങ്കിൽ ബ്ലാങ്ക് ആയി ഇടാം)
+  firebaseConfig = {}; 
+}
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
