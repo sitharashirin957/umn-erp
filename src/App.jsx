@@ -9,7 +9,7 @@ import {
   ShieldCheck, HandCoins, ShoppingBag, CreditCard, Menu, 
   Edit3, Receipt, Package, Truck, FileText, PieChart as PieChartIcon, 
   Bell, DownloadCloud, AlertTriangle, UsersRound, Activity, BookOpen, Image as ImageIcon,
-  Sun, Moon, ClipboardList, TrendingDown, FilePlus
+  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
@@ -21,7 +21,7 @@ try {
   firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG);
 } catch (error) {
   console.error("Firebase config parsing error. Check Vercel Environment Variables.", error);
-  // Fallback (or keep empty if you prefer)
+  // Fallback
   firebaseConfig = {}; 
 }
 
@@ -29,6 +29,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-erp-v1';
+
+// --- SECURITY PINS ---
+const APP_PIN = import.meta.env.VITE_APP_PIN || '6666';
+const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || '9999';
 
 const safeSearch = (val, term) => String(val || '').toLowerCase().includes(String(term || '').toLowerCase());
 const formatCurrency = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'SAR' }).format(Number(num) || 0);
@@ -201,20 +205,29 @@ const CustomTooltip = ({ active, payload, label }) => {
 const App = () => {
   const [user, setUser] = useState(null);
   
-  // --- Professional Dark Mode Initialization ---
+  // --- App Global Lock State ---
+  const [isAppUnlocked, setIsAppUnlocked] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('erp_unlocked') === 'true';
+    }
+    return false;
+  });
+  const [appPinInput, setAppPinInput] = useState('');
+  const [appPinError, setAppPinError] = useState(false);
+
+  // --- Admin Action Lock State ---
+  const [adminAuth, setAdminAuth] = useState({ isOpen: false, callback: null });
+  const [adminPinInput, setAdminPinInput] = useState('');
+  const [adminPinError, setAdminPinError] = useState(false);
+
+  // --- Theme State ---
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    // Check local storage first
     if (typeof window !== 'undefined') {
       const storedTheme = localStorage.getItem('erp_theme');
-      if (storedTheme) {
-        return storedTheme === 'dark';
-      }
-      // If no local storage, check user's system preference
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        return true;
-      }
+      if (storedTheme) return storedTheme === 'dark';
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return true;
     }
-    return false; // Default to light mode
+    return false; 
   });
 
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -261,8 +274,6 @@ const App = () => {
     return () => { window.removeEventListener('resize', handleResize); unsubscribe(); };
   }, []);
 
-  // --- Crucial Dark Mode Effect ---
-  // This physically adds/removes the 'dark' class from the <html> element
   useEffect(() => {
     const root = window.document.documentElement;
     if (isDarkMode) {
@@ -274,10 +285,7 @@ const App = () => {
     }
   }, [isDarkMode]);
 
-  // Function to toggle dark mode
-  const toggleDarkMode = () => {
-    setIsDarkMode((prevMode) => !prevMode);
-  };
+  const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -287,7 +295,6 @@ const App = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // --- Dynamic Favicon Update Effect ---
   useEffect(() => {
     if (settings?.logo) {
       let link = document.querySelector("link[rel~='icon']");
@@ -301,7 +308,7 @@ const App = () => {
   }, [settings?.logo]);
 
   useEffect(() => {
-    if (!user) return; 
+    if (!user || !isAppUnlocked) return; 
     const collectionsMap = {
       customers: setCustomers, suppliers: setSuppliers, products: setProducts,
       sales: setSales, purchases: setPurchases, collections: setCollections, 
@@ -322,10 +329,45 @@ const App = () => {
         if (snap.exists()) setSettings(snap.data());
     });
     return () => { unsubscribers.forEach(unsub => unsub()); unsubSettings(); };
-  }, [user]);
+  }, [user, isAppUnlocked]);
+
+  // --- SECURITY FUNCTIONS ---
+  const handleAppUnlock = (e) => {
+    e.preventDefault();
+    if (appPinInput === APP_PIN) {
+      setIsAppUnlocked(true);
+      sessionStorage.setItem('erp_unlocked', 'true');
+      setAppPinError(false);
+    } else {
+      setAppPinError(true);
+      setAppPinInput('');
+    }
+  };
+
+  const requestAdminAuth = (callback) => {
+    setAdminAuth({ isOpen: true, callback });
+    setAdminPinInput('');
+    setAdminPinError(false);
+  };
+
+  const handleAdminAuthSubmit = (e) => {
+    e.preventDefault();
+    if (adminPinInput === ADMIN_PIN) {
+      if (adminAuth.callback) adminAuth.callback();
+      setAdminAuth({ isOpen: false, callback: null });
+    } else {
+      setAdminPinError(true);
+      setAdminPinInput('');
+    }
+  };
+
+  const triggerDelete = (type, id, title) => {
+    requestAdminAuth(() => {
+      setConfirmDelete({ isOpen: true, type, id, title });
+    });
+  };
 
   // --- COMPREHENSIVE DASHBOARD ANALYTICS ---
-
   const analytics = useMemo(() => {
     const totalSales = sales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
     const totalPurchases = purchases.reduce((acc, p) => acc + (Number(p.grandTotal) || 0), 0);
@@ -336,7 +378,6 @@ const App = () => {
     return { totalSales, totalPurchases, totalCollections, totalExpenses, outstandingReceivables, netProfit };
   }, [sales, purchases, collections, expenses]);
 
-  // Monthly Sales & Purchase Trends (Line Charts)
   const monthlyTrends = useMemo(() => {
     const map = {};
     const process = (arr, key) => {
@@ -356,7 +397,6 @@ const App = () => {
     return Object.values(map).sort((a,b) => a.sortKey.localeCompare(b.sortKey)).slice(-12);
   }, [sales, purchases]);
 
-  // Aging Calculation Engine
   const calculateAging = (invoices, payments, type) => {
     const bins = { 'No Due yet': 0, '0 - 30 Days': 0, '31 - 60 Days': 0, '61 - 90 Days': 0, '91 - 120 Days': 0, '120 +': 0 };
     const today = new Date();
@@ -383,7 +423,6 @@ const App = () => {
   const agingReceivables = useMemo(() => calculateAging(sales, collections, 'rec'), [sales, collections]);
   const agingPayables = useMemo(() => calculateAging(purchases, expenses, 'pay'), [purchases, expenses]);
 
-  // Top Entities
   const topCustomersData = useMemo(() => {
     const map = {};
     sales.forEach(s => {
@@ -402,7 +441,6 @@ const App = () => {
     return Object.entries(map).map(([name, amount]) => ({ name: name || 'Unknown', amount })).sort((a,b) => b.amount - a.amount).slice(0, 5);
   }, [purchases]);
 
-  // VAT & Products
   const vatData = useMemo(() => {
     const outputVat = sales.reduce((acc, s) => acc + (Number(s.taxTotal) || 0), 0);
     const inputVat = purchases.reduce((acc, p) => acc + (Number(p.taxTotal) || 0), 0);
@@ -427,8 +465,6 @@ const App = () => {
     return Object.entries(map).map(([name, value]) => ({ name: name || 'Unknown', value })).sort((a,b) => b.value - a.value).slice(0, 5);
   }, [sales]);
 
-
-  // Notifications Engine
   const notifications = useMemo(() => {
     const notifs = [];
     products.forEach(p => {
@@ -444,12 +480,23 @@ const App = () => {
     return notifs;
   }, [products, topCustomersData]);
 
+  // Modals with Edit Protection
   const openModal = (type, data = null) => {
-    setFormData(data ? { ...data } : { name: '', phone: '', email: '', gst: '', openingBalance: '', category: '', stock: '', purchasePrice: '', sellingPrice: '', tax: '', minStock: '', amount: '', method: '', description: '', ref: '' });
-    if (type === 'sale' || type === 'purchase') {
-      setInvoiceItems(data?.items || [{ productId: '', name: '', description: '', qty: 1, rate: 0, tax: 0, total: 0 }]);
+    const executeOpen = () => {
+      setFormData(data ? { ...data } : { name: '', phone: '', email: '', gst: '', openingBalance: '', category: '', stock: '', purchasePrice: '', sellingPrice: '', tax: '', minStock: '', amount: '', method: '', description: '', ref: '' });
+      if (type === 'sale' || type === 'purchase') {
+        setInvoiceItems(data?.items || [{ productId: '', name: '', description: '', qty: 1, rate: 0, tax: 0, total: 0 }]);
+      }
+      setModalState({ isOpen: true, type, data });
+    };
+
+    if (data) {
+      // Editing existing data requires Admin PIN
+      requestAdminAuth(executeOpen);
+    } else {
+      // Creating new doesn't require PIN
+      executeOpen();
     }
-    setModalState({ isOpen: true, type, data });
   };
 
   const closeModal = () => {
@@ -458,33 +505,27 @@ const App = () => {
     setInvoiceItems([]);
   };
 
-  // --- Push CRM to Invoice Function ---
   const handlePushToInvoice = (crmItem) => {
-    // Navigate to Sales tab
     setActiveTab('sales');
-    
-    // Pre-fill the form data with CRM details
     const preFilledData = {
       customerId: crmItem.customerId || '',
       customerName: crmItem.customerName || '',
       partyName: crmItem.customerName || '',
       salesmanId: crmItem.salesmanId || '',
-      linkedJobId: crmItem.id, // Smart link automatically
+      linkedJobId: crmItem.id, 
       date: new Date().toISOString().split('T')[0],
-      // We start with one item containing the CRM description to save time
       items: [{
         productId: '',
-        name: 'CUSTOM JOB', // Default name, user can change
-        description: crmItem.description || '', // Pre-fill description
+        name: 'CUSTOM JOB',
+        description: crmItem.description || '', 
         qty: 1,
         rate: 0,
         tax: 0,
         total: 0
       }]
     };
-    
-    // Open the Sales modal with this pre-filled data
-    openModal('sale', preFilledData);
+    // Creating new invoice, doesn't need Admin Auth initially (unless they save over an existing one)
+    openModal('sale', preFilledData); 
   };
 
   const handleQuickPayment = (item, type, pendingAmount) => {
@@ -527,11 +568,13 @@ const App = () => {
     setModalState({ isOpen: true, type: 'ledger', data: { entity, entityType: type, rows } });
   };
 
-  const handleCRMStatusChange = async (id, field, value) => {
-    if(!user) return;
-    try {
-        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'crms', id), { [field]: value });
-    } catch(e) { console.error("Error updating CRM status", e); }
+  const handleCRMStatusChange = (id, field, value) => {
+    requestAdminAuth(async () => {
+        if(!user) return;
+        try {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'crms', id), { [field]: value });
+        } catch(e) { console.error("Error updating CRM status", e); }
+    });
   };
 
   const handleSave = async (e) => {
@@ -591,14 +634,16 @@ const App = () => {
     } catch (error) { console.error("Save error:", error); }
   };
 
-  const handleSettingsSave = async (e) => {
+  const handleSettingsSave = (e) => {
     e.preventDefault();
-    if (!user) return;
-    try {
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'profile'), cleanObject(settings), { merge: true });
-        setSettingsSuccess(true);
-        setTimeout(() => setSettingsSuccess(false), 3000);
-    } catch (e) { console.error(e); }
+    requestAdminAuth(async () => {
+        if (!user) return;
+        try {
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'profile'), cleanObject(settings), { merge: true });
+            setSettingsSuccess(true);
+            setTimeout(() => setSettingsSuccess(false), 3000);
+        } catch (err) { console.error(err); }
+    });
   };
 
   const handleLogoUpload = (e) => {
@@ -640,6 +685,36 @@ const App = () => {
   const removeRow = (indexToRemove) => {
     setInvoiceItems(invoiceItems.filter((_, index) => index !== indexToRemove));
   };
+
+  // --- EARLY RETURN FOR APP LOCK SCREEN ---
+  if (!isAppUnlocked) {
+    return (
+      <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen font-sans selection:bg-blue-500/30 flex items-center justify-center`}>
+         <div className="bg-white dark:bg-[#1e293b] p-10 rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center max-w-sm w-full mx-4 animate-fade-in-up">
+             <div className="w-20 h-20 bg-blue-100 dark:bg-blue-500/10 rounded-full flex items-center justify-center mb-6 text-blue-600 dark:text-blue-500">
+                 <Lock size={32} />
+             </div>
+             <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-widest mb-2 text-center">App Locked</h2>
+             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-8 text-center">Enter Global PIN to access</p>
+             <form onSubmit={handleAppUnlock} className="w-full">
+                 <input 
+                     type="password" 
+                     autoFocus
+                     required
+                     placeholder="• • • •" 
+                     className={`w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-2 font-black text-center text-2xl text-slate-900 dark:text-white tracking-[1em] mb-4 focus:outline-none transition-colors ${appPinError ? 'border-rose-500/50 focus:border-rose-500' : 'border-transparent dark:border-slate-800 focus:border-blue-500'}`}
+                     value={appPinInput}
+                     onChange={e => setAppPinInput(e.target.value)}
+                 />
+                 {appPinError && <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center mb-4">Incorrect PIN</p>}
+                 <button type="submit" className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 transition-all">
+                     Unlock ERP
+                 </button>
+             </form>
+         </div>
+      </div>
+    );
+  }
 
   const renderTable = (headers, tableData, type, renderRow) => (
     <div className="bg-white dark:bg-[#1e293b] rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
@@ -1087,12 +1162,11 @@ const App = () => {
                             </td>
                             
                             <td className="px-4 py-3 text-right space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end no-print">
-                              {/* --- PUSH TO INVOICE BUTTON --- */}
                               {!isSmartLinked && (
                                 <button onClick={() => handlePushToInvoice(item)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg" title="Push to Sales Invoice"><FilePlus size={14}/></button>
                               )}
                               <button onClick={() => openModal('crm', item)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg" title="Edit Full Job"><Edit3 size={14}/></button>
-                              <button onClick={() => setConfirmDelete({ isOpen: true, type: 'crm', id: item.id, title: String(item.jobId) })} className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg"><Trash2 size={14}/></button>
+                              <button onClick={() => triggerDelete('crm', item.id, String(item.jobId))} className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg"><Trash2 size={14}/></button>
                             </td>
                           </tr>
                         )})}
@@ -1167,7 +1241,7 @@ const App = () => {
                       <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
                         <button onClick={() => generateLedger(activeTab.slice(0, -1), item)} className="p-2 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg" title="View Ledger"><BookOpen size={16}/></button>
                         <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg"><Edit3 size={16}/></button>
-                        <button onClick={() => setConfirmDelete({ isOpen: true, type: activeTab.slice(0, -1), id: item.id, title: String(item.name) })} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
+                        <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, String(item.name))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
                       </td>
                     </tr>
                   )
@@ -1194,7 +1268,7 @@ const App = () => {
                       <td className="px-6 py-4 font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(item.sellingPrice)}</td>
                       <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => openModal('product', item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg"><Edit3 size={16}/></button>
-                        <button onClick={() => setConfirmDelete({ isOpen: true, type: 'product', id: item.id, title: String(item.name) })} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
+                        <button onClick={() => triggerDelete('product', item.id, String(item.name))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
                       </td>
                     </tr>
                   )
@@ -1239,7 +1313,7 @@ const App = () => {
 
                         <button onClick={() => setPrintDoc({ isOpen: true, type: activeTab.slice(0, -1), data: item })} className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-800 rounded-lg shrink-0" title="Download PDF"><Printer size={16}/></button>
                         <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg shrink-0"><Edit3 size={16}/></button>
-                        <button onClick={() => setConfirmDelete({ isOpen: true, type: activeTab.slice(0, -1), id: item.id, title: String(item.invoiceNo) })} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg shrink-0"><Trash2 size={16}/></button>
+                        <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, String(item.invoiceNo))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg shrink-0"><Trash2 size={16}/></button>
                       </td>
                     </tr>
                   )}
@@ -1268,7 +1342,7 @@ const App = () => {
                       <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">{String(item.method || 'Cash')}</td>
                       <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity no-print flex justify-end items-center">
                         <button onClick={() => setPrintDoc({ isOpen: true, type: activeTab.slice(0, -1), data: item })} className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-800 rounded-lg"><Printer size={16}/></button>
-                        <button onClick={() => setConfirmDelete({ isOpen: true, type: activeTab.slice(0, -1), id: item.id, title: `${formatCurrency(item.amount)}` })} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
+                        <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, formatCurrency(item.amount))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
                       </td>
                     </tr>
                   )
@@ -1296,7 +1370,7 @@ const App = () => {
                       <div className="flex justify-end space-x-2 mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
                         <button onClick={() => generateLedger('salesman', sm)} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-indigo-500 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors" title="View Performance Ledger"><BookOpen size={16}/></button>
                         <button onClick={() => openModal('salesman', sm)} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors"><Edit3 size={16}/></button>
-                        <button onClick={() => setConfirmDelete({ isOpen: true, type: 'salesman', id: sm.id, title: String(sm.name) })} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-rose-500 dark:text-rose-400 rounded-xl hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors"><Trash2 size={16}/></button>
+                        <button onClick={() => triggerDelete('salesman', sm.id, String(sm.name))} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-rose-500 dark:text-rose-400 rounded-xl hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors"><Trash2 size={16}/></button>
                       </div>
                     </div>
                   ))}
@@ -1314,7 +1388,38 @@ const App = () => {
           </div>
         </main>
 
-        {/* --- MODALS & PRINTS --- */}
+        {/* --- ADMIN AUTH MODAL --- */}
+        {adminAuth.isOpen && (
+            <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4 transition-all">
+                <div className="bg-white dark:bg-[#1e293b] w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-200 dark:border-slate-800 animate-fade-in-up">
+                    <div className="flex flex-col items-center">
+                        <div className="w-16 h-16 bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-full flex items-center justify-center mb-4">
+                            <ShieldCheck size={28} />
+                        </div>
+                        <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-widest mb-1">Admin Action</h2>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6 text-center">Authorization required</p>
+                        <form onSubmit={handleAdminAuthSubmit} className="w-full">
+                            <input 
+                                type="password" 
+                                autoFocus
+                                required
+                                placeholder="PIN" 
+                                className={`w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-2 font-black text-center text-xl text-slate-900 dark:text-white tracking-[0.5em] mb-4 focus:outline-none transition-colors ${adminPinError ? 'border-rose-500/50 focus:border-rose-500' : 'border-transparent dark:border-slate-800 focus:border-blue-500'}`}
+                                value={adminPinInput}
+                                onChange={e => setAdminPinInput(e.target.value)}
+                            />
+                            {adminPinError && <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center mb-4">Incorrect Admin PIN</p>}
+                            <div className="flex space-x-3">
+                                <button type="button" onClick={() => setAdminAuth({ isOpen: false, callback: null })} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancel</button>
+                                <button type="submit" className="flex-1 py-4 bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-rose-500/30 hover:scale-95 transition-all">Verify</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* --- OTHER MODALS & PRINTS --- */}
         {modalState.isOpen && modalState.type !== 'ledger' && (
           <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4 overflow-y-auto no-print transition-all">
             <div className="bg-white dark:bg-[#1e293b] w-full max-w-5xl rounded-[2.5rem] shadow-2xl relative my-8 border border-slate-200 dark:border-slate-800">
