@@ -200,10 +200,23 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 const App = () => {
   const [user, setUser] = useState(null);
+  
+  // --- Professional Dark Mode Initialization ---
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') { return localStorage.getItem('erp_theme') === 'dark'; }
-    return false;
+    // Check local storage first
+    if (typeof window !== 'undefined') {
+      const storedTheme = localStorage.getItem('erp_theme');
+      if (storedTheme) {
+        return storedTheme === 'dark';
+      }
+      // If no local storage, check user's system preference
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return true;
+      }
+    }
+    return false; // Default to light mode
   });
+
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
@@ -248,10 +261,23 @@ const App = () => {
     return () => { window.removeEventListener('resize', handleResize); unsubscribe(); };
   }, []);
 
+  // --- Crucial Dark Mode Effect ---
+  // This physically adds/removes the 'dark' class from the <html> element
   useEffect(() => {
-    if (isDarkMode) { document.documentElement.classList.add('dark'); localStorage.setItem('erp_theme', 'dark'); } 
-    else { document.documentElement.classList.remove('dark'); localStorage.setItem('erp_theme', 'light'); }
+    const root = window.document.documentElement;
+    if (isDarkMode) {
+      root.classList.add('dark');
+      localStorage.setItem('erp_theme', 'dark');
+    } else {
+      root.classList.remove('dark');
+      localStorage.setItem('erp_theme', 'light');
+    }
   }, [isDarkMode]);
+
+  // Function to toggle dark mode
+  const toggleDarkMode = () => {
+    setIsDarkMode((prevMode) => !prevMode);
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -592,8 +618,8 @@ const App = () => {
   );
 
   return (
-    <div className={`dark:bg-[#0f172a] ${isDarkMode ? 'dark' : ''}`}>
-      <div className="flex h-screen bg-slate-50 dark:bg-[#0f172a] font-sans text-slate-900 dark:text-slate-100 overflow-hidden selection:bg-blue-500/30 transition-colors duration-300">
+    <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-500/30`}>
+      <div className="flex h-screen overflow-hidden">
         
         {dbError && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 no-print">
@@ -661,7 +687,8 @@ const App = () => {
                 <input type="text" placeholder="Global Entity Search..." className="bg-transparent border-none text-sm font-bold w-full focus:outline-none uppercase dark:text-white dark:placeholder-slate-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
               
-              <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 text-slate-400 hover:text-blue-500 dark:hover:text-cyan-400 transition-colors bg-slate-50 dark:bg-[#0f172a] rounded-full border border-slate-100 dark:border-slate-800">
+              {/* --- The Dark Mode Toggle Button --- */}
+              <button onClick={toggleDarkMode} className="p-2 text-slate-400 hover:text-blue-500 dark:hover:text-cyan-400 transition-colors bg-slate-50 dark:bg-[#0f172a] rounded-full border border-slate-100 dark:border-slate-800">
                 {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
               </button>
 
