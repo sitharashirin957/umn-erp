@@ -287,6 +287,19 @@ const App = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // --- Dynamic Favicon Update Effect ---
+  useEffect(() => {
+    if (settings?.logo) {
+      let link = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.href = settings.logo;
+    }
+  }, [settings?.logo]);
+
   useEffect(() => {
     if (!user) return; 
     const collectionsMap = {
