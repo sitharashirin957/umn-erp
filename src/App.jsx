@@ -17,11 +17,11 @@ import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc
 
 let firebaseConfig;
 try {
-  // Vite ൽ Environment Variables എടുക്കുന്നത് import.meta.env വഴിയാണ്
+  // Vite uses import.meta.env for environment variables
   firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG);
 } catch (error) {
   console.error("Firebase config parsing error. Check Vercel Environment Variables.", error);
-  // Fallback (വേണമെങ്കിൽ മാത്രം, അല്ലെങ്കിൽ ബ്ലാങ്ക് ആയി ഇടാം)
+  // Fallback (or keep empty if you prefer)
   firebaseConfig = {}; 
 }
 
@@ -408,7 +408,7 @@ const App = () => {
   const openModal = (type, data = null) => {
     setFormData(data ? { ...data } : { name: '', phone: '', email: '', gst: '', openingBalance: '', category: '', stock: '', purchasePrice: '', sellingPrice: '', tax: '', minStock: '', amount: '', method: '', description: '', ref: '' });
     if (type === 'sale' || type === 'purchase') {
-      setInvoiceItems(data?.items || [{ productId: '', name: '', qty: 1, rate: 0, tax: 0, total: 0 }]);
+      setInvoiceItems(data?.items || [{ productId: '', name: '', description: '', qty: 1, rate: 0, tax: 0, total: 0 }]);
     }
     setModalState({ isOpen: true, type, data });
   };
@@ -567,6 +567,10 @@ const App = () => {
     const tax = Number(newItems[index].tax) || 0;
     newItems[index].total = (qty * rate) + ((qty * rate * tax) / 100);
     setInvoiceItems(newItems);
+  };
+
+  const removeRow = (indexToRemove) => {
+    setInvoiceItems(invoiceItems.filter((_, index) => index !== indexToRemove));
   };
 
   const renderTable = (headers, tableData, type, renderRow) => (
@@ -1237,10 +1241,10 @@ const App = () => {
           </div>
         </main>
 
-        {/* --- MODALS & PRINTS (Kept identical as per previous correct code) --- */}
+        {/* --- MODALS & PRINTS --- */}
         {modalState.isOpen && modalState.type !== 'ledger' && (
           <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4 overflow-y-auto no-print transition-all">
-            <div className="bg-white dark:bg-[#1e293b] w-full max-w-4xl rounded-[2.5rem] shadow-2xl relative my-8 border border-slate-200 dark:border-slate-800">
+            <div className="bg-white dark:bg-[#1e293b] w-full max-w-5xl rounded-[2.5rem] shadow-2xl relative my-8 border border-slate-200 dark:border-slate-800">
               <div className="sticky top-0 bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-md px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center rounded-t-[2.5rem] z-10">
                 <h2 className="text-2xl font-black uppercase tracking-tight text-slate-800 dark:text-white">{modalState.data?.id ? 'Edit' : 'New'} {String(modalState.type)}</h2>
                 <button onClick={closeModal} className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full transition-colors"><X size={20}/></button>
@@ -1355,18 +1359,41 @@ const App = () => {
                     </div>
                     <div className="bg-slate-50 dark:bg-[#0f172a] p-6 rounded-3xl border border-slate-100 dark:border-slate-800">
                       <h3 className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 mb-4">Item Details</h3>
-                      <div className="space-y-3">
+                      
+                      {/* TABLE HEADER FOR ITEM DETAILS */}
+                      <div className="hidden md:flex gap-3 px-2 pb-2 border-b border-slate-200 dark:border-slate-700 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                         <div className="w-[30%]">Product</div>
+                         <div className="flex-1">Description (Optional)</div>
+                         <div className="w-20 text-center">Qty</div>
+                         <div className="w-28 text-right">Rate</div>
+                         <div className="w-32 text-right">Total</div>
+                         <div className="w-10"></div>
+                      </div>
+
+                      <div className="space-y-3 mt-3">
                         {invoiceItems.map((item, idx) => (
-                          <div key={idx} className="flex flex-col md:flex-row gap-3 items-end">
-                            <select required className="flex-1 p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white uppercase text-xs" value={item.productId || ''} onChange={(e) => handleItemChange(idx, 'productId', e.target.value)}>
+                          <div key={idx} className="flex flex-col md:flex-row gap-3 items-start md:items-center p-3 md:p-0 bg-white dark:bg-[#1e293b] md:bg-transparent rounded-xl md:rounded-none border border-slate-200 dark:border-slate-700 md:border-none">
+                            <select required className="w-full md:w-[30%] p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white uppercase text-xs" value={item.productId || ''} onChange={(e) => handleItemChange(idx, 'productId', e.target.value)}>
                               <option value="">Select Product...</option>{products.map(p => <option key={p.id} value={p.id}>{String(p.name)}</option>)}
                             </select>
-                            <input type="number" placeholder="Qty" required className="w-24 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-center text-xs" value={item.qty || ''} onChange={(e) => handleItemChange(idx, 'qty', e.target.value)} />
-                            <input type="number" placeholder="Rate" required className="w-32 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-right text-xs" value={item.rate || ''} onChange={(e) => handleItemChange(idx, 'rate', e.target.value)} />
-                            <div className="w-32 p-3 bg-slate-200 dark:bg-slate-800 rounded-xl font-black text-right text-xs text-slate-800 dark:text-slate-200 border border-transparent dark:border-slate-700">{formatCurrency(item.total)}</div>
+                            
+                            {/* CUSTOM DESCRIPTION FIELD */}
+                            <input type="text" placeholder="Custom Description" className="w-full md:flex-1 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-xs placeholder:text-slate-400" value={item.description || ''} onChange={(e) => handleItemChange(idx, 'description', e.target.value)} />
+                            
+                            <div className="flex gap-3 w-full md:w-auto">
+                              <input type="number" placeholder="Qty" required className="flex-1 md:w-20 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-center text-xs" value={item.qty || ''} onChange={(e) => handleItemChange(idx, 'qty', e.target.value)} />
+                              <input type="number" placeholder="Rate" required className="flex-1 md:w-28 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-right text-xs" value={item.rate || ''} onChange={(e) => handleItemChange(idx, 'rate', e.target.value)} />
+                            </div>
+                            
+                            <div className="w-full md:w-32 p-3 bg-slate-200 dark:bg-slate-800 rounded-xl font-black text-right text-xs text-slate-800 dark:text-slate-200 border border-transparent dark:border-slate-700">{formatCurrency(item.total)}</div>
+                            
+                            {/* DELETE ROW BUTTON */}
+                            <button type="button" onClick={() => removeRow(idx)} className="w-full md:w-10 p-3 flex justify-center text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-xl transition-colors shrink-0" title="Remove Item">
+                               <Trash2 size={16} />
+                            </button>
                           </div>
                         ))}
-                        <button type="button" onClick={() => setInvoiceItems([...invoiceItems, { productId: '', name: '', qty: 1, rate: 0, tax: 0, total: 0 }])} className="text-blue-600 dark:text-blue-400 font-black text-[10px] uppercase tracking-widest flex items-center p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg mt-2 transition-colors"><Plus size={14} className="mr-1"/> Add Row</button>
+                        <button type="button" onClick={() => setInvoiceItems([...invoiceItems, { productId: '', name: '', description: '', qty: 1, rate: 0, tax: 0, total: 0 }])} className="text-blue-600 dark:text-blue-400 font-black text-[10px] uppercase tracking-widest flex items-center p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg mt-2 transition-colors"><Plus size={14} className="mr-1"/> Add Row</button>
                       </div>
                     </div>
                   </div>
@@ -1510,7 +1537,10 @@ const App = () => {
                       {printDoc.data?.items?.map((item, idx) => (
                         <tr key={idx}>
                           <td className="py-5 px-2 text-slate-400">{idx + 1}</td>
-                          <td className="py-5 px-2 text-slate-900">{String(item.name || '')}</td>
+                          <td className="py-5 px-2 text-slate-900">
+                            <div>{String(item.name || '')}</div>
+                            {item.description && <div className="text-xs text-slate-500 mt-1 font-normal normal-case">{item.description}</div>}
+                          </td>
                           <td className="py-5 px-2 text-center text-slate-700">{String(item.qty || 0)}</td>
                           <td className="py-5 px-2 text-right text-slate-700">{formatCurrency(item.rate)}</td>
                           <td className="py-5 px-2 text-center text-slate-500">{String(item.tax || 0)}%</td>
@@ -1586,6 +1616,5 @@ const App = () => {
     </div>
   );
 };
-
 
 export default App;
