@@ -1579,6 +1579,3 @@ const App = () => {
 };
 
 export default App;
-```eof
-
--
