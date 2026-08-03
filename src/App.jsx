@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area,
+  BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { 
   LayoutDashboard, ReceiptText, Users, Settings, Plus, Search, 
@@ -8,23 +9,13 @@ import {
   ShieldCheck, HandCoins, ShoppingBag, CreditCard, Menu, 
   Edit3, Receipt, Package, Truck, FileText, PieChart as PieChartIcon, 
   Bell, DownloadCloud, AlertTriangle, UsersRound, Activity, BookOpen, Image as ImageIcon,
-  Sun, Moon
+  Sun, Moon, ClipboardList, TrendingDown
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, increment, setDoc } from 'firebase/firestore';
 
-// --- Firebase Configuration ---
-const firebaseConfig = {
-  apiKey: "AIzaSyCSnYfmU7dCnVJE1BShGEpkQQzQ1bGuBp0",
-  authDomain: "umn-erp.firebaseapp.com",
-  projectId: "umn-erp",
-  storageBucket: "umn-erp.firebasestorage.app",
-  messagingSenderId: "483936934389",
-  appId: "1:483936934389:web:1fa1aec041b8bbbd9f68bc",
-  measurementId: "G-48B872HZ6F"
-};
-
+const firebaseConfig = JSON.parse(__firebase_config);
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -40,7 +31,6 @@ const getBadgeStyle = (status) => {
   return 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 border-rose-200 dark:border-rose-500/30 border';
 };
 
-// Clean object utility for Firestore
 const cleanObject = (obj) => {
   const cleaned = Array.isArray(obj) ? [] : {};
   for (const key in obj) {
@@ -54,6 +44,10 @@ const cleanObject = (obj) => {
   }
   return cleaned;
 };
+
+// --- CHART COLORS ---
+const COLORS = ['#10b981', '#3b82f6', '#94a3b8', '#f43f5e', '#eab308', '#8b5cf6', '#06b6d4'];
+const AGING_COLORS = ['#38bdf8', '#fbbf24', '#34d399', '#a78bfa', '#fb923c', '#f43f5e'];
 
 const triggerSystemPrint = async (customFilename) => {
   const element = document.getElementById('printable-area');
@@ -120,30 +114,18 @@ const exportToExcel = async (data, filename) => {
   window.XLSX.writeFile(wb, `${String(filename).toUpperCase()}_REPORT_${new Date().toISOString().split('T')[0]}.xlsx`);
 };
 
-const CompanyLogo = ({ collapsed, settings, setActiveTab, activeTab }) => (
-  <div 
-    onClick={() => setActiveTab('dashboard')}
-    className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} transition-all duration-300 cursor-pointer group`}
-    title="Go to Dashboard"
-  >
+const CompanyLogo = ({ collapsed, settings }) => (
+  <div className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} transition-all duration-300`}>
     {settings?.logo ? (
-      <img 
-        key={`logo-${activeTab}`}
-        src={settings.logo} 
-        alt="Logo" 
-        className="w-10 h-10 rounded-2xl object-contain bg-white shadow-xl shadow-blue-900/10 dark:shadow-none border border-slate-200 dark:border-slate-700 shrink-0 animate-logo-pop group-hover:scale-105 transition-transform duration-300" 
-      />
+      <img src={settings.logo} alt="Logo" className="w-10 h-10 rounded-2xl object-contain bg-white shadow-xl shadow-blue-900/10 dark:shadow-none border border-slate-200 dark:border-slate-700 shrink-0" />
     ) : (
-      <div 
-        key={`logo-${activeTab}`}
-        className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-[#2563eb] to-[#4f46e5] shadow-lg shadow-indigo-500/30 border border-indigo-400/20 shrink-0 animate-logo-pop group-hover:scale-105 transition-transform duration-300"
-      >
-        <span className="relative text-white font-black text-xl tracking-tighter">M<span className="text-cyan-300">Y</span></span>
+      <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-[#2563eb] to-[#4f46e5] shadow-lg shadow-indigo-500/30 border border-indigo-400/20 shrink-0">
+        <span className="relative text-white font-black text-xl tracking-tighter">C<span className="text-cyan-300">E</span></span>
       </div>
     )}
     {!collapsed && (
       <div className="flex flex-col whitespace-nowrap overflow-hidden">
-        <span className="text-xl font-black text-slate-900 dark:text-white tracking-widest leading-none truncate w-40 group-hover:text-blue-600 dark:group-hover:text-cyan-400 transition-colors">{settings?.companyName || 'MY ERP'}</span>
+        <span className="text-xl font-black text-slate-900 dark:text-white tracking-widest leading-none truncate w-40">{settings?.companyName || 'MY ERP'}</span>
       </div>
     )}
   </div>
@@ -160,28 +142,66 @@ const NavItem = ({ id, icon: Icon, label, activeTab, setActiveTab, collapsed, se
   </button>
 );
 
-const KPICard = ({ title, value, icon: Icon, colorClass, bgClass, trend }) => (
-  <div className="bg-white dark:bg-[#1e293b] p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl dark:shadow-none transition-all duration-300 group relative overflow-hidden">
-    <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full ${bgClass} opacity-50 dark:opacity-10 group-hover:scale-150 transition-transform duration-500`}></div>
-    <div className="relative z-10 flex justify-between items-start">
-      <div>
-        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">{String(title)}</p>
-        <h3 className={`text-3xl font-black ${colorClass} tracking-tight`}>{String(value)}</h3>
-        {trend && <p className="text-xs font-bold text-emerald-500 dark:text-emerald-400 mt-2 flex items-center"><TrendingUp size={12} className="mr-1"/> {String(trend)}</p>}
-      </div>
-      <div className={`p-4 rounded-2xl ${bgClass} ${colorClass} shadow-inner dark:bg-opacity-20`}><Icon size={24} /></div>
+const KPICard = ({ title, value, icon: Icon, colorClass, bgClass }) => (
+  <div className={`p-6 rounded-[1.5rem] border ${bgClass} shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between`}>
+    <div>
+      <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-70">{String(title)}</p>
+      <h3 className={`text-2xl font-black ${colorClass} tracking-tight`}>{String(value)}</h3>
     </div>
+    <div className={`p-4 rounded-full bg-white/50 dark:bg-black/20 ${colorClass}`}><Icon size={28} /></div>
   </div>
 );
 
+const getCRMWorkStatusStyle = (status) => {
+  switch (status) {
+    case 'Work Onboarded': return 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-400 border-sky-200 dark:border-sky-500/30 border';
+    case 'Work Finished': return 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400 border-purple-200 dark:border-purple-500/30 border';
+    case 'Price/Quotation Submitted': return 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-200 dark:border-blue-500/30 border';
+    case 'Delivered': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30 border';
+    case 'Cold Lead': return 'bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-400 border-slate-200 dark:border-slate-500/30 border';
+    case 'Quote Rejected': return 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400 border-red-200 dark:border-red-500/30 border';
+    case 'Waiting Approval': return 'bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-400 border-teal-200 dark:border-teal-500/30 border';
+    case 'Canceled': return 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400 border-rose-200 dark:border-rose-500/30 border';
+    default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700 border';
+  }
+};
+
+const getCRMClientTypeStyle = (type) => {
+  if (type === 'Agency') return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400';
+  if (type === 'Direct Client') return 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400';
+  if (type === 'Brand/Company') return 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400';
+  return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+};
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700">
+        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">{label}</p>
+        {payload.map((entry, index) => (
+          <p key={index} className="text-sm font-black" style={{ color: entry.color }}>
+            {entry.name}: {formatCurrency(entry.value)}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+}
+
 const App = () => {
   const [user, setUser] = useState(null);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') { return localStorage.getItem('erp_theme') === 'dark'; }
+    return false;
+  });
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const notifRef = useRef(null);
 
   const [customers, setCustomers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -191,6 +211,7 @@ const App = () => {
   const [collections, setCollections] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [salesmen, setSalesmen] = useState([]);
+  const [crms, setCrms] = useState([]);
   
   const [settings, setSettings] = useState({ companyName: '', taxId: '', phone: '', email: '', address: '', logo: '' });
   const [settingsSuccess, setSettingsSuccess] = useState(false);
@@ -202,36 +223,33 @@ const App = () => {
   const [formData, setFormData] = useState({});
   const [invoiceItems, setInvoiceItems] = useState([]);
   const [dbError, setDbError] = useState(false);
-
   const collapsed = isDesktop && !isSidebarHovered;
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDarkMode]);
 
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
     window.addEventListener('resize', handleResize);
-    
-    // Auth - Force Anonymous login to avoid token mismatches
     const initAuth = async () => {
       try {
-        await signInAnonymously(auth);
-      } catch (err) { 
-        console.error("Auth error:", err); 
-      }
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { await signInWithCustomToken(auth, __initial_auth_token); } 
+        else { await signInAnonymously(auth); }
+      } catch (err) { console.error("Auth error:", err); }
     };
     initAuth();
-    
     const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      unsubscribe();
+    return () => { window.removeEventListener('resize', handleResize); unsubscribe(); };
+  }, []);
+
+  useEffect(() => {
+    if (isDarkMode) { document.documentElement.classList.add('dark'); localStorage.setItem('erp_theme', 'dark'); } 
+    else { document.documentElement.classList.remove('dark'); localStorage.setItem('erp_theme', 'light'); }
+  }, [isDarkMode]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+        if (notifRef.current && !notifRef.current.contains(event.target)) { setIsNotifOpen(false); }
     };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -239,7 +257,7 @@ const App = () => {
     const collectionsMap = {
       customers: setCustomers, suppliers: setSuppliers, products: setProducts,
       sales: setSales, purchases: setPurchases, collections: setCollections, 
-      expenses: setExpenses, salesmen: setSalesmen
+      expenses: setExpenses, salesmen: setSalesmen, crms: setCrms
     };
 
     const unsubscribers = Object.entries(collectionsMap).map(([colName, setter]) => 
@@ -249,22 +267,16 @@ const App = () => {
           const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setter(data.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0)));
         },
-        (error) => {
-          console.error(`Error syncing ${colName}:`, error);
-          if (error.code === 'permission-denied') setDbError(true);
-        }
+        (error) => { console.error(`Error syncing ${colName}:`, error); if (error.code === 'permission-denied') setDbError(true); }
       )
     );
-    
     const unsubSettings = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'profile'), (snap) => {
         if (snap.exists()) setSettings(snap.data());
     });
-    
-    return () => {
-        unsubscribers.forEach(unsub => unsub());
-        unsubSettings();
-    };
+    return () => { unsubscribers.forEach(unsub => unsub()); unsubSettings(); };
   }, [user]);
+
+  // --- COMPREHENSIVE DASHBOARD ANALYTICS ---
 
   const analytics = useMemo(() => {
     const totalSales = sales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
@@ -276,38 +288,116 @@ const App = () => {
     return { totalSales, totalPurchases, totalCollections, totalExpenses, outstandingReceivables, netProfit };
   }, [sales, purchases, collections, expenses]);
 
-  const chartData = useMemo(() => {
+  // Monthly Sales & Purchase Trends (Line Charts)
+  const monthlyTrends = useMemo(() => {
     const map = {};
     const process = (arr, key) => {
       arr.forEach(item => {
         if(!item.date) return;
-        const ym = item.date.substring(0, 7); 
-        if(!map[ym]) {
-           const d = new Date(item.date);
-           const mName = d.toLocaleString('default', { month: 'short' });
-           map[ym] = { sortKey: ym, name: `${mName} '${d.getFullYear().toString().slice(2)}`, sales: 0, purchases: 0 };
-        }
-        map[ym][key] += Number(item.grandTotal) || 0;
+        const d = new Date(item.date);
+        const monthName = d.toLocaleString('default', { month: 'long' });
+        const year = d.getFullYear();
+        const sortKey = `${year}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        
+        if(!map[sortKey]) map[sortKey] = { sortKey, name: monthName, sales: 0, purchases: 0 };
+        map[sortKey][key] += Number(item.grandTotal) || 0;
       });
     };
     process(sales, 'sales');
     process(purchases, 'purchases');
-    return Object.values(map)
-      .sort((a,b) => a.sortKey.localeCompare(b.sortKey))
-      .slice(-6);
+    return Object.values(map).sort((a,b) => a.sortKey.localeCompare(b.sortKey)).slice(-12);
   }, [sales, purchases]);
 
-  const topDebtors = useMemo(() => {
-    return customers.map(c => {
-       const tSales = sales.filter(s => s.customerId === c.id).reduce((sum, s) => sum + Number(s.grandTotal), 0);
-       const tColls = collections.filter(coll => coll.customerId === c.id).reduce((sum, coll) => sum + Number(coll.amount), 0);
-       const bal = (Number(c.openingBalance)||0) + tSales - tColls;
-       return { ...c, balance: bal };
-    }).filter(c => c.balance > 0).sort((a,b) => b.balance - a.balance).slice(0, 5);
-  }, [customers, sales, collections]);
+  // Aging Calculation Engine
+  const calculateAging = (invoices, payments, type) => {
+    const bins = { 'No Due yet': 0, '0 - 30 Days': 0, '31 - 60 Days': 0, '61 - 90 Days': 0, '91 - 120 Days': 0, '120 +': 0 };
+    const today = new Date();
+    
+    invoices.forEach(inv => {
+        const paid = payments.filter(p => p.ref === inv.invoiceNo || p.description === inv.invoiceNo).reduce((a,b)=>a+Number(b.amount), 0);
+        const pending = Number(inv.grandTotal) - paid;
+        
+        if (pending > 0 && inv.date) {
+            const invDate = new Date(inv.date);
+            const diffDays = Math.floor((today - invDate) / (1000 * 60 * 60 * 24));
+            
+            if (diffDays <= 0) bins['No Due yet'] += pending;
+            else if (diffDays <= 30) bins['0 - 30 Days'] += pending;
+            else if (diffDays <= 60) bins['31 - 60 Days'] += pending;
+            else if (diffDays <= 90) bins['61 - 90 Days'] += pending;
+            else if (diffDays <= 120) bins['91 - 120 Days'] += pending;
+            else bins['120 +'] += pending;
+        }
+    });
+    return Object.keys(bins).map((key, index) => ({ name: key, amount: bins[key], color: AGING_COLORS[index] }));
+  };
+
+  const agingReceivables = useMemo(() => calculateAging(sales, collections, 'rec'), [sales, collections]);
+  const agingPayables = useMemo(() => calculateAging(purchases, expenses, 'pay'), [purchases, expenses]);
+
+  // Top Entities
+  const topCustomersData = useMemo(() => {
+    const map = {};
+    sales.forEach(s => {
+      if(!map[s.customerName]) map[s.customerName] = 0;
+      map[s.customerName] += Number(s.grandTotal);
+    });
+    return Object.entries(map).map(([name, amount]) => ({ name: name || 'Unknown', amount })).sort((a,b) => b.amount - a.amount).slice(0, 5);
+  }, [sales]);
+
+  const topSuppliersData = useMemo(() => {
+    const map = {};
+    purchases.forEach(p => {
+      if(!map[p.supplierName]) map[p.supplierName] = 0;
+      map[p.supplierName] += Number(p.grandTotal);
+    });
+    return Object.entries(map).map(([name, amount]) => ({ name: name || 'Unknown', amount })).sort((a,b) => b.amount - a.amount).slice(0, 5);
+  }, [purchases]);
+
+  // VAT & Products
+  const vatData = useMemo(() => {
+    const outputVat = sales.reduce((acc, s) => acc + (Number(s.taxTotal) || 0), 0);
+    const inputVat = purchases.reduce((acc, p) => acc + (Number(p.taxTotal) || 0), 0);
+    const payable = outputVat - inputVat;
+    return [
+      { name: 'Input Vat', value: inputVat },
+      { name: 'Output Vat', value: outputVat },
+      { name: 'Vat Payable', value: payable > 0 ? payable : 0 }
+    ];
+  }, [sales, purchases]);
+
+  const topProductsData = useMemo(() => {
+    const map = {};
+    sales.forEach(s => {
+      if(s.items) {
+        s.items.forEach(item => {
+          if(!map[item.name]) map[item.name] = 0;
+          map[item.name] += Number(item.total);
+        });
+      }
+    });
+    return Object.entries(map).map(([name, value]) => ({ name: name || 'Unknown', value })).sort((a,b) => b.value - a.value).slice(0, 5);
+  }, [sales]);
+
+
+  // Notifications Engine
+  const notifications = useMemo(() => {
+    const notifs = [];
+    products.forEach(p => {
+        if (Number(p.stock) <= Number(p.minStock || 0)) {
+            notifs.push({ id: `stk-${p.id}`, type: 'warning', icon: AlertTriangle, title: 'Low Stock Alert', desc: `${p.name} is running low (${p.stock} units left).` });
+        }
+    });
+    topCustomersData.forEach((c, idx) => {
+        if (idx === 0 && c.amount > 0) {
+             notifs.push({ id: `top-${idx}`, type: 'info', icon: TrendingUp, title: 'Top Performer', desc: `${c.name} is your top customer.` });
+        }
+    });
+    return notifs;
+  }, [products, topCustomersData]);
 
   const openModal = (type, data = null) => {
-    setFormData(data ? { ...data } : {});
+    setFormData(data ? { ...data } : { name: '', phone: '', email: '', gst: '', openingBalance: '', category: '', stock: '', purchasePrice: '', sellingPrice: '', tax: '', minStock: '', amount: '', method: '', description: '', ref: '' });
     if (type === 'sale' || type === 'purchase') {
       setInvoiceItems(data?.items || [{ productId: '', name: '', qty: 1, rate: 0, tax: 0, total: 0 }]);
     }
@@ -323,22 +413,14 @@ const App = () => {
   const handleQuickPayment = (item, type, pendingAmount) => {
     if (type === 'sale') {
       setFormData({
-        customerId: item.customerId,
-        customerName: item.customerName,
-        partyName: item.customerName,
-        ref: item.invoiceNo, 
-        amount: pendingAmount > 0 ? pendingAmount : 0,
-        date: new Date().toISOString().split('T')[0]
+        customerId: item.customerId || '', customerName: item.customerName || '', partyName: item.customerName || '',
+        ref: item.invoiceNo || '', amount: pendingAmount > 0 ? pendingAmount : 0, date: new Date().toISOString().split('T')[0]
       });
       setModalState({ isOpen: true, type: 'collection', data: null });
     } else if (type === 'purchase') {
       setFormData({
-        supplierId: item.supplierId,
-        supplierName: item.supplierName,
-        partyName: item.supplierName,
-        description: item.invoiceNo, 
-        amount: pendingAmount > 0 ? pendingAmount : 0,
-        date: new Date().toISOString().split('T')[0]
+        supplierId: item.supplierId || '', supplierName: item.supplierName || '', partyName: item.supplierName || '',
+        description: item.invoiceNo || '', amount: pendingAmount > 0 ? pendingAmount : 0, date: new Date().toISOString().split('T')[0]
       });
       setModalState({ isOpen: true, type: 'expense', data: null });
     }
@@ -352,29 +434,27 @@ const App = () => {
         rows.push({ date: '-', ref: 'OP-BAL', desc: 'Opening Balance', debit: balance > 0 ? balance : 0, credit: balance < 0 ? Math.abs(balance) : 0, balance, rawDate: new Date(0) });
         const s = sales.filter(x => x.customerId === entity.id).map(x => ({ date: x.date, ref: x.invoiceNo, desc: 'Sales Invoice', debit: Number(x.grandTotal), credit: 0, rawDate: new Date(x.date) }));
         const c = collections.filter(x => x.customerId === entity.id).map(x => ({ date: x.date, ref: x.ref || 'PAYMENT', desc: x.method || 'Collection Received', debit: 0, credit: Number(x.amount), rawDate: new Date(x.date) }));
-        [...s, ...c].sort((a,b) => a.rawDate - b.rawDate).forEach(r => {
-            balance = balance + r.debit - r.credit;
-            rows.push({ ...r, balance });
-        });
+        [...s, ...c].sort((a,b) => a.rawDate - b.rawDate).forEach(r => { balance = balance + r.debit - r.credit; rows.push({ ...r, balance }); });
     } else if (type === 'supplier') {
         rows.push({ date: '-', ref: 'OP-BAL', desc: 'Opening Balance', debit: balance < 0 ? Math.abs(balance) : 0, credit: balance > 0 ? balance : 0, balance, rawDate: new Date(0) });
         const p = purchases.filter(x => x.supplierId === entity.id).map(x => ({ date: x.date, ref: x.invoiceNo, desc: 'Purchase Order', debit: 0, credit: Number(x.grandTotal), rawDate: new Date(x.date) }));
         const e = expenses.filter(x => x.partyName === entity.name || x.supplierName === entity.name).map(x => ({ date: x.date, ref: x.ref || x.description || 'PAYMENT', desc: x.method || 'Payment Sent', debit: Number(x.amount), credit: 0, rawDate: new Date(x.date) }));
-        [...p, ...e].sort((a,b) => a.rawDate - b.rawDate).forEach(r => {
-            balance = balance - r.debit + r.credit;
-            rows.push({ ...r, balance });
-        });
+        [...p, ...e].sort((a,b) => a.rawDate - b.rawDate).forEach(r => { balance = balance - r.debit + r.credit; rows.push({ ...r, balance }); });
     } else if (type === 'salesman') {
         const s = sales.filter(x => x.salesmanId === entity.id).map(x => ({ date: x.date, ref: x.invoiceNo, desc: `Sale (${x.customerName})`, debit: Number(x.grandTotal), credit: 0, rawDate: new Date(x.date) }));
         const c = collections.filter(x => x.salesmanId === entity.id).map(x => ({ date: x.date, ref: x.ref || 'PAYMENT', desc: `Collection (${x.customerName})`, debit: 0, credit: Number(x.amount), rawDate: new Date(x.date) }));
         let perfBal = 0;
-        [...s, ...c].sort((a,b) => a.rawDate - b.rawDate).forEach(r => {
-            perfBal = perfBal + r.debit - r.credit;
-            rows.push({ ...r, balance: perfBal });
-        });
+        [...s, ...c].sort((a,b) => a.rawDate - b.rawDate).forEach(r => { perfBal = perfBal + r.debit - r.credit; rows.push({ ...r, balance: perfBal }); });
     }
 
     setModalState({ isOpen: true, type: 'ledger', data: { entity, entityType: type, rows } });
+  };
+
+  const handleCRMStatusChange = async (id, field, value) => {
+    if(!user) return;
+    try {
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'crms', id), { [field]: value });
+    } catch(e) { console.error("Error updating CRM status", e); }
   };
 
   const handleSave = async (e) => {
@@ -382,7 +462,7 @@ const App = () => {
     if (!user) return;
     const { type, data } = modalState;
     const isEdit = !!data?.id;
-    const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses' };
+    const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms' };
     const colName = colMap[type];
     const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
     
@@ -417,17 +497,21 @@ const App = () => {
         batch.set(docRef, { ...payload, createdAt: isEdit ? data.createdAt : serverTimestamp() }, { merge: true });
         await batch.commit();
 
+      } else if (type === 'crm') {
+         if (!isEdit) {
+             payload.jobId = generateID('JB', crms.length);
+             payload.workStatus = 'Work Onboarded';
+             payload.invoicingStatus = 'Not invoiced';
+             payload.collectionStatus = 'Pending';
+         }
+         if (isEdit) { await updateDoc(doc(collectionRef, data.id), payload); } 
+         else { await addDoc(collectionRef, { ...payload, createdAt: serverTimestamp() }); }
       } else {
-        if (isEdit) {
-          await updateDoc(doc(collectionRef, data.id), payload);
-        } else {
-          await addDoc(collectionRef, { ...payload, createdAt: serverTimestamp() });
-        }
+        if (isEdit) { await updateDoc(doc(collectionRef, data.id), payload); } 
+        else { await addDoc(collectionRef, { ...payload, createdAt: serverTimestamp() }); }
       }
       closeModal();
-    } catch (error) {
-      console.error("Save error:", error);
-    }
+    } catch (error) { console.error("Save error:", error); }
   };
 
   const handleSettingsSave = async (e) => {
@@ -452,7 +536,7 @@ const App = () => {
   const executeDelete = async () => {
     if (!confirmDelete.id || !confirmDelete.type || !user) return;
     try {
-      const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses' };
+      const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms' };
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', colMap[confirmDelete.type], confirmDelete.id));
       setConfirmDelete({ isOpen: false, type: '', id: null, title: '' });
     } catch (e) { console.error("Delete Error", e); }
@@ -461,7 +545,6 @@ const App = () => {
   const handleItemChange = (index, field, value) => {
     const newItems = [...invoiceItems];
     newItems[index][field] = value;
-    
     if (field === 'productId') {
       const prod = products.find(p => p.id === value);
       if (prod) {
@@ -470,7 +553,6 @@ const App = () => {
         newItems[index].tax = prod.tax || 0;
       }
     }
-    
     const qty = Number(newItems[index].qty) || 0;
     const rate = Number(newItems[index].rate) || 0;
     const tax = Number(newItems[index].tax) || 0;
@@ -497,7 +579,7 @@ const App = () => {
   );
 
   return (
-    <div className={`${isDarkMode ? 'dark' : ''}`}>
+    <div className={`dark:bg-[#0f172a] ${isDarkMode ? 'dark' : ''}`}>
       <div className="flex h-screen bg-slate-50 dark:bg-[#0f172a] font-sans text-slate-900 dark:text-slate-100 overflow-hidden selection:bg-blue-500/30 transition-colors duration-300">
         
         {dbError && (
@@ -514,19 +596,7 @@ const App = () => {
           .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
           .custom-scrollbar::-webkit-scrollbar-thumb { background: ${isDarkMode ? '#334155' : '#cbd5e1'}; border-radius: 10px; }
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-          
-          /* New Animations */
-          @keyframes logoPop {
-            0% { transform: scale(0.5) rotate(-15deg); opacity: 0; }
-            60% { transform: scale(1.15) rotate(5deg); opacity: 1; }
-            100% { transform: scale(1) rotate(0deg); opacity: 1; }
-          }
-          .animate-logo-pop { animation: logoPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-          
-          @keyframes marquee {
-            0% { transform: translateX(0%); }
-            100% { transform: translateX(-50%); }
-          }
+          .recharts-cartesian-axis-tick-value { font-weight: bold; font-size: 10px; fill: ${isDarkMode ? '#94a3b8' : '#64748b'}; }
         `}</style>
 
         {/* --- Sidebar Navigation --- */}
@@ -538,13 +608,14 @@ const App = () => {
           `}
         >
           <div className="mb-10 mt-2 flex justify-between items-center">
-            <CompanyLogo collapsed={collapsed} settings={settings} setActiveTab={setActiveTab} activeTab={activeTab} />
+            <CompanyLogo collapsed={collapsed} settings={settings} />
             <button className="lg:hidden text-slate-400" onClick={() => setIsMobileMenuOpen(false)}><X size={24}/></button>
           </div>
           
           <nav className="flex-1 space-y-2 overflow-y-auto custom-scrollbar pr-2">
             <p className={`text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 mt-6 ${collapsed ? 'text-center' : 'px-4'}`}>Core Operations</p>
             <NavItem id="dashboard" icon={LayoutDashboard} label="Dashboard" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
+            <NavItem id="crm" icon={ClipboardList} label="CRM / Job Tracker" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="sales" icon={Receipt} label="Sales Invoices" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="purchases" icon={ShoppingBag} label="Purchases" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             
@@ -564,8 +635,9 @@ const App = () => {
           </nav>
         </aside>
 
-        {}
+        {/* --- Main Content Area --- */}
         <main className={`flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300 ${isDesktop ? 'lg:pl-24' : ''}`}>
+          
           <header className="h-20 bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 shrink-0 z-20 no-print">
             <div className="flex items-center space-x-4">
               <button className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl" onClick={() => setIsMobileMenuOpen(true)}><Menu size={24}/></button>
@@ -580,85 +652,375 @@ const App = () => {
                 {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
               </button>
 
-              <button className="relative p-2 text-slate-400 hover:text-blue-500 transition-colors">
-                <Bell size={22}/>
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-[#1e293b]"></span>
-              </button>
-              <div onClick={() => setActiveTab('dashboard')} className="cursor-pointer hover:scale-110 transition-transform h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/30" title="Go to Dashboard">
-                {settings?.companyName ? settings.companyName.charAt(0).toUpperCase() : 'M'}
+              <div className="relative" ref={notifRef}>
+                  <button onClick={() => setIsNotifOpen(!isNotifOpen)} className="relative p-2 text-slate-400 hover:text-blue-500 transition-colors">
+                    <Bell size={22}/>
+                    {notifications.length > 0 && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-[#1e293b] animate-pulse"></span>}
+                  </button>
+                  {isNotifOpen && (
+                      <div className="absolute right-0 mt-4 w-80 bg-white dark:bg-[#1e293b] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 overflow-hidden animate-fade-in-up">
+                          <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center">
+                              <span className="font-black text-xs uppercase text-slate-800 dark:text-white">Notifications</span>
+                              <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 py-1 px-2 rounded-full text-[9px] font-bold">{notifications.length} New</span>
+                          </div>
+                          <div className="max-h-80 overflow-y-auto custom-scrollbar">
+                              {notifications.length === 0 ? (
+                                 <div className="p-8 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">All Caught Up!</div>
+                              ) : (
+                                 notifications.map((n, i) => (
+                                     <div key={i} className="p-4 border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors flex gap-4">
+                                         <div className={`mt-1 p-2 rounded-full h-fit shrink-0 ${n.type === 'warning' ? 'bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' : 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400'}`}><n.icon size={14}/></div>
+                                         <div>
+                                             <p className="text-xs font-black text-slate-800 dark:text-white uppercase">{n.title}</p>
+                                             <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase leading-relaxed">{n.desc}</p>
+                                         </div>
+                                     </div>
+                                 ))
+                              )}
+                          </div>
+                      </div>
+                  )}
+              </div>
+
+              <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/30">
+                {settings?.companyName ? settings.companyName.charAt(0).toUpperCase() : 'C'}
               </div>
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar pb-32 relative">
+          <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar relative flex flex-col">
             
-            {/* Dashboard Analytics */}
+            {/* --- DASHBOARD VIEW --- */}
             {activeTab === 'dashboard' && (
-              <div className="max-w-7xl mx-auto space-y-8 animate-fade-in-up">
+              <div className="max-w-[100rem] mx-auto w-full space-y-8 animate-fade-in-up flex-1">
+                
+                {/* KPI ROW */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <KPICard title="Total Revenue" value={formatCurrency(analytics.totalSales)} icon={TrendingUp} colorClass="text-blue-600 dark:text-blue-400" bgClass="bg-blue-50 dark:bg-blue-500/10" trend="Active Cycle" />
-                  <KPICard title="Total Collections" value={formatCurrency(analytics.totalCollections)} icon={HandCoins} colorClass="text-emerald-600 dark:text-emerald-400" bgClass="bg-emerald-50 dark:bg-emerald-500/10" trend="Healthy Flow" />
-                  <KPICard title="Outstanding A/R" value={formatCurrency(analytics.outstandingReceivables)} icon={AlertTriangle} colorClass="text-rose-500 dark:text-rose-400" bgClass="bg-rose-50 dark:bg-rose-500/10" />
-                  <KPICard title="Net Profit (Estimate)" value={formatCurrency(analytics.netProfit)} icon={PieChartIcon} colorClass="text-indigo-600 dark:text-indigo-400" bgClass="bg-indigo-50 dark:bg-indigo-500/10" />
+                  <KPICard title="Total Sales" value={formatCurrency(analytics.totalSales)} icon={Receipt} colorClass="text-[#10b981]" bgClass="bg-[#ecfdf5] dark:bg-[#10b981]/10 border-[#a7f3d0] dark:border-[#10b981]/20" />
+                  <KPICard title="Total Purchase" value={formatCurrency(analytics.totalPurchases)} icon={ShoppingBag} colorClass="text-[#3b82f6]" bgClass="bg-[#eff6ff] dark:bg-[#3b82f6]/10 border-[#bfdbfe] dark:border-[#3b82f6]/20" />
+                  <KPICard title="Total Receipt" value={formatCurrency(analytics.totalCollections)} icon={HandCoins} colorClass="text-[#f59e0b]" bgClass="bg-[#fffbeb] dark:bg-[#f59e0b]/10 border-[#fde68a] dark:border-[#f59e0b]/20" />
+                  <KPICard title="Total Payment" value={formatCurrency(analytics.totalExpenses)} icon={CreditCard} colorClass="text-[#f43f5e]" bgClass="bg-[#fff1f2] dark:bg-[#f43f5e]/10 border-[#fecdd3] dark:border-[#f43f5e]/20" />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  <div className="lg:col-span-2 bg-white dark:bg-[#1e293b] p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
-                    <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight mb-6 flex items-center">
-                      <Activity className="mr-2 text-blue-500"/> Revenue vs Expenses Analytics
-                    </h3>
-                    <div className="h-80 w-full">
+                {/* QUICK ACTIONS ROW */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <button onClick={() => openModal('product')} className="py-4 border-2 border-[#10b981] text-[#10b981] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#10b981] hover:text-white transition-all flex items-center justify-center bg-white dark:bg-[#1e293b]"><Package size={16} className="mr-2"/> Create Product</button>
+                  <button onClick={() => setActiveTab('products')} className="py-4 border-2 border-[#10b981] text-[#10b981] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#10b981] hover:text-white transition-all flex items-center justify-center bg-white dark:bg-[#1e293b]"><Activity size={16} className="mr-2"/> Update Rates</button>
+                  <button onClick={() => openModal('customer')} className="py-4 border-2 border-[#10b981] text-[#10b981] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#10b981] hover:text-white transition-all flex items-center justify-center bg-white dark:bg-[#1e293b]"><Users size={16} className="mr-2"/> Create Customer</button>
+                  <button onClick={() => openModal('supplier')} className="py-4 border-2 border-[#10b981] text-[#10b981] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#10b981] hover:text-white transition-all flex items-center justify-center bg-white dark:bg-[#1e293b]"><Truck size={16} className="mr-2"/> Create Supplier</button>
+                </div>
+
+                {/* AGING CHARTS ROW */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
+                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Outstanding Payable</h3>
+                    <div className="w-full h-72">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#2563eb" stopOpacity={0.4}/>
-                              <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                            </linearGradient>
-                            <linearGradient id="colorPurchases" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.4}/>
-                              <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
+                        <BarChart data={agingPayables} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: isDarkMode ? '#94a3b8' : '#94a3b8', fontSize: 11, fontWeight: 700}} dy={10} />
-                          <YAxis axisLine={false} tickLine={false} tick={{fill: isDarkMode ? '#94a3b8' : '#94a3b8', fontSize: 11, fontWeight: 700}} tickFormatter={(value) => `SAR ${value/1000}k`} />
-                          <Tooltip contentStyle={{borderRadius: '1rem', border: 'none', backgroundColor: isDarkMode ? '#1e293b' : '#fff', color: isDarkMode ? '#fff' : '#000', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold'}} />
-                          <Area type="monotone" dataKey="sales" stroke="#2563eb" strokeWidth={4} fillOpacity={1} fill="url(#colorSales)" name="Sales Revenue" />
-                          <Area type="monotone" dataKey="purchases" stroke="#f43f5e" strokeWidth={4} fillOpacity={1} fill="url(#colorPurchases)" name="Purchases/Expenses" />
-                        </AreaChart>
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} angle={-60} textAnchor="end" />
+                          <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
+                          <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}}/>
+                          <Bar dataKey="amount" radius={[4,4,0,0]}>
+                            {agingPayables.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
+                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Outstanding Receivables</h3>
+                    <div className="w-full h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={agingReceivables} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} angle={-60} textAnchor="end" />
+                          <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
+                          <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}}/>
+                          <Bar dataKey="amount" radius={[4,4,0,0]}>
+                            {agingReceivables.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+
+                {/* TRENDS (LINE CHARTS) ROW */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
+                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Sales Analysis</h3>
+                    <div className="flex items-center space-x-2 mb-4">
+                      <div className="w-8 h-4 bg-[#10b981] rounded-sm"></div><span className="text-xs font-bold dark:text-slate-300">Sales Amount</span>
+                    </div>
+                    <div className="w-full h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={monthlyTrends} margin={{ top: 10, right: 10, left: -10, bottom: 40 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={true} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} angle={-45} textAnchor="end" />
+                          <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Line type="monotone" dataKey="sales" stroke="#10b981" strokeWidth={4} dot={{r: 4, fill: '#10b981'}} activeDot={{r: 6}} />
+                        </LineChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
 
-                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col">
-                    <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight mb-6 flex items-center">
-                      <UsersRound className="mr-2 text-indigo-500"/> Top Outstanding Ledgers
-                    </h3>
-                    <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-2">
-                      {topDebtors.map(customer => (
-                        <div key={customer.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group border border-transparent dark:border-slate-800">
-                          <div className="overflow-hidden">
-                            <p className="font-black text-sm text-slate-800 dark:text-white uppercase truncate">{customer.name}</p>
-                            <p className="text-xs font-bold text-rose-500 dark:text-rose-400">{formatCurrency(customer.balance)} Due</p>
-                          </div>
-                          <button onClick={() => generateLedger('customer', customer)} className="p-3 bg-white dark:bg-[#1e293b] text-blue-600 rounded-xl shadow-sm hover:shadow-md transition-all shrink-0 border border-slate-100 dark:border-slate-700" title="Open Ledger">
-                            <BookOpen size={16} />
-                          </button>
-                        </div>
-                      ))}
-                      {topDebtors.length === 0 && (
-                        <div className="text-center text-slate-400 dark:text-slate-500 font-bold text-xs uppercase py-10">No outstanding balances.</div>
-                      )}
+                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
+                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Purchase Analysis</h3>
+                    <div className="flex items-center space-x-2 mb-4">
+                      <div className="w-8 h-4 bg-[#991b1b] rounded-sm"></div><span className="text-xs font-bold dark:text-slate-300">Purchase Amount</span>
                     </div>
+                    <div className="w-full h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={monthlyTrends} margin={{ top: 10, right: 10, left: -10, bottom: 40 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={true} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} angle={-45} textAnchor="end" />
+                          <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Line type="monotone" dataKey="purchases" stroke="#991b1b" strokeWidth={4} dot={{r: 4, fill: 'transparent', stroke: '#991b1b', strokeWidth: 2}} activeDot={{r: 6}} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+
+                {/* TOP ENTITIES (HORIZONTAL BARS) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
+                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Top Selling Customers</h3>
+                    <div className="flex items-center space-x-2 mb-4">
+                      <div className="w-8 h-4 bg-[#2dd4bf] rounded-sm"></div><span className="text-xs font-bold dark:text-slate-300">Top Selling Customers</span>
+                    </div>
+                    <div className="w-full h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart layout="vertical" data={topCustomersData} margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
+                          <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
+                          <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={150} tick={{fontSize: 9, fontWeight: 'bold'}} />
+                          <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}}/>
+                          <Bar dataKey="amount" fill="#2dd4bf" barSize={20} radius={[0,4,4,0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
+                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Top Suppliers</h3>
+                    <div className="flex items-center space-x-2 mb-4">
+                      <div className="w-8 h-4 bg-[#2dd4bf] rounded-sm"></div><span className="text-xs font-bold dark:text-slate-300">Amount</span>
+                    </div>
+                    <div className="w-full h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart layout="vertical" data={topSuppliersData} margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
+                          <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
+                          <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={150} tick={{fontSize: 9, fontWeight: 'bold'}} />
+                          <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}}/>
+                          <Bar dataKey="amount" fill="#2dd4bf" barSize={20} radius={[0,4,4,0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+
+                {/* DONUT CHARTS (PRODUCTS & VAT) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-10">
+                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
+                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-2">Top Selling Products</h3>
+                    <div className="w-full h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={topProductsData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2} dataKey="value" stroke="none">
+                            {topProductsData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                          </Pie>
+                          <Tooltip content={<CustomTooltip />} />
+                          <Legend wrapperStyle={{fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase'}} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
+                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-2">VAT Analysis</h3>
+                    <div className="w-full h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={vatData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2} dataKey="value" stroke="none">
+                            <Cell fill="#f43f5e" /> {/* Input VAT */}
+                            <Cell fill="#eab308" /> {/* Output VAT */}
+                            <Cell fill="#ef4444" /> {/* Payable */}
+                          </Pie>
+                          <Tooltip content={<CustomTooltip />} />
+                          <Legend wrapperStyle={{fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase'}} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* --- CRM VIEW --- */}
+            {activeTab === 'crm' && (
+              <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1">
+                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+                  <div className="flex space-x-3">
+                      <button onClick={() => exportToExcel(crms, `CRM_JOBS_${new Date().toISOString().split('T')[0]}`)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export</button>
+                  </div>
+                  <button onClick={() => openModal('crm')} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Plus size={16} className="mr-2"/> Add New Job</button>
+                </div>
+                
+                <div className="bg-white dark:bg-[#1e293b] rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[1100px]">
+                      <thead className="bg-[#4a5568] text-[10px] uppercase tracking-widest font-black text-white">
+                        <tr>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Job ID</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Date</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Client Name</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 w-1/4">Work Description</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Client Type</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Exec</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-center">Work Status</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-center">Invoicing</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-center">Collection</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 no-print"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                        {crms.filter(c => safeSearch(c.jobId, searchTerm) || safeSearch(c.customerName, searchTerm) || safeSearch(c.description, searchTerm)).map((item) => {
+                          
+                          const linkedSale = sales.find(s => s.linkedJobId === item.id);
+                          const relatedColls = linkedSale ? collections.filter(c => c.ref === linkedSale.invoiceNo).reduce((a,b)=>a+Number(b.amount),0) : 0;
+                          const pendingAmount = linkedSale ? Number(linkedSale.grandTotal) - relatedColls : 0;
+                          
+                          let displayInvStatus = item.invoicingStatus || 'Not invoiced';
+                          let displayCollStatus = item.collectionStatus || 'Pending';
+                          let invBadgeColor = 'bg-gray-100 text-gray-700';
+                          let collBadgeColor = 'bg-gray-100 text-gray-700';
+                          let isSmartLinked = false;
+
+                          if (linkedSale) {
+                              isSmartLinked = true;
+                              displayInvStatus = 'TAX Invoice Created';
+                              invBadgeColor = 'bg-emerald-600 text-white';
+                              
+                              if (pendingAmount <= 0) {
+                                  displayCollStatus = 'Collected';
+                                  collBadgeColor = 'bg-emerald-600 text-white';
+                              } else if (relatedColls > 0) {
+                                  displayCollStatus = 'Partial / Follow Up';
+                                  collBadgeColor = 'bg-amber-500 text-white';
+                              } else {
+                                  displayCollStatus = 'Pending Payment';
+                                  collBadgeColor = 'bg-rose-500 text-white';
+                              }
+                          } else {
+                              if(displayInvStatus === 'Not invoiced' || displayInvStatus === 'Not Invoiced') invBadgeColor = 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400';
+                              else if(displayInvStatus === 'Sample without payment' || displayInvStatus === 'Sample with...') invBadgeColor = 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+                              else if(displayInvStatus === 'Without Invoice') invBadgeColor = 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300';
+                              else if(displayInvStatus === 'Proforma Invoice created and sent') invBadgeColor = 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+                              else if(displayInvStatus === 'TAX Invoice Sent to Client') invBadgeColor = 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400';
+                              else invBadgeColor = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+
+                              if(displayCollStatus === 'Collected') collBadgeColor = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+                              else if(displayCollStatus === 'Collection Follow up') collBadgeColor = 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400';
+                          }
+
+                          return (
+                          <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
+                            <td className="px-4 py-3 uppercase tracking-wider">{item.jobId}</td>
+                            <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{item.date}</td>
+                            <td className="px-4 py-3 uppercase">{item.customerName}</td>
+                            <td className="px-4 py-3 uppercase truncate max-w-xs" title={item.description}>{item.description}</td>
+                            <td className="px-4 py-3">
+                                <span className={`px-2 py-1 rounded text-[9px] uppercase tracking-widest ${getCRMClientTypeStyle(item.clientType)}`}>
+                                    {item.clientType || 'Direct Client'}
+                                </span>
+                            </td>
+                            <td className="px-4 py-3 uppercase">{salesmen.find(s=>s.id === item.salesmanId)?.name || 'N/A'}</td>
+                            
+                            <td className="px-4 py-3 text-center">
+                                <select 
+                                    className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center ${getCRMWorkStatusStyle(item.workStatus)}`}
+                                    value={item.workStatus || 'Work Onboarded'}
+                                    onChange={(e) => handleCRMStatusChange(item.id, 'workStatus', e.target.value)}
+                                >
+                                    <option value="Price/Quotation Submitted">Price/Quotation Submitted</option>
+                                    <option value="Work Onboarded">Work Onboarded</option>
+                                    <option value="Work Finished">Work Finished</option>
+                                    <option value="Delivered">Delivered</option>
+                                    <option value="Cold Lead">Cold Lead</option>
+                                    <option value="Quote Rejected">Quote Rejected</option>
+                                    <option value="Quote Revised">Quote Revised</option>
+                                    <option value="Waiting Approval">Waiting Approval</option>
+                                    <option value="Canceled">Canceled</option>
+                                </select>
+                            </td>
+
+                            <td className="px-4 py-3 text-center">
+                                {isSmartLinked ? (
+                                    <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${invBadgeColor}`} title={`Auto-linked to Sale: ${linkedSale?.invoiceNo}`}>
+                                        {displayInvStatus} 🔗
+                                    </span>
+                                ) : (
+                                    <select 
+                                        className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center border-none ${invBadgeColor}`}
+                                        value={displayInvStatus}
+                                        onChange={(e) => handleCRMStatusChange(item.id, 'invoicingStatus', e.target.value)}
+                                    >
+                                        <option value="Not invoiced">Not invoiced</option>
+                                        <option value="TAX Invoice Created">TAX Invoice Created</option>
+                                        <option value="TAX Invoice Sent to Client">TAX Invoice Sent to Client</option>
+                                        <option value="Without Invoice">Without Invoice</option>
+                                        <option value="Proforma Invoice created and sent">Proforma Invoice created and sent</option>
+                                        <option value="Sample without payment">Sample without payment</option>
+                                    </select>
+                                )}
+                            </td>
+
+                            <td className="px-4 py-3 text-center">
+                                {isSmartLinked ? (
+                                    <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${collBadgeColor}`}>
+                                        {displayCollStatus}
+                                    </span>
+                                ) : (
+                                    <select 
+                                        className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center border-none ${collBadgeColor}`}
+                                        value={displayCollStatus}
+                                        onChange={(e) => handleCRMStatusChange(item.id, 'collectionStatus', e.target.value)}
+                                    >
+                                        <option value="Pending">Pending</option>
+                                        <option value="Collection Follow up">Collection Follow up</option>
+                                        <option value="Collected">Collected</option>
+                                    </select>
+                                )}
+                            </td>
+                            
+                            <td className="px-4 py-3 text-right space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end no-print">
+                              <button onClick={() => openModal('crm', item)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg" title="Edit Full Job"><Edit3 size={14}/></button>
+                              <button onClick={() => setConfirmDelete({ isOpen: true, type: 'crm', id: item.id, title: String(item.jobId) })} className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg"><Trash2 size={14}/></button>
+                            </td>
+                          </tr>
+                        )})}
+                        {crms.length === 0 && <tr><td colSpan="10" className="py-12 text-center text-slate-300 dark:text-slate-600 uppercase tracking-widest">No Jobs Tracked Yet</td></tr>}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
             )}
 
-            {}
+            {/* --- SETTINGS VIEW --- */}
             {activeTab === 'settings' && (
-              <div className="max-w-4xl mx-auto space-y-6 animate-fade-in-up">
+              <div className="max-w-4xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="bg-white dark:bg-[#1e293b] p-10 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
                    <h2 className="text-2xl font-black uppercase tracking-tight text-slate-800 dark:text-white mb-8 border-b border-slate-100 dark:border-slate-800 pb-6">Company Profile Setup</h2>
                    {settingsSuccess && <div className="mb-6 p-4 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold rounded-xl text-center border border-emerald-200 dark:border-emerald-500/30">Settings successfully updated!</div>}
@@ -694,9 +1056,9 @@ const App = () => {
               </div>
             )}
 
-            {}
+            {/* --- LIST VIEWS --- */}
             {(activeTab === 'customers' || activeTab === 'suppliers') && (
-              <div className="max-w-7xl mx-auto space-y-6 animate-fade-in-up">
+              <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
                   <button onClick={() => exportToExcel(activeTab === 'customers' ? customers : suppliers, activeTab)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
                   <button onClick={() => openModal(activeTab.slice(0, -1))} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Plus size={16} className="mr-2"/> Add {activeTab.slice(0, -1)}</button>
@@ -727,9 +1089,8 @@ const App = () => {
               </div>
             )}
 
-            {}
             {activeTab === 'products' && (
-              <div className="max-w-7xl mx-auto space-y-6 animate-fade-in-up">
+              <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
                   <button onClick={() => exportToExcel(products, 'products')} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
                   <button onClick={() => openModal('product')} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase flex items-center hover:scale-95 transition-all shadow-lg shadow-blue-500/30"><Plus size={16} className="mr-2"/> Add Product</button>
@@ -755,9 +1116,8 @@ const App = () => {
               </div>
             )}
 
-            {}
             {(activeTab === 'sales' || activeTab === 'purchases') && (
-              <div className="max-w-7xl mx-auto space-y-6 animate-fade-in-up">
+              <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
                   <button onClick={() => exportToExcel(activeTab === 'sales' ? sales : purchases, `${settings?.companyName || 'MY'}_${activeTab.toUpperCase()}_REPORT_${new Date().toISOString().split('T')[0]}`)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
                   <button onClick={() => openModal(activeTab.slice(0, -1))} className={`px-8 py-3 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg flex items-center hover:scale-95 transition-all ${activeTab === 'sales' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/30' : 'bg-gradient-to-r from-slate-700 to-slate-900 shadow-slate-900/30'}`}><Plus size={16} className="mr-2"/> Generate {activeTab.slice(0, -1)}</button>
@@ -777,7 +1137,10 @@ const App = () => {
                     return (
                     <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                       <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">{String(item.date || '')}</td>
-                      <td className="px-6 py-4 text-xs font-black text-blue-600 dark:text-blue-400 tracking-wider">{String(item.invoiceNo || '')}</td>
+                      <td className="px-6 py-4 text-xs font-black text-blue-600 dark:text-blue-400 tracking-wider flex items-center">
+                          {String(item.invoiceNo || '')}
+                          {item.linkedJobId && <ClipboardList size={14} className="ml-2 text-indigo-400" title="Linked to CRM Job"/>}
+                      </td>
                       <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.customerName || item.supplierName || '')}</td>
                       <td className="px-6 py-4 font-bold text-xs uppercase text-slate-400 dark:text-slate-500">{String(salesmen.find(s=>s.id === item.salesmanId)?.name || 'N/A')}</td>
                       <td className={`px-6 py-4 font-black ${activeTab === 'sales' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100'}`}>{formatCurrency(item.grandTotal)}</td>
@@ -798,9 +1161,8 @@ const App = () => {
               </div>
             )}
 
-            {}
             {(activeTab === 'collections' || activeTab === 'expenses') && (
-              <div className="max-w-7xl mx-auto space-y-6 animate-fade-in-up">
+              <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
                   <button onClick={() => exportToExcel(activeTab === 'collections' ? collections : expenses, activeTab)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
                   <button onClick={() => openModal(activeTab.slice(0, -1))} className={`px-8 py-3 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg flex items-center hover:scale-95 transition-all ${activeTab === 'collections' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/30' : 'bg-gradient-to-r from-rose-500 to-rose-600 shadow-rose-500/30'}`}><Plus size={16} className="mr-2"/> Record {activeTab.slice(0, -1)}</button>
@@ -828,9 +1190,8 @@ const App = () => {
               </div>
             )}
 
-            {}
             {activeTab === 'salesmen' && (
-              <div className="max-w-7xl mx-auto space-y-6 animate-fade-in-up">
+              <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
                   <button onClick={() => exportToExcel(salesmen, 'salesmen')} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
                   <button onClick={() => openModal('salesman')} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Plus size={16} className="mr-2"/> Register Staff</button>
@@ -856,26 +1217,18 @@ const App = () => {
                 </div>
               </div>
             )}
-          </div>
 
-          {}
-          <footer className="w-full py-3 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest border-t border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-md shrink-0 no-print overflow-hidden relative group cursor-default">
-            <div className="absolute inset-0 flex items-center whitespace-nowrap animate-[marquee_20s_linear_infinite] group-hover:[animation-play-state:paused]">
-                <span className="mx-8">© UMNABEEL 2026</span>
-                <span className="mx-8 text-blue-500">CLOUD ERP SYSTEM</span>
-                <span className="mx-8">SECURE & SCALABLE</span>
-                <span className="mx-8 text-indigo-500">POWERED BY REACT</span>
-                <span className="mx-8">© UMNABEEL 2026</span>
-                <span className="mx-8 text-blue-500">CLOUD ERP SYSTEM</span>
-                <span className="mx-8">SECURE & SCALABLE</span>
-                <span className="mx-8 text-indigo-500">POWERED BY REACT</span>
+            <div className="mt-auto pt-16 pb-8 flex flex-col items-center justify-center space-y-2 opacity-60 hover:opacity-100 transition-opacity duration-500 no-print group">
+                <div className="h-px w-24 bg-gradient-to-r from-transparent via-blue-500 to-transparent group-hover:w-48 transition-all duration-700"></div>
+                <p className="text-[10px] font-black uppercase tracking-[0.5em] bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-cyan-400 dark:to-blue-500 drop-shadow-sm hover:scale-110 transition-transform duration-500 cursor-default">
+                    © UMNABEEL 2026
+                </p>
             </div>
-            {/* Invisible placeholder to maintain layout height */}
-            <div className="opacity-0 text-center w-full">© UMNABEEL 2026</div>
-          </footer>
+
+          </div>
         </main>
 
-        {}
+        {/* --- MODALS & PRINTS (Kept identical as per previous correct code) --- */}
         {modalState.isOpen && modalState.type !== 'ledger' && (
           <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4 overflow-y-auto no-print transition-all">
             <div className="bg-white dark:bg-[#1e293b] w-full max-w-4xl rounded-[2.5rem] shadow-2xl relative my-8 border border-slate-200 dark:border-slate-800">
@@ -886,13 +1239,13 @@ const App = () => {
               
               <form onSubmit={handleSave} className="p-8 space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar">
                 
-                {['sale', 'purchase', 'expense', 'collection'].includes(modalState.type) && (
+                {['sale', 'purchase', 'expense', 'collection', 'crm'].includes(modalState.type) && (
                   <div className="p-6 bg-slate-50 dark:bg-[#0f172a] rounded-3xl border border-slate-200 dark:border-slate-800 mb-6 shadow-inner dark:shadow-none">
-                     <label className="block text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 mb-3">Select Entity / Party Account *</label>
+                     <label className="block text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 mb-3">Select Entity / Customer *</label>
                      <select required className="w-full p-4 bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 font-black text-slate-800 dark:text-white uppercase focus:ring-2 ring-blue-500/20 shadow-sm" 
                              value={formData.customerId || formData.supplierId || formData.partyName || ''} 
                              onChange={e => {
-                               if(modalState.type === 'sale' || modalState.type === 'collection') {
+                               if(modalState.type === 'sale' || modalState.type === 'collection' || modalState.type === 'crm') {
                                  const entity = customers.find(c => c.id === e.target.value);
                                  if(entity) setFormData({...formData, customerId: entity.id, customerName: entity.name, partyName: entity.name});
                                } else if (modalState.type === 'purchase') {
@@ -903,8 +1256,40 @@ const App = () => {
                                }
                              }}>
                        <option value="">Choose Existing Entity...</option>
-                       {(['sale', 'collection'].includes(modalState.type) ? customers : suppliers).map(c => <option key={c.id} value={c.id}>{String(c.name)}</option>)}
+                       {(['sale', 'collection', 'crm'].includes(modalState.type) ? customers : suppliers).map(c => <option key={c.id} value={c.id}>{String(c.name)}</option>)}
                      </select>
+
+                     {modalState.type === 'sale' && formData.customerId && (
+                         <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-2">Smart Link to CRM Job (Optional)</label>
+                            <select className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-800 dark:text-white uppercase text-xs focus:ring-2 ring-indigo-500/20" 
+                                    value={formData.linkedJobId || ''} 
+                                    onChange={e => setFormData({...formData, linkedJobId: e.target.value})}>
+                                <option value="">No Link (Independent Invoice)</option>
+                                {crms.filter(c => c.customerId === formData.customerId).map(job => (
+                                    <option key={job.id} value={job.id}>{job.jobId} - {job.description.slice(0,40)}...</option>
+                                ))}
+                            </select>
+                         </div>
+                     )}
+                  </div>
+                )}
+
+                {modalState.type === 'crm' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Date *</label><input type="date" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.date || new Date().toISOString().split('T')[0]} onChange={e => setFormData({...formData, date: e.target.value})} /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Client Type *</label>
+                      <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-800 dark:text-white uppercase" value={formData.clientType || 'Direct Client'} onChange={e => setFormData({...formData, clientType: e.target.value})}>
+                        <option value="Direct Client">Direct Client</option>
+                        <option value="Agency">Agency</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Sales Executive *</label>
+                      <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-800 dark:text-white uppercase" value={formData.salesmanId || ''} onChange={e => setFormData({...formData, salesmanId: e.target.value})}>
+                        <option value="">Select Exec...</option>{salesmen.map(s => <option key={s.id} value={s.id}>{String(s.name)}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Work Description (Detailed) *</label><textarea required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20 min-h-[100px]" value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} /></div>
                   </div>
                 )}
 
@@ -934,7 +1319,6 @@ const App = () => {
                   </div>
                 )}
 
-                {}
                 {['collection', 'expense'].includes(modalState.type) && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Amount (SAR) *</label><input type="number" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-xl text-slate-800 dark:text-white" value={formData.amount || ''} onChange={e => setFormData({...formData, amount: e.target.value})} /></div>
@@ -988,7 +1372,6 @@ const App = () => {
           </div>
         )}
         
-        {}
         {modalState.isOpen && modalState.type === 'ledger' && (
           <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4 overflow-y-auto no-print">
             <div className="bg-white dark:bg-[#1e293b] w-full max-w-5xl rounded-[2.5rem] shadow-2xl relative my-8 border border-slate-200 dark:border-slate-800">
@@ -1026,7 +1409,6 @@ const App = () => {
           </div>
         )}
 
-        {}
         {printDoc.isOpen && (
           <div className="fixed inset-0 bg-slate-900/98 dark:bg-black/98 backdrop-blur-xl z-[500] overflow-y-auto print-overlay">
             <div className="max-w-4xl mx-auto flex justify-between items-center my-8 px-4 no-print">
@@ -1043,12 +1425,11 @@ const App = () => {
               </div>
             </div>
 
-            {/* PRINTABLE AREA - FORCED LIGHT MODE FOR CLEAN PRINTS */}
             <div id="printable-area" className="max-w-[210mm] mx-auto bg-white min-h-[297mm] p-[15mm] shadow-2xl relative font-sans text-slate-900 mb-20 print:shadow-none" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
               <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8 mb-8">
                 <div className="w-64 text-slate-900">
-                    {settings?.logo ? <img src={settings.logo} className="w-16 h-16 object-contain mb-2 rounded-xl" alt="Logo"/> : <div className="text-3xl font-black tracking-tighter mb-2 text-slate-900">M<span className="text-blue-500">Y</span></div>}
-                    <h2 className="font-black text-lg uppercase tracking-tight text-slate-900">{settings?.companyName || 'My ERP Solutions'}</h2>
+                    {settings?.logo ? <img src={settings.logo} className="w-16 h-16 object-contain mb-2 rounded-xl" alt="Logo"/> : <div className="text-3xl font-black tracking-tighter mb-2 text-slate-900">C<span className="text-blue-500">E</span></div>}
+                    <h2 className="font-black text-lg uppercase tracking-tight text-slate-900">{settings?.companyName || 'My Custom ERP'}</h2>
                 </div>
                 <div className="text-right">
                   <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 mb-1">
@@ -1069,7 +1450,7 @@ const App = () => {
               <div className="grid grid-cols-2 gap-12 mb-12">
                 <div className="border-l-4 border-blue-600 pl-4">
                   <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Issued By</h2>
-                  <p className="font-black text-sm uppercase text-slate-900">{settings?.companyName || 'My ERP Solutions'}</p>
+                  <p className="font-black text-sm uppercase text-slate-900">{settings?.companyName || 'My Custom ERP'}</p>
                   <p className="text-xs font-bold text-slate-500 uppercase mt-1">Tax ID: {settings?.taxId || '310294817200003'}</p>
                   <p className="text-xs font-bold text-slate-500 mt-1">{settings?.email || 'info@erp.com'} | {settings?.phone || '+966 50 000 0000'}</p>
                   {settings?.address && <p className="text-xs font-bold text-slate-500 mt-1">{settings.address}</p>}
@@ -1179,7 +1560,6 @@ const App = () => {
           </div>
         )}
 
-        {}
         {confirmDelete.isOpen && (
           <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4 no-print transition-all">
             <div className="max-w-md w-full bg-white dark:bg-[#1e293b] rounded-[2.5rem] p-10 shadow-2xl text-center border border-slate-200 dark:border-slate-800">
@@ -1199,3 +1579,6 @@ const App = () => {
 };
 
 export default App;
+```eof
+
+-
