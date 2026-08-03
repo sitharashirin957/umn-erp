@@ -9,7 +9,7 @@ import {
   ShieldCheck, HandCoins, ShoppingBag, CreditCard, Menu, 
   Edit3, Receipt, Package, Truck, FileText, PieChart as PieChartIcon, 
   Bell, DownloadCloud, AlertTriangle, UsersRound, Activity, BookOpen, Image as ImageIcon,
-  Sun, Moon, ClipboardList, TrendingDown
+  Sun, Moon, ClipboardList, TrendingDown, FilePlus
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
@@ -456,6 +456,35 @@ const App = () => {
     setModalState({ isOpen: false, type: null, data: null });
     setFormData({});
     setInvoiceItems([]);
+  };
+
+  // --- Push CRM to Invoice Function ---
+  const handlePushToInvoice = (crmItem) => {
+    // Navigate to Sales tab
+    setActiveTab('sales');
+    
+    // Pre-fill the form data with CRM details
+    const preFilledData = {
+      customerId: crmItem.customerId || '',
+      customerName: crmItem.customerName || '',
+      partyName: crmItem.customerName || '',
+      salesmanId: crmItem.salesmanId || '',
+      linkedJobId: crmItem.id, // Smart link automatically
+      date: new Date().toISOString().split('T')[0],
+      // We start with one item containing the CRM description to save time
+      items: [{
+        productId: '',
+        name: 'CUSTOM JOB', // Default name, user can change
+        description: crmItem.description || '', // Pre-fill description
+        qty: 1,
+        rate: 0,
+        tax: 0,
+        total: 0
+      }]
+    };
+    
+    // Open the Sales modal with this pre-filled data
+    openModal('sale', preFilledData);
   };
 
   const handleQuickPayment = (item, type, pendingAmount) => {
@@ -944,7 +973,7 @@ const App = () => {
                           <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-center">Work Status</th>
                           <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-center">Invoicing</th>
                           <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-center">Collection</th>
-                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 no-print"></th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-right no-print">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-[11px] font-bold text-slate-700 dark:text-slate-300">
@@ -1058,6 +1087,10 @@ const App = () => {
                             </td>
                             
                             <td className="px-4 py-3 text-right space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end no-print">
+                              {/* --- PUSH TO INVOICE BUTTON --- */}
+                              {!isSmartLinked && (
+                                <button onClick={() => handlePushToInvoice(item)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg" title="Push to Sales Invoice"><FilePlus size={14}/></button>
+                              )}
                               <button onClick={() => openModal('crm', item)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg" title="Edit Full Job"><Edit3 size={14}/></button>
                               <button onClick={() => setConfirmDelete({ isOpen: true, type: 'crm', id: item.id, title: String(item.jobId) })} className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg"><Trash2 size={14}/></button>
                             </td>
