@@ -31,7 +31,7 @@ const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-erp-v1';
 
 // --- SECURITY PINS ---
-const APP_PIN = import.meta.env.VITE_APP_PIN || '6666';
+const APP_PIN = import.meta.env.VITE_APP_PIN || '1234';
 const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || '9999';
 
 const safeSearch = (val, term) => String(val || '').toLowerCase().includes(String(term || '').toLowerCase());
@@ -295,6 +295,7 @@ const App = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // --- Dynamic Favicon Update Effect ---
   useEffect(() => {
     if (settings?.logo) {
       let link = document.querySelector("link[rel~='icon']");
@@ -306,6 +307,33 @@ const App = () => {
       link.href = settings.logo;
     }
   }, [settings?.logo]);
+
+  // --- Auto Lock Timer (1 Hour) ---
+  useEffect(() => {
+    if (!isAppUnlocked) return;
+    let timer;
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        setIsAppUnlocked(false);
+        sessionStorage.removeItem('erp_unlocked');
+      }, 60 * 60 * 1000); // 1 hour in milliseconds
+    };
+
+    // Events to track user activity
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('keypress', resetTimer);
+    window.addEventListener('click', resetTimer);
+
+    resetTimer(); // Initialize timer
+
+    return () => {
+      window.removeEventListener('mousemove', resetTimer);
+      window.removeEventListener('keypress', resetTimer);
+      window.removeEventListener('click', resetTimer);
+      clearTimeout(timer);
+    };
+  }, [isAppUnlocked]);
 
   useEffect(() => {
     if (!user || !isAppUnlocked) return; 
@@ -524,7 +552,7 @@ const App = () => {
         total: 0
       }]
     };
-    // Creating new invoice, doesn't need Admin Auth initially (unless they save over an existing one)
+    // Creating new invoice, doesn't need Admin Auth initially
     openModal('sale', preFilledData); 
   };
 
@@ -1162,6 +1190,7 @@ const App = () => {
                             </td>
                             
                             <td className="px-4 py-3 text-right space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end no-print">
+                              {/* --- PUSH TO INVOICE BUTTON --- */}
                               {!isSmartLinked && (
                                 <button onClick={() => handlePushToInvoice(item)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg" title="Push to Sales Invoice"><FilePlus size={14}/></button>
                               )}
@@ -1772,19 +1801,6 @@ const App = () => {
               <div className="absolute bottom-[15mm] left-[15mm] right-[15mm] border-t border-slate-200 pt-4 flex justify-between text-[8px] font-black uppercase text-slate-400 tracking-widest">
                   <span>System Generated Document</span>
                   <span>Powered by {settings?.companyName || 'Cloud ERP'}</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {confirmDelete.isOpen && (
-          <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4 no-print transition-all">
-            <div className="max-w-md w-full bg-white dark:bg-[#1e293b] rounded-[2.5rem] p-10 shadow-2xl text-center border border-slate-200 dark:border-slate-800">
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2 uppercase">Delete Record?</h2>
-              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-8 uppercase">Permanently remove <span className="text-slate-900 dark:text-white font-black">"{String(confirmDelete.title)}"</span>?</p>
-              <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => setConfirmDelete({ isOpen: false })} className="py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancel</button>
-                <button onClick={executeDelete} className="py-4 bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-95 transition-transform">Confirm</button>
               </div>
             </div>
           </div>
