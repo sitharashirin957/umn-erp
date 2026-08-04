@@ -9,7 +9,7 @@ import {
   ShieldCheck, HandCoins, ShoppingBag, CreditCard, Menu, 
   Edit3, Receipt, Package, Truck, FileText, PieChart as PieChartIcon, 
   Bell, DownloadCloud, AlertTriangle, UsersRound, Activity, BookOpen, Image as ImageIcon,
-  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator, Database, ShoppingCart, Info
+  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator, Database, ShoppingCart, Info, Table
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
@@ -31,6 +31,24 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-erp-v1';
 // --- SECURITY PINS ---
 const APP_PIN = import.meta.env.VITE_APP_PIN || '1234';
 const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || '9999';
+
+// --- HARDCODED ACRYLIC MATRIX CHART ---
+const STANDARD_MATRIX = {
+    "30 x 15": { "3": 20, "4": 25, "5": 35, "6": 40, "8": 45, "10": 50 },
+    "30 x 20 / A4": { "3": 30, "4": 35, "5": 40, "6": 50, "8": 60, "10": 75 },
+    "A3": { "3": 40, "4": 45, "5": 55, "6": 60, "8": 70, "10": 100 },
+    "30 x 50": { "3": 45, "4": 50, "5": 65, "6": 75, "8": 90, "10": 125 },
+    "35 x 50": { "3": 50, "4": 55, "5": 70, "6": 80, "8": 105, "10": 135 },
+    "40 x 50": { "3": 50, "4": 60, "5": 70, "6": 85, "8": 120, "10": 150 },
+    "50 x 50": { "3": 65, "4": 75, "5": 85, "6": 100, "8": 140, "10": 175 },
+    "60 x 40": { "3": 65, "4": 75, "5": 85, "6": 100, "8": 140, "10": 175 },
+    "50 x 70": { "3": 85, "4": 95, "5": 105, "6": 125, "8": 155, "10": 210 },
+    "70 x 100": { "3": 140, "4": 170, "5": 220, "6": 260, "8": 330, "10": 420 },
+    "100 x 100": { "3": 200, "4": 240, "5": 300, "6": 350, "8": 450, "10": 600 },
+    "120 x 100": { "3": 230, "4": 280, "5": 380, "6": 450, "8": 550, "10": 700 },
+    "100 x 200": { "3": 365, "4": 430, "5": 550, "6": 650, "8": 800, "10": 1100 },
+    "122 x 244": { "3": 520, "4": 620, "5": 800, "6": 950, "8": 1100, "10": 1300 }
+};
 
 const safeSearch = (val, term) => String(val || '').toLowerCase().includes(String(term || '').toLowerCase());
 const formatCurrency = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'SAR' }).format(Number(num) || 0);
@@ -246,7 +264,8 @@ const App = () => {
   const [showEstimatorDB, setShowEstimatorDB] = useState(false);
   const [estimateCart, setEstimateCart] = useState([]);
   const [calcForm, setCalcForm] = useState({ 
-    category: '', itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1 
+    category: '', itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1,
+    matrixSize: '', matrixThick: '' // New states for the Matrix Method
   });
 
   const [settings, setSettings] = useState({ companyName: '', taxId: '', phone: '', email: '', address: '', logo: '' });
@@ -733,24 +752,34 @@ const App = () => {
     if(!itemDb) return { total: 0, specs: '' };
     const q = Number(form.qty) || 1;
     
-    // 1. Fixed Unit Based
+    // 1. Standard Size Matrix (Hardcoded from Image)
+    if(itemDb.calcType === 'Standard_Matrix') {
+        const mSize = form.matrixSize;
+        const mThick = form.matrixThick;
+        if(STANDARD_MATRIX[mSize] && STANDARD_MATRIX[mSize][mThick]) {
+             const price = STANDARD_MATRIX[mSize][mThick];
+             return { total: price * q, specs: `${mSize} (${mThick}mm)` };
+        }
+        return { total: 0, specs: 'Invalid Size/Thickness' };
+    }
+
+    // 2. Fixed Unit Based
     if(itemDb.calcType === 'Fixed') {
         const rate = Number(itemDb.rate) || 0;
         return { total: rate * q, specs: `Fixed Unit` };
     }
 
-    // 2. Time Based
+    // 3. Time Based
     if(itemDb.calcType === 'Time') {
         const rate = Number(itemDb.rate) || 0;
         const mins = Number(form.minutes) || 0;
         return { total: mins * rate * q, specs: `${mins} Mins` };
     }
 
-    // 3. Tiered (Quantity Dependent)
+    // 4. Tiered (Quantity Dependent)
     if(itemDb.calcType === 'Tiered') {
         let unitPrice = Number(itemDb.rate) || 0; 
         if (itemDb.tiers && itemDb.tiers.length > 0) {
-            // Sort tiers descending to find the highest applicable threshold
             const sortedTiers = [...itemDb.tiers].sort((a,b) => b.minQty - a.minQty);
             const matchedTier = sortedTiers.find(t => q >= t.minQty);
             if (matchedTier) unitPrice = matchedTier.price;
@@ -758,7 +787,7 @@ const App = () => {
         return { total: unitPrice * q, specs: `Tier Rate Applied: ${formatCurrency(unitPrice)}/ea` };
     }
     
-    // 4. Area Calculations (Area, Area_Thickness, Sheet_Cut)
+    // 5. Area Calculations (Area, Area_Thickness, Sheet_Cut)
     const w = Number(form.width) || 0;
     const h = Number(form.height) || 0;
     const sqm = (w * h) / 10000;
@@ -767,7 +796,6 @@ const App = () => {
         const selectedThick = Number(form.thickness);
         let materialRate = Number(itemDb.rate) || 0;
         
-        // Auto-select price if thickness tiers exist
         if (itemDb.thicknessTiers && itemDb.thicknessTiers.length > 0) {
              const matchedTier = itemDb.thicknessTiers.find(t => Number(t.thickness) === selectedThick);
              if (matchedTier) materialRate = Number(matchedTier.price);
@@ -804,13 +832,13 @@ const App = () => {
           desc: calcForm.desc,
           specs: specs,
           qty: calcForm.qty,
-          rate: itemDb.rate,
+          rate: itemDb.rate, // Note: This might not be relevant for Tiered/Matrix, just for display
           totalPrice: total
       };
       
       setEstimateCart([...estimateCart, cartItem]);
       // Reset form but keep category selected for speed
-      setCalcForm({ category: calcForm.category, itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1 });
+      setCalcForm({ category: calcForm.category, itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1, matrixSize: '', matrixThick: '' });
   };
 
 
@@ -1238,10 +1266,13 @@ const App = () => {
                                     <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">{String(item.category || '')}</td>
                                     <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.name || '')}</td>
                                     <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">
-                                        <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">{String(item.calcType || 'Area')}</span>
+                                        <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
+                                            {item.calcType === 'Standard_Matrix' ? 'Standard Size Matrix' : String(item.calcType || 'Area')}
+                                        </span>
                                     </td>
                                     <td className="px-6 py-4 font-black text-blue-600 dark:text-blue-400 tracking-wider">
-                                        {item.calcType === 'Tiered' ? 'Tiered Pricing' : 
+                                        {item.calcType === 'Standard_Matrix' ? <span className="text-indigo-500 text-[10px] uppercase">Auto Chart</span> :
+                                         item.calcType === 'Tiered' ? 'Tiered Pricing' : 
                                          (item.calcType === 'Area_Thickness' || item.calcType === 'Sheet_Cut') && item.thicknessTiers?.length > 0 ? 'Thickness Based' : 
                                          formatCurrency(item.rate)}
                                     </td>
@@ -1291,7 +1322,7 @@ const App = () => {
                                     >
                                         <option value="">Choose Item...</option>
                                         {estimatorItems.filter(i => i.category === calcForm.category).map(item => (
-                                            <option key={item.id} value={item.id}>{String(item.name)} {item.calcType !== 'Tiered' && (!item.thicknessTiers || item.thicknessTiers.length === 0) && `(SAR ${item.rate})`}</option>
+                                            <option key={item.id} value={item.id}>{String(item.name)} {item.calcType !== 'Tiered' && item.calcType !== 'Standard_Matrix' && (!item.thicknessTiers || item.thicknessTiers.length === 0) && `(SAR ${item.rate})`}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -1304,13 +1335,44 @@ const App = () => {
                                     return (
                                         <div className="space-y-5 pt-2">
                                             
+                                            {/* Standard Matrix Info Alert */}
+                                            {selItem.calcType === 'Standard_Matrix' && (
+                                                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl flex gap-3 text-indigo-800 dark:text-indigo-300 mb-4">
+                                                    <Table size={18} className="shrink-0"/>
+                                                    <div className="text-xs">
+                                                        <p className="font-black uppercase tracking-widest mb-1">Standard Chart Active</p>
+                                                        <p className="font-bold opacity-80">Pricing is generated directly from the fixed standard sizes chart.</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             {/* Tiered Info Alert */}
                                             {selItem.calcType === 'Tiered' && (
-                                                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl flex gap-3 text-indigo-800 dark:text-indigo-300">
+                                                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl flex gap-3 text-indigo-800 dark:text-indigo-300 mb-4">
                                                     <Info size={18} className="shrink-0"/>
                                                     <div className="text-xs">
                                                         <p className="font-black uppercase tracking-widest mb-1">Tiered Pricing Active</p>
                                                         <p className="font-bold opacity-80">The unit price will automatically decrease based on the quantity you enter.</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Standard Matrix Inputs */}
+                                            {selItem.calcType === 'Standard_Matrix' && (
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Standard Size *</label>
+                                                        <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={calcForm.matrixSize} onChange={e => setCalcForm({...calcForm, matrixSize: e.target.value})}>
+                                                            <option value="">Select Size...</option>
+                                                            {Object.keys(STANDARD_MATRIX).map(s => <option key={s} value={s}>{s}</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Thickness (mm) *</label>
+                                                        <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={calcForm.matrixThick} onChange={e => setCalcForm({...calcForm, matrixThick: e.target.value})}>
+                                                            <option value="">Thickness...</option>
+                                                            {[3, 4, 5, 6, 8, 10].map(t => <option key={t} value={t}>{t} mm</option>)}
+                                                        </select>
                                                     </div>
                                                 </div>
                                             )}
@@ -1857,6 +1919,7 @@ const App = () => {
                             <option value="Time">Time Based (Minutes x Rate)</option>
                             <option value="Fixed">Fixed / Unit Based (Qty x Rate)</option>
                             <option value="Tiered">Quantity Tiered (E.g. Books, Cards)</option>
+                            <option value="Standard_Matrix">Standard Size Matrix (Acrylic Chart)</option>
                         </select>
                     </div>
 
@@ -1879,6 +1942,14 @@ const App = () => {
                                 ))}
                             </div>
                             <button type="button" onClick={addTier} className="mt-4 px-4 py-2 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-blue-200 transition-colors">+ Add Tier Level</button>
+                        </div>
+                    ) : formData.calcType === 'Standard_Matrix' ? (
+                        <div className="md:col-span-2 bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-2xl flex items-center space-x-4 border border-indigo-100 dark:border-indigo-800">
+                            <Table size={24} className="text-indigo-500 shrink-0"/>
+                            <div>
+                                <p className="text-xs font-black text-indigo-900 dark:text-indigo-400 uppercase tracking-widest">Standard Matrix Applied</p>
+                                <p className="text-[10px] font-bold text-indigo-500/80 mt-1">This item will automatically use the predefined Acrylic prices from the standard sizes chart. No base rate needed here.</p>
+                            </div>
                         </div>
                     ) : formData.calcType === 'Area_Thickness' || formData.calcType === 'Sheet_Cut' ? (
                         <>
