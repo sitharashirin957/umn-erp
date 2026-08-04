@@ -9,7 +9,7 @@ import {
   ShieldCheck, HandCoins, ShoppingBag, CreditCard, Menu, 
   Edit3, Receipt, Package, Truck, FileText, PieChart as PieChartIcon, 
   Bell, DownloadCloud, AlertTriangle, UsersRound, Activity, BookOpen, Image as ImageIcon,
-  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock
+  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
@@ -247,7 +247,11 @@ const App = () => {
   const [expenses, setExpenses] = useState([]);
   const [salesmen, setSalesmen] = useState([]);
   const [crms, setCrms] = useState([]);
+  const [estimatorItems, setEstimatorItems] = useState([]); // NEW STATE FOR PRICE ESTIMATOR
   
+  // Calculator Form State
+  const [calcForm, setCalcForm] = useState({ category: '', itemId: '', width: '', height: '', qty: 1 });
+
   const [settings, setSettings] = useState({ companyName: '', taxId: '', phone: '', email: '', address: '', logo: '' });
   const [settingsSuccess, setSettingsSuccess] = useState(false);
 
@@ -340,7 +344,8 @@ const App = () => {
     const collectionsMap = {
       customers: setCustomers, suppliers: setSuppliers, products: setProducts,
       sales: setSales, purchases: setPurchases, collections: setCollections, 
-      expenses: setExpenses, salesmen: setSalesmen, crms: setCrms
+      expenses: setExpenses, salesmen: setSalesmen, crms: setCrms,
+      estimator_items: setEstimatorItems // Bind estimator items to state
     };
 
     const unsubscribers = Object.entries(collectionsMap).map(([colName, setter]) => 
@@ -375,7 +380,7 @@ const App = () => {
   const handleManualLock = () => {
     setIsAppUnlocked(false);
     sessionStorage.removeItem('erp_unlocked');
-    setAppPinInput(''); // Clear previous input
+    setAppPinInput(''); 
   };
 
   const requestAdminAuth = (callback) => {
@@ -517,7 +522,7 @@ const App = () => {
   // Modals with Edit Protection
   const openModal = (type, data = null) => {
     const executeOpen = () => {
-      setFormData(data ? { ...data } : { name: '', phone: '', email: '', gst: '', openingBalance: '', category: '', stock: '', purchasePrice: '', sellingPrice: '', tax: '', minStock: '', amount: '', method: '', description: '', ref: '' });
+      setFormData(data ? { ...data } : { name: '', phone: '', email: '', gst: '', openingBalance: '', category: '', stock: '', purchasePrice: '', sellingPrice: '', tax: '', minStock: '', amount: '', method: '', description: '', ref: '', rate: '' });
       if (type === 'sale' || type === 'purchase') {
         setInvoiceItems(data?.items || [{ productId: '', name: '', description: '', qty: 1, rate: 0, tax: 0, total: 0 }]);
       }
@@ -616,7 +621,8 @@ const App = () => {
     if (!user) return;
     const { type, data } = modalState;
     const isEdit = !!data?.id;
-    const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms' };
+    // Added estimator_items mapping
+    const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms', 'estimatorItem': 'estimator_items' };
     const colName = colMap[type];
     const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
     
@@ -692,7 +698,7 @@ const App = () => {
   const executeDelete = async () => {
     if (!confirmDelete.id || !confirmDelete.type || !user) return;
     try {
-      const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms' };
+      const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms', 'estimatorItem': 'estimator_items' };
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', colMap[confirmDelete.type], confirmDelete.id));
       setConfirmDelete({ isOpen: false, type: '', id: null, title: '' });
     } catch (e) { console.error("Delete Error", e); }
@@ -733,6 +739,7 @@ const App = () => {
       case 'suppliers': return { title: 'Supplier Network', desc: 'Manage Vendor Profiles' };
       case 'products': return { title: 'Inventory Management', desc: 'Manage Products & Stock Levels' };
       case 'salesmen': return { title: 'Sales Executives', desc: 'Manage Staff & Commissions' };
+      case 'estimator': return { title: 'Price Estimator', desc: 'Custom Dimension Pricing Calculator' };
       case 'settings': return { title: 'System Settings', desc: 'Global Configuration & Profile' };
       default: return { title: 'Dashboard', desc: 'Overview' };
     }
@@ -838,6 +845,7 @@ const App = () => {
             <NavItem id="suppliers" icon={Truck} label="Suppliers" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="products" icon={Package} label="Inventory" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="salesmen" icon={Briefcase} label="Sales Team" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
+            <NavItem id="estimator" icon={Calculator} label="Price Estimator" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             
             <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
                <NavItem id="settings" icon={Settings} label="Company Profile" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
@@ -1094,6 +1102,131 @@ const App = () => {
                   </div>
                 </div>
 
+              </div>
+            )}
+
+            {/* --- PRICE ESTIMATOR VIEW --- */}
+            {activeTab === 'estimator' && (
+              <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1">
+                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+                  <div className="flex space-x-3">
+                     <span className="px-6 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center border border-blue-100 dark:border-blue-800/50">
+                        <Calculator size={16} className="mr-2"/> Area Calculator
+                     </span>
+                  </div>
+                  <button onClick={() => openModal('estimatorItem')} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Plus size={16} className="mr-2"/> Add Estimate Item</button>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                    {/* CALCULATOR PANEL */}
+                    <div className="lg:col-span-1 bg-white dark:bg-[#1e293b] p-8 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-slate-800 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-8 opacity-5 dark:opacity-10 pointer-events-none">
+                            <Calculator size={120} />
+                        </div>
+                        <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight mb-6">Price Estimator</h3>
+                        
+                        <div className="space-y-5 relative z-10">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Select Category</label>
+                                <select 
+                                    className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20"
+                                    value={calcForm.category}
+                                    onChange={(e) => setCalcForm({...calcForm, category: e.target.value, itemId: ''})}
+                                >
+                                    <option value="">Choose Category...</option>
+                                    {[...new Set(estimatorItems.map(i => i.category))].map(cat => (
+                                        <option key={cat} value={cat}>{String(cat)}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Select Item Type</label>
+                                <select 
+                                    className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20"
+                                    value={calcForm.itemId}
+                                    onChange={(e) => setCalcForm({...calcForm, itemId: e.target.value})}
+                                    disabled={!calcForm.category}
+                                >
+                                    <option value="">Choose Item...</option>
+                                    {estimatorItems.filter(i => i.category === calcForm.category).map(item => (
+                                        <option key={item.id} value={item.id}>{String(item.name)} (SAR {item.rate}/sqm)</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Width (CM)</label>
+                                    <input type="number" placeholder="0" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.width} onChange={e => setCalcForm({...calcForm, width: e.target.value})} />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Height (CM)</label>
+                                    <input type="number" placeholder="0" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.height} onChange={e => setCalcForm({...calcForm, height: e.target.value})} />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Quantity</label>
+                                <input type="number" min="1" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.qty} onChange={e => setCalcForm({...calcForm, qty: e.target.value})} />
+                            </div>
+
+                            {/* LIVE CALCULATION RESULT */}
+                            {(() => {
+                                const selectedItem = estimatorItems.find(i => i.id === calcForm.itemId);
+                                const rate = selectedItem ? Number(selectedItem.rate) : 0;
+                                const w = Number(calcForm.width) || 0;
+                                const h = Number(calcForm.height) || 0;
+                                const q = Number(calcForm.qty) || 1;
+                                
+                                const sqmPerPiece = (w * h) / 10000;
+                                const totalSqm = sqmPerPiece * q;
+                                const totalPrice = totalSqm * rate;
+
+                                return (
+                                    <div className="mt-8 pt-6 border-t-2 border-dashed border-slate-200 dark:border-slate-700 space-y-3">
+                                        <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                            <span>Area Per Piece</span>
+                                            <span>{sqmPerPiece > 0 ? sqmPerPiece.toFixed(4) : '0.0000'} SQM</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                            <span>Total Area ({q} Qty)</span>
+                                            <span>{totalSqm > 0 ? totalSqm.toFixed(4) : '0.0000'} SQM</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs font-bold text-blue-500 dark:text-blue-400 uppercase tracking-widest">
+                                            <span>Rate / SQM</span>
+                                            <span>{formatCurrency(rate)}</span>
+                                        </div>
+                                        <div className="p-4 bg-slate-900 dark:bg-black rounded-2xl mt-4 flex justify-between items-center shadow-inner">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estimate Price</span>
+                                            <span className="text-2xl font-black text-emerald-400">{formatCurrency(totalPrice)}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    </div>
+
+                    {/* ESTIMATOR ITEMS MANAGEMENT TABLE */}
+                    <div className="lg:col-span-2 space-y-6">
+                        {renderTable(
+                            ['Category', 'Item Name', 'Rate / Sq.Mtr'],
+                            estimatorItems.filter(i => safeSearch(i.name, searchTerm) || safeSearch(i.category, searchTerm)),
+                            'estimatorItem',
+                            (item) => (
+                                <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                                    <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">{String(item.category || '')}</td>
+                                    <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.name || '')}</td>
+                                    <td className="px-6 py-4 font-black text-blue-600 dark:text-blue-400 tracking-wider">{formatCurrency(item.rate)}</td>
+                                    <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
+                                        <button onClick={() => openModal('estimatorItem', item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg"><Edit3 size={16}/></button>
+                                        <button onClick={() => triggerDelete('estimatorItem', item.id, String(item.name))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
+                                    </td>
+                                </tr>
+                            )
+                        )}
+                    </div>
+                </div>
               </div>
             )}
 
@@ -1498,12 +1631,34 @@ const App = () => {
           <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4 overflow-y-auto no-print transition-all">
             <div className="bg-white dark:bg-[#1e293b] w-full max-w-5xl rounded-[2.5rem] shadow-2xl relative my-8 border border-slate-200 dark:border-slate-800">
               <div className="sticky top-0 bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-md px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center rounded-t-[2.5rem] z-10">
-                <h2 className="text-2xl font-black uppercase tracking-tight text-slate-800 dark:text-white">{modalState.data?.id ? 'Edit' : 'New'} {String(modalState.type)}</h2>
+                <h2 className="text-2xl font-black uppercase tracking-tight text-slate-800 dark:text-white">
+                  {modalState.type === 'estimatorItem' ? (modalState.data?.id ? 'Edit Estimate Item' : 'New Estimate Item') : 
+                   modalState.data?.id ? `Edit ${String(modalState.type)}` : `New ${String(modalState.type)}`}
+                </h2>
                 <button onClick={closeModal} className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full transition-colors"><X size={20}/></button>
               </div>
               
               <form onSubmit={handleSave} className="p-8 space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar">
                 
+                {/* MODAL: PRICE ESTIMATOR ITEMS */}
+                {modalState.type === 'estimatorItem' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2 md:col-span-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Category (e.g., Sticker, Acrylic) *</label>
+                        <input required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.category || ''} onChange={e => setFormData({...formData, category: e.target.value})} />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Specific Item Name *</label>
+                        <input required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Rate per Sq.Mtr (SAR) *</label>
+                        <input type="number" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.rate || ''} onChange={e => setFormData({...formData, rate: e.target.value})} />
+                    </div>
+                  </div>
+                )}
+
+                {/* MODAL: SALE/PURCHASE/EXPENSE/COLLECTION/CRM */}
                 {['sale', 'purchase', 'expense', 'collection', 'crm'].includes(modalState.type) && (
                   <div className="p-6 bg-slate-50 dark:bg-[#0f172a] rounded-3xl border border-slate-200 dark:border-slate-800 mb-6 shadow-inner dark:shadow-none">
                      <label className="block text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 mb-3">Select Entity / Customer *</label>
@@ -1846,19 +2001,6 @@ const App = () => {
               <div className="absolute bottom-[15mm] left-[15mm] right-[15mm] border-t border-slate-200 pt-4 flex justify-between text-[8px] font-black uppercase text-slate-400 tracking-widest">
                   <span>System Generated Document</span>
                   <span>Powered by {settings?.companyName || 'Cloud ERP'}</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {confirmDelete.isOpen && (
-          <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4 no-print transition-all">
-            <div className="max-w-md w-full bg-white dark:bg-[#1e293b] rounded-[2.5rem] p-10 shadow-2xl text-center border border-slate-200 dark:border-slate-800">
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2 uppercase">Delete Record?</h2>
-              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-8 uppercase">Permanently remove <span className="text-slate-900 dark:text-white font-black">"{String(confirmDelete.title)}"</span>?</p>
-              <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => setConfirmDelete({ isOpen: false })} className="py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancel</button>
-                <button onClick={executeDelete} className="py-4 bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-95 transition-transform">Confirm</button>
               </div>
             </div>
           </div>
