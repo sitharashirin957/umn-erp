@@ -1,4 +1,3 @@
-/* STREAMING_CHUNK:Imports and Firebase Setup... */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area,
@@ -29,7 +28,6 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-erp-v1';
 
-/* STREAMING_CHUNK:Constants and Helper Functions... */
 // --- SECURITY PINS ---
 const APP_PIN = import.meta.env.VITE_APP_PIN || '1234';
 const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || '9999';
@@ -62,7 +60,6 @@ const cleanObject = (obj) => {
 const COLORS = ['#10b981', '#3b82f6', '#94a3b8', '#f43f5e', '#eab308', '#8b5cf6', '#06b6d4'];
 const AGING_COLORS = ['#38bdf8', '#fbbf24', '#34d399', '#a78bfa', '#fb923c', '#f43f5e'];
 
-/* STREAMING_CHUNK:Print and Export Utilities... */
 const triggerSystemPrint = async (customFilename) => {
   const element = document.getElementById('printable-area');
   if (!element) return;
@@ -123,7 +120,6 @@ const exportToExcel = async (data, filename) => {
   window.XLSX.writeFile(wb, `${String(filename).toUpperCase()}_REPORT_${new Date().toISOString().split('T')[0]}.xlsx`);
 };
 
-/* STREAMING_CHUNK:UI Components... */
 const CompanyLogo = ({ collapsed, settings }) => (
   <div className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} transition-all duration-300`}>
     {settings?.logo ? (
@@ -199,7 +195,6 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 }
 
-/* STREAMING_CHUNK:Main Application Initialization... */
 const App = () => {
   const [user, setUser] = useState(null);
   
@@ -236,7 +231,6 @@ const App = () => {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef(null);
 
-  /* STREAMING_CHUNK:Firebase Data States... */
   const [customers, setCustomers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -267,7 +261,6 @@ const App = () => {
   const [dbError, setDbError] = useState(false);
   const collapsed = isDesktop && !isSidebarHovered;
 
-  /* STREAMING_CHUNK:Effects and Event Listeners... */
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
     window.addEventListener('resize', handleResize);
@@ -362,7 +355,6 @@ const App = () => {
     return () => { unsubscribers.forEach(unsub => unsub()); unsubSettings(); };
   }, [user, isAppUnlocked]);
 
-  /* STREAMING_CHUNK:Security and Authentication Handlers... */
   const handleAppUnlock = (e) => {
     e.preventDefault();
     if (appPinInput === APP_PIN) {
@@ -404,7 +396,6 @@ const App = () => {
     });
   };
 
-  /* STREAMING_CHUNK:Analytics Calculations... */
   const analytics = useMemo(() => {
     const totalSales = sales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
     const totalPurchases = purchases.reduce((acc, p) => acc + (Number(p.grandTotal) || 0), 0);
@@ -517,13 +508,12 @@ const App = () => {
     return notifs;
   }, [products, topCustomersData]);
 
-  /* STREAMING_CHUNK:Form Modal Handlers... */
   const openModal = (type, data = null) => {
     const executeOpen = () => {
       setFormData(data ? { ...data } : { 
         name: '', phone: '', email: '', gst: '', openingBalance: '', category: '', stock: '', 
         purchasePrice: '', sellingPrice: '', tax: '', minStock: '', amount: '', method: '', 
-        description: '', ref: '', rate: '', timeRate: '', calcType: 'Area', tiers: []
+        description: '', ref: '', rate: '', timeRate: '', calcType: 'Area', tiers: [], thicknessTiers: []
       });
       if (type === 'sale' || type === 'purchase') {
         setInvoiceItems(data?.items || [{ productId: '', name: '', description: '', qty: 1, rate: 0, tax: 0, total: 0 }]);
@@ -615,7 +605,6 @@ const App = () => {
     });
   };
 
-  /* STREAMING_CHUNK:Database Save Operations... */
   const handleSave = async (e) => {
     e.preventDefault();
     if (!user) return;
@@ -725,7 +714,7 @@ const App = () => {
     setInvoiceItems(invoiceItems.filter((_, index) => index !== indexToRemove));
   };
 
-  /* STREAMING_CHUNK:Advanced Estimator Logic... */
+  // --- ADVANCED ESTIMATOR LOGIC ---
   const handleTierChange = (index, field, value) => {
       const newTiers = [...(formData.tiers || [])];
       newTiers[index][field] = Number(value) || 0;
@@ -773,24 +762,32 @@ const App = () => {
     const w = Number(form.width) || 0;
     const h = Number(form.height) || 0;
     const sqm = (w * h) / 10000;
-    const rate = Number(itemDb.rate) || 0;
     
-    if(itemDb.calcType === 'Area_Thickness') {
-        const thick = Number(form.thickness) || 1;
-        return { total: sqm * thick * rate * q, specs: `${w}x${h}cm (${sqm.toFixed(4)}sqm) x ${thick}mm` };
-    }
+    if(itemDb.calcType === 'Area_Thickness' || itemDb.calcType === 'Sheet_Cut') {
+        const selectedThick = Number(form.thickness);
+        let materialRate = Number(itemDb.rate) || 0;
+        
+        // Auto-select price if thickness tiers exist
+        if (itemDb.thicknessTiers && itemDb.thicknessTiers.length > 0) {
+             const matchedTier = itemDb.thicknessTiers.find(t => Number(t.thickness) === selectedThick);
+             if (matchedTier) materialRate = Number(matchedTier.price);
+        }
 
-    if(itemDb.calcType === 'Sheet_Cut') {
-        const thick = Number(form.thickness) || 1;
-        const matCost = sqm * thick * rate;
-        const timeRate = Number(itemDb.timeRate) || 0;
-        const timeCost = (Number(form.minutes) || 0) * timeRate;
-        const unitTotal = matCost + timeCost;
-        return { total: unitTotal * q, specs: `${w}x${h}cm (${sqm.toFixed(4)}sqm), ${thick}mm, ${form.minutes || 0}mins` };
+        const matCost = sqm * materialRate;
+        
+        if (itemDb.calcType === 'Sheet_Cut') {
+            const timeRate = Number(itemDb.timeRate) || 0;
+            const timeCost = (Number(form.minutes) || 0) * timeRate;
+            const unitTotal = matCost + timeCost;
+            return { total: unitTotal * q, specs: `${w}x${h}cm (${sqm.toFixed(2)}sqm), ${selectedThick}mm, ${form.minutes || 0}mins` };
+        } else {
+            return { total: matCost * q, specs: `${w}x${h}cm (${sqm.toFixed(2)}sqm) x ${selectedThick}mm` };
+        }
     }
     
     // Default Area
-    return { total: sqm * rate * q, specs: `${w}x${h}cm (${sqm.toFixed(4)}sqm)` };
+    const rate = Number(itemDb.rate) || 0;
+    return { total: sqm * rate * q, specs: `${w}x${h}cm (${sqm.toFixed(2)}sqm)` };
   };
 
   const handleAddEstimateToCart = (e) => {
@@ -817,7 +814,6 @@ const App = () => {
   };
 
 
-  // --- Dynamic Tab Titles Details ---
   const getTabDetails = (tabId) => {
     switch (tabId) {
       case 'dashboard': return { title: 'Business Overview', desc: 'Real-time Analytics & KPIs' };
@@ -838,7 +834,6 @@ const App = () => {
 
   const currentTabDetails = getTabDetails(activeTab);
 
-  /* STREAMING_CHUNK:App Lock UI Render... */
   if (!isAppUnlocked) {
     return (
       <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen font-sans selection:bg-blue-500/30 flex items-center justify-center`}>
@@ -886,7 +881,6 @@ const App = () => {
     </div>
   );
 
-  /* STREAMING_CHUNK:Main Application Layout... */
   return (
     <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-500/30`}>
       <div className="flex h-screen overflow-hidden">
@@ -1246,7 +1240,11 @@ const App = () => {
                                     <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">
                                         <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">{String(item.calcType || 'Area')}</span>
                                     </td>
-                                    <td className="px-6 py-4 font-black text-blue-600 dark:text-blue-400 tracking-wider">{item.calcType === 'Tiered' ? 'Tiered Pricing' : formatCurrency(item.rate)}</td>
+                                    <td className="px-6 py-4 font-black text-blue-600 dark:text-blue-400 tracking-wider">
+                                        {item.calcType === 'Tiered' ? 'Tiered Pricing' : 
+                                         (item.calcType === 'Area_Thickness' || item.calcType === 'Sheet_Cut') && item.thicknessTiers?.length > 0 ? 'Thickness Based' : 
+                                         formatCurrency(item.rate)}
+                                    </td>
                                     <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
                                         <button onClick={() => openModal('estimatorItem', item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg"><Edit3 size={16}/></button>
                                         <button onClick={() => triggerDelete('estimatorItem', item.id, String(item.name))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
@@ -1293,7 +1291,7 @@ const App = () => {
                                     >
                                         <option value="">Choose Item...</option>
                                         {estimatorItems.filter(i => i.category === calcForm.category).map(item => (
-                                            <option key={item.id} value={item.id}>{String(item.name)} {item.calcType !== 'Tiered' && `(SAR ${item.rate})`}</option>
+                                            <option key={item.id} value={item.id}>{String(item.name)} {item.calcType !== 'Tiered' && (!item.thicknessTiers || item.thicknessTiers.length === 0) && `(SAR ${item.rate})`}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -1331,11 +1329,20 @@ const App = () => {
                                                 </div>
                                             )}
 
-                                            {/* Thickness Input */}
+                                            {/* Thickness Input with Smart Dropdown */}
                                             {(selItem.calcType === 'Area_Thickness' || selItem.calcType === 'Sheet_Cut') && (
                                                 <div className="space-y-2">
                                                     <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Thickness (MM) *</label>
-                                                    <input type="number" required placeholder="e.g., 3" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.thickness} onChange={e => setCalcForm({...calcForm, thickness: e.target.value})} />
+                                                    {selItem.thicknessTiers && selItem.thicknessTiers.length > 0 ? (
+                                                        <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.thickness} onChange={e => setCalcForm({...calcForm, thickness: e.target.value})}>
+                                                            <option value="">Select Thickness...</option>
+                                                            {selItem.thicknessTiers.map(t => (
+                                                                <option key={t.thickness} value={t.thickness}>{t.thickness} mm (SAR {t.price}/sqm)</option>
+                                                            ))}
+                                                        </select>
+                                                    ) : (
+                                                        <input type="number" required placeholder="e.g., 3" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.thickness} onChange={e => setCalcForm({...calcForm, thickness: e.target.value})} />
+                                                    )}
                                                 </div>
                                             )}
 
@@ -1873,16 +1880,45 @@ const App = () => {
                             </div>
                             <button type="button" onClick={addTier} className="mt-4 px-4 py-2 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-blue-200 transition-colors">+ Add Tier Level</button>
                         </div>
-                    ) : formData.calcType === 'Sheet_Cut' ? (
+                    ) : formData.calcType === 'Area_Thickness' || formData.calcType === 'Sheet_Cut' ? (
                         <>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Base Material Rate per Sq.Mtr *</label>
-                                <input type="number" required step="any" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.rate || ''} onChange={e => setFormData({...formData, rate: e.target.value})} />
+                            <div className="md:col-span-2 bg-slate-50 dark:bg-[#0f172a] p-6 rounded-2xl">
+                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-4 block">Thickness Pricing Tiers (Per Sq.Mtr)</label>
+                                <div className="space-y-3">
+                                    {formData.thicknessTiers?.map((tier, idx) => (
+                                        <div key={idx} className="flex gap-4 items-center">
+                                            <div className="flex-1 space-y-1">
+                                                <span className="text-[9px] font-bold text-slate-400 uppercase">Thickness (mm)</span>
+                                                <input type="number" step="any" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.thickness} onChange={(e) => {
+                                                    const newTiers = [...(formData.thicknessTiers || [])];
+                                                    newTiers[idx].thickness = Number(e.target.value) || 0;
+                                                    setFormData({...formData, thicknessTiers: newTiers});
+                                                }} />
+                                            </div>
+                                            <div className="flex-1 space-y-1">
+                                                <span className="text-[9px] font-bold text-slate-400 uppercase">Price per Sq.Mtr (SAR)</span>
+                                                <input type="number" step="any" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.price} onChange={(e) => {
+                                                    const newTiers = [...(formData.thicknessTiers || [])];
+                                                    newTiers[idx].price = Number(e.target.value) || 0;
+                                                    setFormData({...formData, thicknessTiers: newTiers});
+                                                }} />
+                                            </div>
+                                            <button type="button" onClick={() => {
+                                                const newTiers = [...(formData.thicknessTiers || [])];
+                                                newTiers.splice(idx, 1);
+                                                setFormData({...formData, thicknessTiers: newTiers});
+                                            }} className="mt-4 p-3 text-rose-500 bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 rounded-xl transition-all"><Trash2 size={16}/></button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button type="button" onClick={() => setFormData({...formData, thicknessTiers: [...(formData.thicknessTiers || []), { thickness: 0, price: 0 }]})} className="mt-4 px-4 py-2 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-blue-200 transition-colors">+ Add Thickness Rate</button>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Cut Rate per Minute *</label>
-                                <input type="number" required step="any" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.timeRate || ''} onChange={e => setFormData({...formData, timeRate: e.target.value})} />
-                            </div>
+                            {formData.calcType === 'Sheet_Cut' && (
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Cut Rate per Minute *</label>
+                                    <input type="number" required step="any" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.timeRate || ''} onChange={e => setFormData({...formData, timeRate: e.target.value})} />
+                                </div>
+                            )}
                         </>
                     ) : (
                         <div className="space-y-2 md:col-span-2">
