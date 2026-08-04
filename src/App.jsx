@@ -9,7 +9,7 @@ import {
   ShieldCheck, HandCoins, ShoppingBag, CreditCard, Menu, 
   Edit3, Receipt, Package, Truck, FileText, PieChart as PieChartIcon, 
   Bell, DownloadCloud, AlertTriangle, UsersRound, Activity, BookOpen, Image as ImageIcon,
-  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock
+  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
@@ -370,6 +370,12 @@ const App = () => {
       setAppPinError(true);
       setAppPinInput('');
     }
+  };
+
+  const handleManualLock = () => {
+    setIsAppUnlocked(false);
+    sessionStorage.removeItem('erp_unlocked');
+    setAppPinInput(''); // Clear previous input
   };
 
   const requestAdminAuth = (callback) => {
@@ -867,9 +873,17 @@ const App = () => {
                   )}
               </div>
 
-              <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/30">
-                {settings?.companyName ? settings.companyName.charAt(0).toUpperCase() : 'C'}
-              </div>
+              {/* --- MANUAL LOCK BUTTON (Replaces simple initial) --- */}
+              <button 
+                onClick={handleManualLock}
+                className="group relative h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/30 overflow-hidden transition-all hover:scale-95"
+                title="Lock Application"
+              >
+                 <span className="absolute transition-all duration-300 group-hover:scale-0 group-hover:opacity-0">
+                    {settings?.companyName ? settings.companyName.charAt(0).toUpperCase() : 'C'}
+                 </span>
+                 <Lock size={18} className="absolute scale-0 opacity-0 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
+              </button>
             </div>
           </header>
 
@@ -1801,6 +1815,19 @@ const App = () => {
               <div className="absolute bottom-[15mm] left-[15mm] right-[15mm] border-t border-slate-200 pt-4 flex justify-between text-[8px] font-black uppercase text-slate-400 tracking-widest">
                   <span>System Generated Document</span>
                   <span>Powered by {settings?.companyName || 'Cloud ERP'}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {confirmDelete.isOpen && (
+          <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4 no-print transition-all">
+            <div className="max-w-md w-full bg-white dark:bg-[#1e293b] rounded-[2.5rem] p-10 shadow-2xl text-center border border-slate-200 dark:border-slate-800">
+              <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2 uppercase">Delete Record?</h2>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-8 uppercase">Permanently remove <span className="text-slate-900 dark:text-white font-black">"{String(confirmDelete.title)}"</span>?</p>
+              <div className="grid grid-cols-2 gap-4">
+                <button onClick={() => setConfirmDelete({ isOpen: false })} className="py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancel</button>
+                <button onClick={executeDelete} className="py-4 bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-95 transition-transform">Confirm</button>
               </div>
             </div>
           </div>
