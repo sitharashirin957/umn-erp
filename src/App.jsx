@@ -1,3 +1,4 @@
+/* STREAMING_CHUNK:Imports and Firebase Setup... */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area,
@@ -9,18 +10,19 @@ import {
   ShieldCheck, HandCoins, ShoppingBag, CreditCard, Menu, 
   Edit3, Receipt, Package, Truck, FileText, PieChart as PieChartIcon, 
   Bell, DownloadCloud, AlertTriangle, UsersRound, Activity, BookOpen, Image as ImageIcon,
-  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator, Database, ShoppingCart, Info, Table
+  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator, Database, ShoppingCart, Info, Table, CheckSquare
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, increment, setDoc } from 'firebase/firestore';
 
-let firebaseConfig;
+let firebaseConfig = {};
 try {
-  firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG);
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_FIREBASE_CONFIG) {
+    firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG);
+  }
 } catch (error) {
-  console.error("Firebase config parsing error. Check Vercel Environment Variables.", error);
-  firebaseConfig = {}; 
+  console.error("Firebase config parsing error.", error);
 }
 
 const app = initializeApp(firebaseConfig);
@@ -28,9 +30,10 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-erp-v1';
 
+/* STREAMING_CHUNK:Constants and Helper Functions... */
 // --- SECURITY PINS ---
-const APP_PIN = import.meta.env.VITE_APP_PIN || '1234';
-const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || '9999';
+const APP_PIN = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APP_PIN) || '1234';
+const ADMIN_PIN = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ADMIN_PIN) || '9999';
 
 // --- HARDCODED ACRYLIC MATRIX CHART ---
 const STANDARD_MATRIX = {
@@ -49,6 +52,24 @@ const STANDARD_MATRIX = {
     "100 x 200": { "3": 365, "4": 430, "5": 550, "6": 650, "8": 800, "10": 1100 },
     "122 x 244": { "3": 520, "4": 620, "5": 800, "6": 950, "8": 1100, "10": 1300 }
 };
+
+// Map names to specific Area Values for Linear Interpolation
+const MATRIX_AREAS = [
+    { label: "30 x 15", area: 450 },
+    { label: "30 x 20 / A4", area: 600 },
+    { label: "A3", area: 1260 }, // Approx A3 Area
+    { label: "30 x 50", area: 1500 },
+    { label: "35 x 50", area: 1750 },
+    { label: "40 x 50", area: 2000 },
+    { label: "60 x 40", area: 2400 },
+    { label: "50 x 50", area: 2500 },
+    { label: "50 x 70", area: 3500 },
+    { label: "70 x 100", area: 7000 },
+    { label: "100 x 100", area: 10000 },
+    { label: "120 x 100", area: 12000 },
+    { label: "100 x 200", area: 20000 },
+    { label: "122 x 244", area: 29768 }
+].sort((a, b) => a.area - b.area);
 
 const safeSearch = (val, term) => String(val || '').toLowerCase().includes(String(term || '').toLowerCase());
 const formatCurrency = (num) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'SAR' }).format(Number(num) || 0);
@@ -78,6 +99,7 @@ const cleanObject = (obj) => {
 const COLORS = ['#10b981', '#3b82f6', '#94a3b8', '#f43f5e', '#eab308', '#8b5cf6', '#06b6d4'];
 const AGING_COLORS = ['#38bdf8', '#fbbf24', '#34d399', '#a78bfa', '#fb923c', '#f43f5e'];
 
+/* STREAMING_CHUNK:Print and Export Utilities... */
 const triggerSystemPrint = async (customFilename) => {
   const element = document.getElementById('printable-area');
   if (!element) return;
@@ -138,6 +160,7 @@ const exportToExcel = async (data, filename) => {
   window.XLSX.writeFile(wb, `${String(filename).toUpperCase()}_REPORT_${new Date().toISOString().split('T')[0]}.xlsx`);
 };
 
+/* STREAMING_CHUNK:UI Components... */
 const CompanyLogo = ({ collapsed, settings }) => (
   <div className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} transition-all duration-300`}>
     {settings?.logo ? (
@@ -213,6 +236,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 }
 
+/* STREAMING_CHUNK:Main Application Initialization... */
 const App = () => {
   const [user, setUser] = useState(null);
   
@@ -249,6 +273,7 @@ const App = () => {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef(null);
 
+  /* STREAMING_CHUNK:Firebase Data States... */
   const [customers, setCustomers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -265,7 +290,7 @@ const App = () => {
   const [estimateCart, setEstimateCart] = useState([]);
   const [calcForm, setCalcForm] = useState({ 
     category: '', itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1,
-    matrixSize: '', matrixThick: '' // New states for the Matrix Method
+    matrixSize: '', matrixThick: '', isCustomMatrix: false // States for Custom Matrix Calculation
   });
 
   const [settings, setSettings] = useState({ companyName: '', taxId: '', phone: '', email: '', address: '', logo: '' });
@@ -280,6 +305,7 @@ const App = () => {
   const [dbError, setDbError] = useState(false);
   const collapsed = isDesktop && !isSidebarHovered;
 
+  /* STREAMING_CHUNK:Effects and Event Listeners... */
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
     window.addEventListener('resize', handleResize);
@@ -374,6 +400,7 @@ const App = () => {
     return () => { unsubscribers.forEach(unsub => unsub()); unsubSettings(); };
   }, [user, isAppUnlocked]);
 
+  /* STREAMING_CHUNK:Security and Authentication Handlers... */
   const handleAppUnlock = (e) => {
     e.preventDefault();
     if (appPinInput === APP_PIN) {
@@ -415,6 +442,7 @@ const App = () => {
     });
   };
 
+  /* STREAMING_CHUNK:Analytics Calculations... */
   const analytics = useMemo(() => {
     const totalSales = sales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
     const totalPurchases = purchases.reduce((acc, p) => acc + (Number(p.grandTotal) || 0), 0);
@@ -527,6 +555,7 @@ const App = () => {
     return notifs;
   }, [products, topCustomersData]);
 
+  /* STREAMING_CHUNK:Form Modal Handlers... */
   const openModal = (type, data = null) => {
     const executeOpen = () => {
       setFormData(data ? { ...data } : { 
@@ -624,6 +653,7 @@ const App = () => {
     });
   };
 
+  /* STREAMING_CHUNK:Database Save Operations... */
   const handleSave = async (e) => {
     e.preventDefault();
     if (!user) return;
@@ -733,7 +763,7 @@ const App = () => {
     setInvoiceItems(invoiceItems.filter((_, index) => index !== indexToRemove));
   };
 
-  // --- ADVANCED ESTIMATOR LOGIC ---
+  /* STREAMING_CHUNK:Advanced Estimator Logic with Interpolation... */
   const handleTierChange = (index, field, value) => {
       const newTiers = [...(formData.tiers || [])];
       newTiers[index][field] = Number(value) || 0;
@@ -752,15 +782,53 @@ const App = () => {
     if(!itemDb) return { total: 0, specs: '' };
     const q = Number(form.qty) || 1;
     
-    // 1. Standard Size Matrix (Hardcoded from Image)
+    // 1. Standard Size Matrix (Interpolation for Custom Sizes included)
     if(itemDb.calcType === 'Standard_Matrix') {
-        const mSize = form.matrixSize;
         const mThick = form.matrixThick;
-        if(STANDARD_MATRIX[mSize] && STANDARD_MATRIX[mSize][mThick]) {
-             const price = STANDARD_MATRIX[mSize][mThick];
-             return { total: price * q, specs: `${mSize} (${mThick}mm)` };
+        if (!mThick) return { total: 0, specs: 'Please Select Thickness' };
+
+        if (form.isCustomMatrix) {
+            const w = Number(form.width) || 0;
+            const h = Number(form.height) || 0;
+            if (w === 0 || h === 0) return { total: 0, specs: 'Enter Dimensions' };
+            const customArea = w * h; // Square CM
+            
+            let lower = MATRIX_AREAS[0];
+            let upper = MATRIX_AREAS[MATRIX_AREAS.length - 1];
+            let unitPrice = 0;
+
+            if (customArea <= lower.area) {
+                // Extrapolate downwards (or use exact ratio of smallest standard area)
+                unitPrice = (customArea / lower.area) * STANDARD_MATRIX[lower.label][mThick];
+            } else if (customArea >= upper.area) {
+                // Extrapolate upwards (ratio of largest standard area)
+                unitPrice = (customArea / upper.area) * STANDARD_MATRIX[upper.label][mThick];
+            } else {
+                // Linear Interpolation
+                for (let i = 0; i < MATRIX_AREAS.length - 1; i++) {
+                    if (customArea >= MATRIX_AREAS[i].area && customArea <= MATRIX_AREAS[i+1].area) {
+                        lower = MATRIX_AREAS[i];
+                        upper = MATRIX_AREAS[i+1];
+                        break;
+                    }
+                }
+                const priceLow = STANDARD_MATRIX[lower.label][mThick];
+                const priceHigh = STANDARD_MATRIX[upper.label][mThick];
+                // Y = y1 + ((x - x1) / (x2 - x1)) * (y2 - y1)
+                unitPrice = priceLow + ((customArea - lower.area) / (upper.area - lower.area)) * (priceHigh - priceLow);
+            }
+
+            return { total: unitPrice * q, specs: `Custom Size ${w}x${h}cm (${mThick}mm)` };
+
+        } else {
+            // Standard Size Lookup
+            const mSize = form.matrixSize;
+            if(STANDARD_MATRIX[mSize] && STANDARD_MATRIX[mSize][mThick]) {
+                 const price = STANDARD_MATRIX[mSize][mThick];
+                 return { total: price * q, specs: `Standard ${mSize} (${mThick}mm)` };
+            }
+            return { total: 0, specs: 'Select Standard Size' };
         }
-        return { total: 0, specs: 'Invalid Size/Thickness' };
     }
 
     // 2. Fixed Unit Based
@@ -801,7 +869,7 @@ const App = () => {
              if (matchedTier) materialRate = Number(matchedTier.price);
         }
 
-        const matCost = sqm * materialRate;
+        const matCost = sqm * materialRate; // materialRate is per sqm for this thickness
         
         if (itemDb.calcType === 'Sheet_Cut') {
             const timeRate = Number(itemDb.timeRate) || 0;
@@ -824,6 +892,7 @@ const App = () => {
       if(!itemDb) return;
       
       const { total, specs } = calculateEstimateItemTotal(itemDb, calcForm);
+      if (total === 0) return; // Prevent adding if calculation is missing inputs
       
       const cartItem = {
           id: Date.now(),
@@ -832,13 +901,13 @@ const App = () => {
           desc: calcForm.desc,
           specs: specs,
           qty: calcForm.qty,
-          rate: itemDb.rate, // Note: This might not be relevant for Tiered/Matrix, just for display
+          rate: itemDb.rate,
           totalPrice: total
       };
       
       setEstimateCart([...estimateCart, cartItem]);
       // Reset form but keep category selected for speed
-      setCalcForm({ category: calcForm.category, itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1, matrixSize: '', matrixThick: '' });
+      setCalcForm({ category: calcForm.category, itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1, matrixSize: '', matrixThick: '', isCustomMatrix: false });
   };
 
 
@@ -862,6 +931,7 @@ const App = () => {
 
   const currentTabDetails = getTabDetails(activeTab);
 
+  /* STREAMING_CHUNK:App Lock UI Render... */
   if (!isAppUnlocked) {
     return (
       <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen font-sans selection:bg-blue-500/30 flex items-center justify-center`}>
@@ -909,6 +979,7 @@ const App = () => {
     </div>
   );
 
+  /* STREAMING_CHUNK:Main Application Layout... */
   return (
     <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-500/30`}>
       <div className="flex h-screen overflow-hidden">
@@ -1335,13 +1406,64 @@ const App = () => {
                                     return (
                                         <div className="space-y-5 pt-2">
                                             
-                                            {/* Standard Matrix Info Alert */}
+                                            {/* Standard Matrix Input Group */}
                                             {selItem.calcType === 'Standard_Matrix' && (
-                                                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl flex gap-3 text-indigo-800 dark:text-indigo-300 mb-4">
-                                                    <Table size={18} className="shrink-0"/>
-                                                    <div className="text-xs">
-                                                        <p className="font-black uppercase tracking-widest mb-1">Standard Chart Active</p>
-                                                        <p className="font-bold opacity-80">Pricing is generated directly from the fixed standard sizes chart.</p>
+                                                <div className="bg-indigo-50 dark:bg-indigo-900/10 p-6 rounded-2xl border border-indigo-100 dark:border-indigo-800/30">
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <label className="text-[10px] font-black uppercase text-indigo-800 dark:text-indigo-400 tracking-widest flex items-center">
+                                                            <Table size={14} className="mr-2"/> Matrix Chart Sizing
+                                                        </label>
+                                                        <label className="flex items-center cursor-pointer space-x-2">
+                                                            <input 
+                                                                type="checkbox" 
+                                                                className="w-4 h-4 text-indigo-600 rounded bg-white dark:bg-slate-800 border-indigo-300 focus:ring-indigo-500"
+                                                                checked={calcForm.isCustomMatrix || false}
+                                                                onChange={(e) => setCalcForm({...calcForm, isCustomMatrix: e.target.checked, matrixSize: '', width: '', height: ''})}
+                                                            />
+                                                            <span className="text-[9px] font-bold uppercase text-slate-500">Use Custom Dimensions</span>
+                                                        </label>
+                                                    </div>
+
+                                                    <div className="space-y-4">
+                                                        {calcForm.isCustomMatrix ? (
+                                                            <div className="grid grid-cols-2 gap-4 animate-fade-in-up">
+                                                                <div className="space-y-1">
+                                                                    <label className="text-[9px] font-bold uppercase text-slate-500">Width (CM) *</label>
+                                                                    <input type="number" required placeholder="0" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-indigo-100 dark:border-indigo-800/50 font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-indigo-500/20 shadow-sm" value={calcForm.width} onChange={e => setCalcForm({...calcForm, width: e.target.value})} />
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <label className="text-[9px] font-bold uppercase text-slate-500">Height (CM) *</label>
+                                                                    <input type="number" required placeholder="0" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-indigo-100 dark:border-indigo-800/50 font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-indigo-500/20 shadow-sm" value={calcForm.height} onChange={e => setCalcForm({...calcForm, height: e.target.value})} />
+                                                                </div>
+                                                                <p className="col-span-2 text-[9px] font-bold text-indigo-400 text-center leading-tight">Prices are proportionally calculated based on standard chart limits.</p>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="space-y-1">
+                                                                <label className="text-[9px] font-bold uppercase text-slate-500">Select Standard Size *</label>
+                                                                <select required className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-indigo-100 dark:border-indigo-800/50 font-black text-slate-900 dark:text-white uppercase focus:ring-2 ring-indigo-500/20 shadow-sm" value={calcForm.matrixSize} onChange={e => setCalcForm({...calcForm, matrixSize: e.target.value})}>
+                                                                    <option value="">Select Size...</option>
+                                                                    {Object.keys(STANDARD_MATRIX).map(s => <option key={s} value={s}>{s}</option>)}
+                                                                </select>
+                                                            </div>
+                                                        )}
+                                                        
+                                                        <div className="space-y-1 pt-2 border-t border-indigo-100 dark:border-indigo-800/30">
+                                                            <label className="text-[9px] font-bold uppercase text-slate-500">Select Thickness (mm) *</label>
+                                                            <div className="flex gap-2 flex-wrap">
+                                                                {[3, 4, 5, 6, 8, 10].map(t => (
+                                                                    <button 
+                                                                        type="button" 
+                                                                        key={t}
+                                                                        onClick={() => setCalcForm({...calcForm, matrixThick: String(t)})}
+                                                                        className={`flex-1 py-2 px-3 rounded-lg font-black text-xs transition-all border ${calcForm.matrixThick === String(t) ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/30 scale-105' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}
+                                                                    >
+                                                                        {t}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                            {/* Hidden input to ensure required validation passes */}
+                                                            <input type="text" className="h-0 w-0 opacity-0 p-0 m-0 absolute -z-10" required value={calcForm.matrixThick || ''} onChange={()=>{}} />
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
@@ -1353,26 +1475,6 @@ const App = () => {
                                                     <div className="text-xs">
                                                         <p className="font-black uppercase tracking-widest mb-1">Tiered Pricing Active</p>
                                                         <p className="font-bold opacity-80">The unit price will automatically decrease based on the quantity you enter.</p>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Standard Matrix Inputs */}
-                                            {selItem.calcType === 'Standard_Matrix' && (
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-2">
-                                                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Standard Size *</label>
-                                                        <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={calcForm.matrixSize} onChange={e => setCalcForm({...calcForm, matrixSize: e.target.value})}>
-                                                            <option value="">Select Size...</option>
-                                                            {Object.keys(STANDARD_MATRIX).map(s => <option key={s} value={s}>{s}</option>)}
-                                                        </select>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Thickness (mm) *</label>
-                                                        <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={calcForm.matrixThick} onChange={e => setCalcForm({...calcForm, matrixThick: e.target.value})}>
-                                                            <option value="">Thickness...</option>
-                                                            {[3, 4, 5, 6, 8, 10].map(t => <option key={t} value={t}>{t} mm</option>)}
-                                                        </select>
                                                     </div>
                                                 </div>
                                             )}
@@ -1948,7 +2050,7 @@ const App = () => {
                             <Table size={24} className="text-indigo-500 shrink-0"/>
                             <div>
                                 <p className="text-xs font-black text-indigo-900 dark:text-indigo-400 uppercase tracking-widest">Standard Matrix Applied</p>
-                                <p className="text-[10px] font-bold text-indigo-500/80 mt-1">This item will automatically use the predefined Acrylic prices from the standard sizes chart. No base rate needed here.</p>
+                                <p className="text-[10px] font-bold text-indigo-500/80 mt-1">This item will automatically use the predefined Acrylic prices from the standard sizes chart. Custom inputs will be interpolated.</p>
                             </div>
                         </div>
                     ) : formData.calcType === 'Area_Thickness' || formData.calcType === 'Sheet_Cut' ? (
