@@ -1,3 +1,4 @@
+/* STREAMING_CHUNK:Imports and Firebase Setup... */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area,
@@ -9,7 +10,7 @@ import {
   ShieldCheck, HandCoins, ShoppingBag, CreditCard, Menu, 
   Edit3, Receipt, Package, Truck, FileText, PieChart as PieChartIcon, 
   Bell, DownloadCloud, AlertTriangle, UsersRound, Activity, BookOpen, Image as ImageIcon,
-  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator, Database, ShoppingCart
+  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator, Database, ShoppingCart, Info
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
@@ -28,6 +29,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-erp-v1';
 
+/* STREAMING_CHUNK:Constants and Helper Functions... */
 // --- SECURITY PINS ---
 const APP_PIN = import.meta.env.VITE_APP_PIN || '1234';
 const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || '9999';
@@ -46,10 +48,10 @@ const cleanObject = (obj) => {
   const cleaned = Array.isArray(obj) ? [] : {};
   for (const key in obj) {
     if (obj[key] !== undefined) {
-      if (typeof obj[key] === 'object' && obj[key] !== null && !obj[key].toDate) {
+      if (typeof obj[key] === 'object' && obj[key] !== null && !obj[key].toDate && !Array.isArray(obj[key])) {
         cleaned[key] = cleanObject(obj[key]);
       } else {
-        cleaned[key] = obj[key];
+        cleaned[key] = obj[key]; // Preserve Arrays like tiers and Dates
       }
     }
   }
@@ -60,6 +62,7 @@ const cleanObject = (obj) => {
 const COLORS = ['#10b981', '#3b82f6', '#94a3b8', '#f43f5e', '#eab308', '#8b5cf6', '#06b6d4'];
 const AGING_COLORS = ['#38bdf8', '#fbbf24', '#34d399', '#a78bfa', '#fb923c', '#f43f5e'];
 
+/* STREAMING_CHUNK:Print and Export Utilities... */
 const triggerSystemPrint = async (customFilename) => {
   const element = document.getElementById('printable-area');
   if (!element) return;
@@ -83,15 +86,12 @@ const triggerSystemPrint = async (customFilename) => {
 
   const noPrintElements = element.querySelectorAll('.no-print');
   noPrintElements.forEach(el => el.style.display = 'none');
-
   await window.html2pdf().set(opt).from(element).save();
-
   noPrintElements.forEach(el => el.style.display = '');
 };
 
 const exportToExcel = async (data, filename) => {
   if (!data || !data.length) return;
-  
   if (!window.XLSX) {
     await new Promise((resolve) => {
       const script = document.createElement('script');
@@ -100,7 +100,6 @@ const exportToExcel = async (data, filename) => {
       document.head.appendChild(script);
     });
   }
-
   const cleanData = data.map(row => {
     const cleanRow = {};
     for (const [key, value] of Object.entries(row)) {
@@ -118,13 +117,13 @@ const exportToExcel = async (data, filename) => {
     }
     return cleanRow;
   });
-
   const ws = window.XLSX.utils.json_to_sheet(cleanData);
   const wb = window.XLSX.utils.book_new();
   window.XLSX.utils.book_append_sheet(wb, ws, String(filename).toUpperCase().slice(0, 31));
   window.XLSX.writeFile(wb, `${String(filename).toUpperCase()}_REPORT_${new Date().toISOString().split('T')[0]}.xlsx`);
 };
 
+/* STREAMING_CHUNK:UI Components... */
 const CompanyLogo = ({ collapsed, settings }) => (
   <div className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} transition-all duration-300`}>
     {settings?.logo ? (
@@ -200,6 +199,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 }
 
+/* STREAMING_CHUNK:Main Application Initialization... */
 const App = () => {
   const [user, setUser] = useState(null);
   
@@ -236,6 +236,7 @@ const App = () => {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef(null);
 
+  /* STREAMING_CHUNK:Firebase Data States... */
   const [customers, setCustomers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -266,6 +267,7 @@ const App = () => {
   const [dbError, setDbError] = useState(false);
   const collapsed = isDesktop && !isSidebarHovered;
 
+  /* STREAMING_CHUNK:Effects and Event Listeners... */
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
     window.addEventListener('resize', handleResize);
@@ -301,7 +303,6 @@ const App = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // --- Dynamic Favicon Update Effect ---
   useEffect(() => {
     if (settings?.logo) {
       let link = document.querySelector("link[rel~='icon']");
@@ -314,7 +315,6 @@ const App = () => {
     }
   }, [settings?.logo]);
 
-  // --- Auto Lock Timer (1 Hour) ---
   useEffect(() => {
     if (!isAppUnlocked) return;
     let timer;
@@ -325,13 +325,10 @@ const App = () => {
         sessionStorage.removeItem('erp_unlocked');
       }, 60 * 60 * 1000); // 1 hour
     };
-
     window.addEventListener('mousemove', resetTimer);
     window.addEventListener('keypress', resetTimer);
     window.addEventListener('click', resetTimer);
-
     resetTimer(); 
-
     return () => {
       window.removeEventListener('mousemove', resetTimer);
       window.removeEventListener('keypress', resetTimer);
@@ -346,7 +343,7 @@ const App = () => {
       customers: setCustomers, suppliers: setSuppliers, products: setProducts,
       sales: setSales, purchases: setPurchases, collections: setCollections, 
       expenses: setExpenses, salesmen: setSalesmen, crms: setCrms,
-      estimator_items: setEstimatorItems // Bind estimator items to state
+      estimator_items: setEstimatorItems
     };
 
     const unsubscribers = Object.entries(collectionsMap).map(([colName, setter]) => 
@@ -365,7 +362,7 @@ const App = () => {
     return () => { unsubscribers.forEach(unsub => unsub()); unsubSettings(); };
   }, [user, isAppUnlocked]);
 
-  // --- SECURITY FUNCTIONS ---
+  /* STREAMING_CHUNK:Security and Authentication Handlers... */
   const handleAppUnlock = (e) => {
     e.preventDefault();
     if (appPinInput === APP_PIN) {
@@ -407,7 +404,7 @@ const App = () => {
     });
   };
 
-  // --- COMPREHENSIVE DASHBOARD ANALYTICS ---
+  /* STREAMING_CHUNK:Analytics Calculations... */
   const analytics = useMemo(() => {
     const totalSales = sales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
     const totalPurchases = purchases.reduce((acc, p) => acc + (Number(p.grandTotal) || 0), 0);
@@ -520,13 +517,13 @@ const App = () => {
     return notifs;
   }, [products, topCustomersData]);
 
-  // Modals with Edit Protection
+  /* STREAMING_CHUNK:Form Modal Handlers... */
   const openModal = (type, data = null) => {
     const executeOpen = () => {
       setFormData(data ? { ...data } : { 
         name: '', phone: '', email: '', gst: '', openingBalance: '', category: '', stock: '', 
         purchasePrice: '', sellingPrice: '', tax: '', minStock: '', amount: '', method: '', 
-        description: '', ref: '', rate: '', calcType: 'Area' // Default calcType for estimator
+        description: '', ref: '', rate: '', timeRate: '', calcType: 'Area', tiers: []
       });
       if (type === 'sale' || type === 'purchase') {
         setInvoiceItems(data?.items || [{ productId: '', name: '', description: '', qty: 1, rate: 0, tax: 0, total: 0 }]);
@@ -535,7 +532,6 @@ const App = () => {
     };
 
     if (data && type !== 'estimatorItem') {
-      // Editing existing data requires Admin PIN (except for personal cart items which isn't saved to DB yet)
       requestAdminAuth(executeOpen);
     } else {
       executeOpen();
@@ -619,6 +615,7 @@ const App = () => {
     });
   };
 
+  /* STREAMING_CHUNK:Database Save Operations... */
   const handleSave = async (e) => {
     e.preventDefault();
     if (!user) return;
@@ -728,32 +725,72 @@ const App = () => {
     setInvoiceItems(invoiceItems.filter((_, index) => index !== indexToRemove));
   };
 
-  // --- ESTIMATOR LOGIC ---
+  /* STREAMING_CHUNK:Advanced Estimator Logic... */
+  const handleTierChange = (index, field, value) => {
+      const newTiers = [...(formData.tiers || [])];
+      newTiers[index][field] = Number(value) || 0;
+      setFormData({...formData, tiers: newTiers});
+  };
+  const addTier = () => {
+      setFormData({...formData, tiers: [...(formData.tiers || []), { minQty: 1, price: 0 }]});
+  };
+  const removeTier = (index) => {
+      const newTiers = [...(formData.tiers || [])];
+      newTiers.splice(index, 1);
+      setFormData({...formData, tiers: newTiers});
+  };
+
   const calculateEstimateItemTotal = (itemDb, form) => {
     if(!itemDb) return { total: 0, specs: '' };
-    const rate = Number(itemDb.rate) || 0;
     const q = Number(form.qty) || 1;
     
+    // 1. Fixed Unit Based
+    if(itemDb.calcType === 'Fixed') {
+        const rate = Number(itemDb.rate) || 0;
+        return { total: rate * q, specs: `Fixed Unit` };
+    }
+
+    // 2. Time Based
     if(itemDb.calcType === 'Time') {
+        const rate = Number(itemDb.rate) || 0;
         const mins = Number(form.minutes) || 0;
         return { total: mins * rate * q, specs: `${mins} Mins` };
     }
-    if(itemDb.calcType === 'Fixed') {
-        return { total: rate * q, specs: `Fixed Unit` };
+
+    // 3. Tiered (Quantity Dependent)
+    if(itemDb.calcType === 'Tiered') {
+        let unitPrice = Number(itemDb.rate) || 0; 
+        if (itemDb.tiers && itemDb.tiers.length > 0) {
+            // Sort tiers descending to find the highest applicable threshold
+            const sortedTiers = [...itemDb.tiers].sort((a,b) => b.minQty - a.minQty);
+            const matchedTier = sortedTiers.find(t => q >= t.minQty);
+            if (matchedTier) unitPrice = matchedTier.price;
+        }
+        return { total: unitPrice * q, specs: `Tier Rate Applied: ${formatCurrency(unitPrice)}/ea` };
     }
     
-    // Area calculations
+    // 4. Area Calculations (Area, Area_Thickness, Sheet_Cut)
     const w = Number(form.width) || 0;
     const h = Number(form.height) || 0;
     const sqm = (w * h) / 10000;
+    const rate = Number(itemDb.rate) || 0;
     
     if(itemDb.calcType === 'Area_Thickness') {
         const thick = Number(form.thickness) || 1;
-        return { total: sqm * thick * rate * q, specs: `${w}x${h}cm (${sqm.toFixed(2)}sqm) x ${thick}mm` };
+        return { total: sqm * thick * rate * q, specs: `${w}x${h}cm (${sqm.toFixed(4)}sqm) x ${thick}mm` };
+    }
+
+    if(itemDb.calcType === 'Sheet_Cut') {
+        const thick = Number(form.thickness) || 1;
+        const matCost = sqm * thick * rate;
+        const timeRate = Number(itemDb.timeRate) || 0;
+        const timeCost = (Number(form.minutes) || 0) * timeRate;
+        const unitTotal = matCost + timeCost;
+        return { total: unitTotal * q, specs: `${w}x${h}cm (${sqm.toFixed(4)}sqm), ${thick}mm, ${form.minutes || 0}mins` };
     }
     
     // Default Area
-    return { total: sqm * rate * q, specs: `${w}x${h}cm (${sqm.toFixed(2)}sqm)` };
+    return { total: sqm * rate * q, specs: `${w}x${h}cm (${sqm.toFixed(4)}sqm)` };
   };
 
   const handleAddEstimateToCart = (e) => {
@@ -775,7 +812,6 @@ const App = () => {
       };
       
       setEstimateCart([...estimateCart, cartItem]);
-      
       // Reset form but keep category selected for speed
       setCalcForm({ category: calcForm.category, itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1 });
   };
@@ -802,7 +838,7 @@ const App = () => {
 
   const currentTabDetails = getTabDetails(activeTab);
 
-  // --- EARLY RETURN FOR APP LOCK SCREEN ---
+  /* STREAMING_CHUNK:App Lock UI Render... */
   if (!isAppUnlocked) {
     return (
       <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen font-sans selection:bg-blue-500/30 flex items-center justify-center`}>
@@ -850,6 +886,7 @@ const App = () => {
     </div>
   );
 
+  /* STREAMING_CHUNK:Main Application Layout... */
   return (
     <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-500/30`}>
       <div className="flex h-screen overflow-hidden">
@@ -1209,7 +1246,7 @@ const App = () => {
                                     <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">
                                         <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">{String(item.calcType || 'Area')}</span>
                                     </td>
-                                    <td className="px-6 py-4 font-black text-blue-600 dark:text-blue-400 tracking-wider">{formatCurrency(item.rate)}</td>
+                                    <td className="px-6 py-4 font-black text-blue-600 dark:text-blue-400 tracking-wider">{item.calcType === 'Tiered' ? 'Tiered Pricing' : formatCurrency(item.rate)}</td>
                                     <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
                                         <button onClick={() => openModal('estimatorItem', item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg"><Edit3 size={16}/></button>
                                         <button onClick={() => triggerDelete('estimatorItem', item.id, String(item.name))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
@@ -1256,7 +1293,7 @@ const App = () => {
                                     >
                                         <option value="">Choose Item...</option>
                                         {estimatorItems.filter(i => i.category === calcForm.category).map(item => (
-                                            <option key={item.id} value={item.id}>{String(item.name)} (SAR {item.rate})</option>
+                                            <option key={item.id} value={item.id}>{String(item.name)} {item.calcType !== 'Tiered' && `(SAR ${item.rate})`}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -1269,8 +1306,19 @@ const App = () => {
                                     return (
                                         <div className="space-y-5 pt-2">
                                             
+                                            {/* Tiered Info Alert */}
+                                            {selItem.calcType === 'Tiered' && (
+                                                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl flex gap-3 text-indigo-800 dark:text-indigo-300">
+                                                    <Info size={18} className="shrink-0"/>
+                                                    <div className="text-xs">
+                                                        <p className="font-black uppercase tracking-widest mb-1">Tiered Pricing Active</p>
+                                                        <p className="font-bold opacity-80">The unit price will automatically decrease based on the quantity you enter.</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             {/* Area Based Inputs */}
-                                            {(selItem.calcType === 'Area' || selItem.calcType === 'Area_Thickness') && (
+                                            {(selItem.calcType === 'Area' || selItem.calcType === 'Area_Thickness' || selItem.calcType === 'Sheet_Cut') && (
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div className="space-y-2">
                                                         <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Width (CM) *</label>
@@ -1284,7 +1332,7 @@ const App = () => {
                                             )}
 
                                             {/* Thickness Input */}
-                                            {selItem.calcType === 'Area_Thickness' && (
+                                            {(selItem.calcType === 'Area_Thickness' || selItem.calcType === 'Sheet_Cut') && (
                                                 <div className="space-y-2">
                                                     <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Thickness (MM) *</label>
                                                     <input type="number" required placeholder="e.g., 3" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.thickness} onChange={e => setCalcForm({...calcForm, thickness: e.target.value})} />
@@ -1292,7 +1340,7 @@ const App = () => {
                                             )}
 
                                             {/* Time Based Input */}
-                                            {selItem.calcType === 'Time' && (
+                                            {(selItem.calcType === 'Time' || selItem.calcType === 'Sheet_Cut') && (
                                                 <div className="space-y-2">
                                                     <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Minutes Required *</label>
                                                     <input type="number" required placeholder="e.g., 15" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.minutes} onChange={e => setCalcForm({...calcForm, minutes: e.target.value})} />
@@ -1353,7 +1401,7 @@ const App = () => {
                                                 </div>
                                                 <div className="text-right flex flex-col items-end">
                                                     <span className="font-black text-lg text-slate-900 dark:text-slate-100">{formatCurrency(item.totalPrice)}</span>
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Rate: SAR {item.rate}</span>
+                                                    {item.rate && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Rate Used: SAR {item.rate}</span>}
                                                     <button onClick={() => setEstimateCart(estimateCart.filter(i => i.id !== item.id))} className="mt-2 p-1.5 text-rose-500 opacity-0 group-hover:opacity-100 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all" title="Remove Item"><Trash2 size={14}/></button>
                                                 </div>
                                             </div>
@@ -1768,7 +1816,7 @@ const App = () => {
             </div>
         )}
 
-        {/* --- OTHER MODALS & PRINTS --- */}
+        {/* --- MODALS & PRINTS --- */}
         {modalState.isOpen && modalState.type !== 'ledger' && (
           <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4 overflow-y-auto no-print transition-all">
             <div className="bg-white dark:bg-[#1e293b] w-full max-w-5xl rounded-[2.5rem] shadow-2xl relative my-8 border border-slate-200 dark:border-slate-800">
@@ -1798,14 +1846,50 @@ const App = () => {
                         <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.calcType || 'Area'} onChange={e => setFormData({...formData, calcType: e.target.value})}>
                             <option value="Area">Area Based (Width x Height)</option>
                             <option value="Area_Thickness">Area + Thickness (W x H x Thickness)</option>
+                            <option value="Sheet_Cut">Sheet & Cut (W x H x Thickness + Time)</option>
                             <option value="Time">Time Based (Minutes x Rate)</option>
                             <option value="Fixed">Fixed / Unit Based (Qty x Rate)</option>
+                            <option value="Tiered">Quantity Tiered (E.g. Books, Cards)</option>
                         </select>
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Base Rate (SAR) *</label>
-                        <input type="number" required step="any" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.rate || ''} onChange={e => setFormData({...formData, rate: e.target.value})} />
-                    </div>
+
+                    {formData.calcType === 'Tiered' ? (
+                        <div className="md:col-span-2 bg-slate-50 dark:bg-[#0f172a] p-6 rounded-2xl">
+                            <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-4 block">Pricing Tiers (Price automatically drops based on quantity)</label>
+                            <div className="space-y-3">
+                                {formData.tiers?.map((tier, idx) => (
+                                    <div key={idx} className="flex gap-4 items-center">
+                                        <div className="flex-1 space-y-1">
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase">Min Qty</span>
+                                            <input type="number" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.minQty} onChange={(e) => handleTierChange(idx, 'minQty', e.target.value)} />
+                                        </div>
+                                        <div className="flex-1 space-y-1">
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase">Unit Price (SAR)</span>
+                                            <input type="number" step="any" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.price} onChange={(e) => handleTierChange(idx, 'price', e.target.value)} />
+                                        </div>
+                                        <button type="button" onClick={() => removeTier(idx)} className="mt-4 p-3 text-rose-500 bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 rounded-xl transition-all"><Trash2 size={16}/></button>
+                                    </div>
+                                ))}
+                            </div>
+                            <button type="button" onClick={addTier} className="mt-4 px-4 py-2 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-blue-200 transition-colors">+ Add Tier Level</button>
+                        </div>
+                    ) : formData.calcType === 'Sheet_Cut' ? (
+                        <>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Base Material Rate per Sq.Mtr *</label>
+                                <input type="number" required step="any" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.rate || ''} onChange={e => setFormData({...formData, rate: e.target.value})} />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Cut Rate per Minute *</label>
+                                <input type="number" required step="any" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.timeRate || ''} onChange={e => setFormData({...formData, timeRate: e.target.value})} />
+                            </div>
+                        </>
+                    ) : (
+                        <div className="space-y-2 md:col-span-2">
+                            <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Base Rate (SAR) *</label>
+                            <input type="number" required step="any" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.rate || ''} onChange={e => setFormData({...formData, rate: e.target.value})} />
+                        </div>
+                    )}
                   </div>
                 )}
 
@@ -2091,7 +2175,7 @@ const App = () => {
                         <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">S.No</th>
                         <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">Description / Spec</th>
                         <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Qty</th>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Base Rate</th>
+                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Unit Total</th>
                         <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Line Total</th>
                       </tr>
                     </thead>
@@ -2105,7 +2189,7 @@ const App = () => {
                             {item.desc && <div className="text-[10px] text-slate-400 mt-1 font-normal normal-case">{item.desc}</div>}
                           </td>
                           <td className="py-5 px-2 text-center text-slate-700">{item.qty}</td>
-                          <td className="py-5 px-2 text-right text-slate-700">{formatCurrency(item.rate)}</td>
+                          <td className="py-5 px-2 text-right text-slate-700">{formatCurrency(item.totalPrice / item.qty)}</td>
                           <td className="py-5 px-2 text-right text-slate-900">{formatCurrency(item.totalPrice)}</td>
                         </tr>
                       ))}
