@@ -9,7 +9,7 @@ import {
   ShieldCheck, HandCoins, ShoppingBag, CreditCard, Menu, 
   Edit3, Receipt, Package, Truck, FileText, PieChart as PieChartIcon, 
   Bell, DownloadCloud, AlertTriangle, UsersRound, Activity, BookOpen, Image as ImageIcon,
-  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator
+  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator, Database, ShoppingCart
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
@@ -17,11 +17,9 @@ import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc
 
 let firebaseConfig;
 try {
-  // Vite uses import.meta.env for environment variables
   firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG);
 } catch (error) {
   console.error("Firebase config parsing error. Check Vercel Environment Variables.", error);
-  // Fallback
   firebaseConfig = {}; 
 }
 
@@ -247,10 +245,14 @@ const App = () => {
   const [expenses, setExpenses] = useState([]);
   const [salesmen, setSalesmen] = useState([]);
   const [crms, setCrms] = useState([]);
-  const [estimatorItems, setEstimatorItems] = useState([]); // NEW STATE FOR PRICE ESTIMATOR
   
-  // Calculator Form State
-  const [calcForm, setCalcForm] = useState({ category: '', itemId: '', width: '', height: '', qty: 1 });
+  // --- ESTIMATOR STATES ---
+  const [estimatorItems, setEstimatorItems] = useState([]); 
+  const [showEstimatorDB, setShowEstimatorDB] = useState(false);
+  const [estimateCart, setEstimateCart] = useState([]);
+  const [calcForm, setCalcForm] = useState({ 
+    category: '', itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1 
+  });
 
   const [settings, setSettings] = useState({ companyName: '', taxId: '', phone: '', email: '', address: '', logo: '' });
   const [settingsSuccess, setSettingsSuccess] = useState(false);
@@ -321,15 +323,14 @@ const App = () => {
       timer = setTimeout(() => {
         setIsAppUnlocked(false);
         sessionStorage.removeItem('erp_unlocked');
-      }, 60 * 60 * 1000); // 1 hour in milliseconds
+      }, 60 * 60 * 1000); // 1 hour
     };
 
-    // Events to track user activity
     window.addEventListener('mousemove', resetTimer);
     window.addEventListener('keypress', resetTimer);
     window.addEventListener('click', resetTimer);
 
-    resetTimer(); // Initialize timer
+    resetTimer(); 
 
     return () => {
       window.removeEventListener('mousemove', resetTimer);
@@ -522,18 +523,21 @@ const App = () => {
   // Modals with Edit Protection
   const openModal = (type, data = null) => {
     const executeOpen = () => {
-      setFormData(data ? { ...data } : { name: '', phone: '', email: '', gst: '', openingBalance: '', category: '', stock: '', purchasePrice: '', sellingPrice: '', tax: '', minStock: '', amount: '', method: '', description: '', ref: '', rate: '' });
+      setFormData(data ? { ...data } : { 
+        name: '', phone: '', email: '', gst: '', openingBalance: '', category: '', stock: '', 
+        purchasePrice: '', sellingPrice: '', tax: '', minStock: '', amount: '', method: '', 
+        description: '', ref: '', rate: '', calcType: 'Area' // Default calcType for estimator
+      });
       if (type === 'sale' || type === 'purchase') {
         setInvoiceItems(data?.items || [{ productId: '', name: '', description: '', qty: 1, rate: 0, tax: 0, total: 0 }]);
       }
       setModalState({ isOpen: true, type, data });
     };
 
-    if (data) {
-      // Editing existing data requires Admin PIN
+    if (data && type !== 'estimatorItem') {
+      // Editing existing data requires Admin PIN (except for personal cart items which isn't saved to DB yet)
       requestAdminAuth(executeOpen);
     } else {
-      // Creating new doesn't require PIN
       executeOpen();
     }
   };
@@ -563,7 +567,6 @@ const App = () => {
         total: 0
       }]
     };
-    // Creating new invoice, doesn't need Admin Auth initially
     openModal('sale', preFilledData); 
   };
 
@@ -621,7 +624,6 @@ const App = () => {
     if (!user) return;
     const { type, data } = modalState;
     const isEdit = !!data?.id;
-    // Added estimator_items mapping
     const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms', 'estimatorItem': 'estimator_items' };
     const colName = colMap[type];
     const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
@@ -725,6 +727,59 @@ const App = () => {
   const removeRow = (indexToRemove) => {
     setInvoiceItems(invoiceItems.filter((_, index) => index !== indexToRemove));
   };
+
+  // --- ESTIMATOR LOGIC ---
+  const calculateEstimateItemTotal = (itemDb, form) => {
+    if(!itemDb) return { total: 0, specs: '' };
+    const rate = Number(itemDb.rate) || 0;
+    const q = Number(form.qty) || 1;
+    
+    if(itemDb.calcType === 'Time') {
+        const mins = Number(form.minutes) || 0;
+        return { total: mins * rate * q, specs: `${mins} Mins` };
+    }
+    if(itemDb.calcType === 'Fixed') {
+        return { total: rate * q, specs: `Fixed Unit` };
+    }
+    
+    // Area calculations
+    const w = Number(form.width) || 0;
+    const h = Number(form.height) || 0;
+    const sqm = (w * h) / 10000;
+    
+    if(itemDb.calcType === 'Area_Thickness') {
+        const thick = Number(form.thickness) || 1;
+        return { total: sqm * thick * rate * q, specs: `${w}x${h}cm (${sqm.toFixed(2)}sqm) x ${thick}mm` };
+    }
+    
+    // Default Area
+    return { total: sqm * rate * q, specs: `${w}x${h}cm (${sqm.toFixed(2)}sqm)` };
+  };
+
+  const handleAddEstimateToCart = (e) => {
+      e.preventDefault();
+      const itemDb = estimatorItems.find(i => i.id === calcForm.itemId);
+      if(!itemDb) return;
+      
+      const { total, specs } = calculateEstimateItemTotal(itemDb, calcForm);
+      
+      const cartItem = {
+          id: Date.now(),
+          category: itemDb.category,
+          name: itemDb.name,
+          desc: calcForm.desc,
+          specs: specs,
+          qty: calcForm.qty,
+          rate: itemDb.rate,
+          totalPrice: total
+      };
+      
+      setEstimateCart([...estimateCart, cartItem]);
+      
+      // Reset form but keep category selected for speed
+      setCalcForm({ category: calcForm.category, itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1 });
+  };
+
 
   // --- Dynamic Tab Titles Details ---
   const getTabDetails = (tabId) => {
@@ -845,8 +900,11 @@ const App = () => {
             <NavItem id="suppliers" icon={Truck} label="Suppliers" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="products" icon={Package} label="Inventory" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="salesmen" icon={Briefcase} label="Sales Team" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
-            <NavItem id="estimator" icon={Calculator} label="Price Estimator" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             
+            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+               <NavItem id="estimator" icon={Calculator} label="Price Estimator" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
+            </div>
+
             <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
                <NavItem id="settings" icon={Settings} label="Company Profile" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             </div>
@@ -1108,115 +1166,49 @@ const App = () => {
             {/* --- PRICE ESTIMATOR VIEW --- */}
             {activeTab === 'estimator' && (
               <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1">
+                
+                {/* TOOLBAR */}
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
                   <div className="flex space-x-3">
-                     <span className="px-6 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center border border-blue-100 dark:border-blue-800/50">
-                        <Calculator size={16} className="mr-2"/> Area Calculator
-                     </span>
+                     <button 
+                        onClick={() => requestAdminAuth(() => setShowEstimatorDB(!showEstimatorDB))} 
+                        className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center transition-colors border ${showEstimatorDB ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800/50' : 'bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/80'}`}
+                     >
+                        <Database size={16} className="mr-2"/> {showEstimatorDB ? 'Close Database' : 'Manage Items Database'}
+                     </button>
                   </div>
-                  <button onClick={() => openModal('estimatorItem')} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Plus size={16} className="mr-2"/> Add Estimate Item</button>
+                  <div className="flex space-x-3">
+                      {estimateCart.length > 0 && (
+                          <>
+                             <button onClick={() => setEstimateCart([])} className="px-6 py-3 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors">Clear All</button>
+                             <button onClick={() => setPrintDoc({ isOpen: true, type: 'estimate', data: { items: estimateCart, grandTotal: estimateCart.reduce((a,b)=>a+b.totalPrice, 0), date: new Date().toISOString().split('T')[0] } })} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Printer size={16} className="mr-2"/> Print Estimate</button>
+                          </>
+                      )}
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                    {/* CALCULATOR PANEL */}
-                    <div className="lg:col-span-1 bg-white dark:bg-[#1e293b] p-8 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-slate-800 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-8 opacity-5 dark:opacity-10 pointer-events-none">
-                            <Calculator size={120} />
+                {/* MAIN ESTIMATOR GRID */}
+                {showEstimatorDB ? (
+                    /* DATABASE MANAGEMENT VIEW */
+                    <div className="space-y-6 animate-fade-in-up">
+                        <div className="flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/10 p-6 rounded-[2rem] border border-indigo-100 dark:border-indigo-800/30">
+                            <div>
+                                <h3 className="text-lg font-black text-indigo-900 dark:text-indigo-400 uppercase tracking-tight">Estimator Database</h3>
+                                <p className="text-xs font-bold text-indigo-500/70 uppercase tracking-widest mt-1">Add base rates and calculation formulas</p>
+                            </div>
+                            <button onClick={() => openModal('estimatorItem')} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/30 hover:scale-95 transition-all flex items-center"><Plus size={16} className="mr-2"/> Add New Item</button>
                         </div>
-                        <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight mb-6">Price Estimator</h3>
-                        
-                        <div className="space-y-5 relative z-10">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Select Category</label>
-                                <select 
-                                    className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20"
-                                    value={calcForm.category}
-                                    onChange={(e) => setCalcForm({...calcForm, category: e.target.value, itemId: ''})}
-                                >
-                                    <option value="">Choose Category...</option>
-                                    {[...new Set(estimatorItems.map(i => i.category))].map(cat => (
-                                        <option key={cat} value={cat}>{String(cat)}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Select Item Type</label>
-                                <select 
-                                    className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20"
-                                    value={calcForm.itemId}
-                                    onChange={(e) => setCalcForm({...calcForm, itemId: e.target.value})}
-                                    disabled={!calcForm.category}
-                                >
-                                    <option value="">Choose Item...</option>
-                                    {estimatorItems.filter(i => i.category === calcForm.category).map(item => (
-                                        <option key={item.id} value={item.id}>{String(item.name)} (SAR {item.rate}/sqm)</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Width (CM)</label>
-                                    <input type="number" placeholder="0" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.width} onChange={e => setCalcForm({...calcForm, width: e.target.value})} />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Height (CM)</label>
-                                    <input type="number" placeholder="0" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.height} onChange={e => setCalcForm({...calcForm, height: e.target.value})} />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Quantity</label>
-                                <input type="number" min="1" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.qty} onChange={e => setCalcForm({...calcForm, qty: e.target.value})} />
-                            </div>
-
-                            {/* LIVE CALCULATION RESULT */}
-                            {(() => {
-                                const selectedItem = estimatorItems.find(i => i.id === calcForm.itemId);
-                                const rate = selectedItem ? Number(selectedItem.rate) : 0;
-                                const w = Number(calcForm.width) || 0;
-                                const h = Number(calcForm.height) || 0;
-                                const q = Number(calcForm.qty) || 1;
-                                
-                                const sqmPerPiece = (w * h) / 10000;
-                                const totalSqm = sqmPerPiece * q;
-                                const totalPrice = totalSqm * rate;
-
-                                return (
-                                    <div className="mt-8 pt-6 border-t-2 border-dashed border-slate-200 dark:border-slate-700 space-y-3">
-                                        <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
-                                            <span>Area Per Piece</span>
-                                            <span>{sqmPerPiece > 0 ? sqmPerPiece.toFixed(4) : '0.0000'} SQM</span>
-                                        </div>
-                                        <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
-                                            <span>Total Area ({q} Qty)</span>
-                                            <span>{totalSqm > 0 ? totalSqm.toFixed(4) : '0.0000'} SQM</span>
-                                        </div>
-                                        <div className="flex justify-between text-xs font-bold text-blue-500 dark:text-blue-400 uppercase tracking-widest">
-                                            <span>Rate / SQM</span>
-                                            <span>{formatCurrency(rate)}</span>
-                                        </div>
-                                        <div className="p-4 bg-slate-900 dark:bg-black rounded-2xl mt-4 flex justify-between items-center shadow-inner">
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estimate Price</span>
-                                            <span className="text-2xl font-black text-emerald-400">{formatCurrency(totalPrice)}</span>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-                        </div>
-                    </div>
-
-                    {/* ESTIMATOR ITEMS MANAGEMENT TABLE */}
-                    <div className="lg:col-span-2 space-y-6">
                         {renderTable(
-                            ['Category', 'Item Name', 'Rate / Sq.Mtr'],
+                            ['Category', 'Item Name', 'Calculation Method', 'Base Rate'],
                             estimatorItems.filter(i => safeSearch(i.name, searchTerm) || safeSearch(i.category, searchTerm)),
                             'estimatorItem',
                             (item) => (
                                 <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                                     <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">{String(item.category || '')}</td>
                                     <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.name || '')}</td>
+                                    <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">
+                                        <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">{String(item.calcType || 'Area')}</span>
+                                    </td>
                                     <td className="px-6 py-4 font-black text-blue-600 dark:text-blue-400 tracking-wider">{formatCurrency(item.rate)}</td>
                                     <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
                                         <button onClick={() => openModal('estimatorItem', item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg"><Edit3 size={16}/></button>
@@ -1226,7 +1218,157 @@ const App = () => {
                             )
                         )}
                     </div>
-                </div>
+                ) : (
+                    /* CALCULATOR & CART VIEW */
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-fade-in-up">
+                        
+                        {/* CALCULATOR PANEL (Left 4 cols) */}
+                        <div className="lg:col-span-5 bg-white dark:bg-[#1e293b] p-8 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-slate-800 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-8 opacity-5 dark:opacity-10 pointer-events-none">
+                                <Calculator size={120} />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight mb-6">Price Estimator</h3>
+                            
+                            <form onSubmit={handleAddEstimateToCart} className="space-y-5 relative z-10">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Select Category *</label>
+                                    <select 
+                                        required
+                                        className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20"
+                                        value={calcForm.category}
+                                        onChange={(e) => setCalcForm({...calcForm, category: e.target.value, itemId: ''})}
+                                    >
+                                        <option value="">Choose Category...</option>
+                                        {[...new Set(estimatorItems.map(i => i.category))].map(cat => (
+                                            <option key={cat} value={cat}>{String(cat)}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Select Item Type *</label>
+                                    <select 
+                                        required
+                                        className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20"
+                                        value={calcForm.itemId}
+                                        onChange={(e) => setCalcForm({...calcForm, itemId: e.target.value})}
+                                        disabled={!calcForm.category}
+                                    >
+                                        <option value="">Choose Item...</option>
+                                        {estimatorItems.filter(i => i.category === calcForm.category).map(item => (
+                                            <option key={item.id} value={item.id}>{String(item.name)} (SAR {item.rate})</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* DYNAMIC FIELDS BASED ON CALC TYPE */}
+                                {(() => {
+                                    const selItem = estimatorItems.find(i => i.id === calcForm.itemId);
+                                    if(!selItem) return null;
+
+                                    return (
+                                        <div className="space-y-5 pt-2">
+                                            
+                                            {/* Area Based Inputs */}
+                                            {(selItem.calcType === 'Area' || selItem.calcType === 'Area_Thickness') && (
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Width (CM) *</label>
+                                                        <input type="number" required placeholder="0" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.width} onChange={e => setCalcForm({...calcForm, width: e.target.value})} />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Height (CM) *</label>
+                                                        <input type="number" required placeholder="0" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.height} onChange={e => setCalcForm({...calcForm, height: e.target.value})} />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Thickness Input */}
+                                            {selItem.calcType === 'Area_Thickness' && (
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Thickness (MM) *</label>
+                                                    <input type="number" required placeholder="e.g., 3" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.thickness} onChange={e => setCalcForm({...calcForm, thickness: e.target.value})} />
+                                                </div>
+                                            )}
+
+                                            {/* Time Based Input */}
+                                            {selItem.calcType === 'Time' && (
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Minutes Required *</label>
+                                                    <input type="number" required placeholder="e.g., 15" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.minutes} onChange={e => setCalcForm({...calcForm, minutes: e.target.value})} />
+                                                </div>
+                                            )}
+
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Quantity *</label>
+                                                <input type="number" min="1" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.qty} onChange={e => setCalcForm({...calcForm, qty: e.target.value})} />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Remarks / Description</label>
+                                                <input type="text" placeholder="Add custom notes..." className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-xs text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={calcForm.desc} onChange={e => setCalcForm({...calcForm, desc: e.target.value})} />
+                                            </div>
+
+                                            {/* LIVE CALCULATION RESULT */}
+                                            <div className="mt-8 pt-6 border-t-2 border-dashed border-slate-200 dark:border-slate-700">
+                                                <div className="p-4 bg-slate-900 dark:bg-black rounded-2xl mt-4 flex justify-between items-center shadow-inner">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Line Estimate</span>
+                                                    <span className="text-2xl font-black text-emerald-400">{formatCurrency(calculateEstimateItemTotal(selItem, calcForm).total)}</span>
+                                                </div>
+                                            </div>
+
+                                            <button type="submit" className="w-full py-4 mt-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/30 hover:scale-95 transition-all">
+                                                Add to Estimate List
+                                            </button>
+                                        </div>
+                                    );
+                                })()}
+                            </form>
+                        </div>
+
+                        {/* ESTIMATE CART (Right 8 cols) */}
+                        <div className="lg:col-span-7 bg-white dark:bg-[#1e293b] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
+                            <div className="p-6 bg-slate-50/50 dark:bg-[#0f172a]/50 border-b border-slate-100 dark:border-slate-800 flex items-center">
+                                <ShoppingCart size={20} className="text-slate-400 mr-3"/>
+                                <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-tight">Estimate Preview</h3>
+                            </div>
+                            
+                            <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
+                                {estimateCart.length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 space-y-4 py-20">
+                                        <ClipboardList size={48} className="opacity-50"/>
+                                        <p className="text-xs font-black uppercase tracking-widest">No items added yet</p>
+                                    </div>
+                                ) : (
+                                    <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                                        {estimateCart.map((item) => (
+                                            <div key={item.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group flex items-center justify-between">
+                                                <div className="flex-1 pr-4">
+                                                    <div className="flex items-center space-x-2 mb-1">
+                                                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-[8px] font-black uppercase tracking-widest">{item.category}</span>
+                                                    </div>
+                                                    <h4 className="font-black text-sm text-slate-800 dark:text-white uppercase">{item.name}</h4>
+                                                    {item.desc && <p className="text-xs font-bold text-slate-500 mt-0.5">{item.desc}</p>}
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Specs: {item.specs} | Qty: <span className="text-slate-700 dark:text-slate-300">{item.qty}</span></p>
+                                                </div>
+                                                <div className="text-right flex flex-col items-end">
+                                                    <span className="font-black text-lg text-slate-900 dark:text-slate-100">{formatCurrency(item.totalPrice)}</span>
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Rate: SAR {item.rate}</span>
+                                                    <button onClick={() => setEstimateCart(estimateCart.filter(i => i.id !== item.id))} className="mt-2 p-1.5 text-rose-500 opacity-0 group-hover:opacity-100 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all" title="Remove Item"><Trash2 size={14}/></button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="p-6 bg-slate-900 dark:bg-black text-white flex justify-between items-center mt-auto">
+                                <span className="text-xs font-black uppercase tracking-widest text-slate-400">Grand Total Estimate</span>
+                                <span className="text-3xl font-black text-emerald-400">{formatCurrency(estimateCart.reduce((a,b)=>a+b.totalPrice, 0))}</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
               </div>
             )}
 
@@ -1652,8 +1794,17 @@ const App = () => {
                         <input required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Rate per Sq.Mtr (SAR) *</label>
-                        <input type="number" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.rate || ''} onChange={e => setFormData({...formData, rate: e.target.value})} />
+                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Calculation Method *</label>
+                        <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.calcType || 'Area'} onChange={e => setFormData({...formData, calcType: e.target.value})}>
+                            <option value="Area">Area Based (Width x Height)</option>
+                            <option value="Area_Thickness">Area + Thickness (W x H x Thickness)</option>
+                            <option value="Time">Time Based (Minutes x Rate)</option>
+                            <option value="Fixed">Fixed / Unit Based (Qty x Rate)</option>
+                        </select>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Base Rate (SAR) *</label>
+                        <input type="number" required step="any" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.rate || ''} onChange={e => setFormData({...formData, rate: e.target.value})} />
                     </div>
                   </div>
                 )}
@@ -1879,40 +2030,45 @@ const App = () => {
                     {printDoc.type === 'sale' ? 'INVOICE' : 
                      printDoc.type === 'purchase' ? 'PURCHASE ORDER' : 
                      printDoc.type === 'collection' ? 'PAYMENT RECEIPT' : 
+                     printDoc.type === 'estimate' ? 'PRICE ESTIMATE' : 
                      printDoc.type === 'ledger' ? 'STATEMENT OF ACCOUNT' : 'EXPENSE VOUCHER'}
                   </h1>
-                  <p className="text-lg font-black text-blue-600">
-                    {String(printDoc.data?.invoiceNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
-                  </p>
+                  {printDoc.type !== 'estimate' && (
+                      <p className="text-lg font-black text-blue-600">
+                        {String(printDoc.data?.invoiceNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
+                      </p>
+                  )}
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">
                     Date: {String(printDoc.data?.date || (printDoc.data?.createdAt?.toDate ? printDoc.data.createdAt.toDate().toISOString().split('T')[0] : ''))}
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-12 mb-12">
-                <div className="border-l-4 border-blue-600 pl-4">
-                  <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Issued By</h2>
-                  <p className="font-black text-sm uppercase text-slate-900">{settings?.companyName || 'My Custom ERP'}</p>
-                  <p className="text-xs font-bold text-slate-500 uppercase mt-1">Tax ID: {settings?.taxId || '310294817200003'}</p>
-                  <p className="text-xs font-bold text-slate-500 mt-1">{settings?.email || 'info@erp.com'} | {settings?.phone || '+966 50 000 0000'}</p>
-                  {settings?.address && <p className="text-xs font-bold text-slate-500 mt-1">{settings.address}</p>}
-                </div>
-                <div className="border-l-4 border-slate-900 pl-4">
-                  <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
-                    {printDoc.type === 'sale' ? 'Billed To Customer' : 
-                     printDoc.type === 'purchase' ? 'Supplier Details' : 
-                     printDoc.type === 'ledger' ? `${printDoc.data?.entityType} Details` :
-                     printDoc.type === 'collection' ? 'Received From' : 'Expense Account'}
-                  </h2>
-                  <p className="font-black text-sm uppercase text-slate-900">
-                    {String(printDoc.data?.customerName || printDoc.data?.supplierName || printDoc.data?.category || printDoc.data?.description || printDoc.data?.entity?.name || '')}
-                  </p>
-                  <p className="text-xs font-bold text-slate-500 uppercase mt-1">
-                    Contact: {String(printDoc.data?.entity?.phone || '--')}
-                  </p>
-                </div>
-              </div>
+              {printDoc.type !== 'estimate' && (
+                  <div className="grid grid-cols-2 gap-12 mb-12">
+                    <div className="border-l-4 border-blue-600 pl-4">
+                      <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Issued By</h2>
+                      <p className="font-black text-sm uppercase text-slate-900">{settings?.companyName || 'My Custom ERP'}</p>
+                      <p className="text-xs font-bold text-slate-500 uppercase mt-1">Tax ID: {settings?.taxId || '310294817200003'}</p>
+                      <p className="text-xs font-bold text-slate-500 mt-1">{settings?.email || 'info@erp.com'} | {settings?.phone || '+966 50 000 0000'}</p>
+                      {settings?.address && <p className="text-xs font-bold text-slate-500 mt-1">{settings.address}</p>}
+                    </div>
+                    <div className="border-l-4 border-slate-900 pl-4">
+                      <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
+                        {printDoc.type === 'sale' ? 'Billed To Customer' : 
+                         printDoc.type === 'purchase' ? 'Supplier Details' : 
+                         printDoc.type === 'ledger' ? `${printDoc.data?.entityType} Details` :
+                         printDoc.type === 'collection' ? 'Received From' : 'Expense Account'}
+                      </h2>
+                      <p className="font-black text-sm uppercase text-slate-900">
+                        {String(printDoc.data?.customerName || printDoc.data?.supplierName || printDoc.data?.category || printDoc.data?.description || printDoc.data?.entity?.name || '')}
+                      </p>
+                      <p className="text-xs font-bold text-slate-500 uppercase mt-1">
+                        Contact: {String(printDoc.data?.entity?.phone || '--')}
+                      </p>
+                    </div>
+                  </div>
+              )}
 
               {printDoc.type === 'ledger' ? (
                   <table className="w-full text-left border-collapse mb-12">
@@ -1927,6 +2083,43 @@ const App = () => {
                   </table>
               ) : 
               
+              printDoc.type === 'estimate' ? (
+                 <>
+                  <table className="w-full text-left border-collapse mb-12">
+                    <thead className="bg-slate-50 border-y-2 border-slate-900">
+                      <tr>
+                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">S.No</th>
+                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">Description / Spec</th>
+                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Qty</th>
+                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Base Rate</th>
+                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Line Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-sm font-bold uppercase text-slate-900">
+                      {printDoc.data?.items?.map((item, idx) => (
+                        <tr key={idx}>
+                          <td className="py-5 px-2 text-slate-400">{idx + 1}</td>
+                          <td className="py-5 px-2 text-slate-900">
+                            <div><span className="text-blue-600">[{item.category}]</span> {item.name}</div>
+                            <div className="text-xs text-slate-500 mt-1 font-bold">{item.specs}</div>
+                            {item.desc && <div className="text-[10px] text-slate-400 mt-1 font-normal normal-case">{item.desc}</div>}
+                          </td>
+                          <td className="py-5 px-2 text-center text-slate-700">{item.qty}</td>
+                          <td className="py-5 px-2 text-right text-slate-700">{formatCurrency(item.rate)}</td>
+                          <td className="py-5 px-2 text-right text-slate-900">{formatCurrency(item.totalPrice)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  <div className="flex justify-end mb-16">
+                    <div className="w-80 space-y-3 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                      <div className="border-t-2 border-slate-900 pt-4 flex justify-between text-xl font-black text-slate-900 uppercase"><span>Est. Total</span><span className="text-blue-600">{formatCurrency(printDoc.data?.grandTotal)}</span></div>
+                    </div>
+                  </div>
+                 </>
+              ) :
+
               ['sale', 'purchase'].includes(printDoc.type) ? (
                 <>
                   <table className="w-full text-left border-collapse mb-12">
@@ -2001,6 +2194,19 @@ const App = () => {
               <div className="absolute bottom-[15mm] left-[15mm] right-[15mm] border-t border-slate-200 pt-4 flex justify-between text-[8px] font-black uppercase text-slate-400 tracking-widest">
                   <span>System Generated Document</span>
                   <span>Powered by {settings?.companyName || 'Cloud ERP'}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {confirmDelete.isOpen && (
+          <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4 no-print transition-all">
+            <div className="max-w-md w-full bg-white dark:bg-[#1e293b] rounded-[2.5rem] p-10 shadow-2xl text-center border border-slate-200 dark:border-slate-800">
+              <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2 uppercase">Delete Record?</h2>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-8 uppercase">Permanently remove <span className="text-slate-900 dark:text-white font-black">"{String(confirmDelete.title)}"</span>?</p>
+              <div className="grid grid-cols-2 gap-4">
+                <button onClick={() => setConfirmDelete({ isOpen: false })} className="py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancel</button>
+                <button onClick={executeDelete} className="py-4 bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-95 transition-transform">Confirm</button>
               </div>
             </div>
           </div>
