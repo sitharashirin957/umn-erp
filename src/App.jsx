@@ -39,8 +39,8 @@ const formatCurrency = (num) => new Intl.NumberFormat('en-US', { style: 'currenc
 const generateID = (prefix, length) => `${prefix}-${String(length + 1).padStart(5, '0')}`;
 
 const getBadgeStyle = (status) => {
-  if (status === 'Paid' || status === 'Active') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30 border';
-  if (status === 'Partial') return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border-amber-200 dark:border-amber-500/30 border';
+  if (status === 'Paid' || status === 'Active' || status === 'Collected') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30 border';
+  if (status === 'Partial' || status === 'Collection Follow up') return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border-amber-200 dark:border-amber-500/30 border';
   return 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 border-rose-200 dark:border-rose-500/30 border';
 };
 
@@ -720,6 +720,26 @@ const App = () => {
     setInvoiceItems(invoiceItems.filter((_, index) => index !== indexToRemove));
   };
 
+  // --- Dynamic Tab Titles Details ---
+  const getTabDetails = (tabId) => {
+    switch (tabId) {
+      case 'dashboard': return { title: 'Business Overview', desc: 'Real-time Analytics & KPIs' };
+      case 'crm': return { title: 'CRM & Job Tracker', desc: 'Manage Client Projects & Lifecycles' };
+      case 'sales': return { title: 'Sales & Invoices', desc: 'Manage Billing & Receivables' };
+      case 'purchases': return { title: 'Purchase Orders', desc: 'Manage Supplier Bills & Payables' };
+      case 'collections': return { title: 'Payment Collections', desc: 'Track Received Payments' };
+      case 'expenses': return { title: 'Business Expenses', desc: 'Track Outward Cashflow' };
+      case 'customers': return { title: 'Customer Directory', desc: 'Manage Client Profiles & Balances' };
+      case 'suppliers': return { title: 'Supplier Network', desc: 'Manage Vendor Profiles' };
+      case 'products': return { title: 'Inventory Management', desc: 'Manage Products & Stock Levels' };
+      case 'salesmen': return { title: 'Sales Executives', desc: 'Manage Staff & Commissions' };
+      case 'settings': return { title: 'System Settings', desc: 'Global Configuration & Profile' };
+      default: return { title: 'Dashboard', desc: 'Overview' };
+    }
+  };
+
+  const currentTabDetails = getTabDetails(activeTab);
+
   // --- EARLY RETURN FOR APP LOCK SCREEN ---
   if (!isAppUnlocked) {
     return (
@@ -831,7 +851,18 @@ const App = () => {
           <header className="h-20 bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 shrink-0 z-20 no-print">
             <div className="flex items-center space-x-4">
               <button className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl" onClick={() => setIsMobileMenuOpen(true)}><Menu size={24}/></button>
+              
+              {/* --- DYNAMIC PAGE TITLE --- */}
+              <div className="hidden sm:flex flex-col ml-2 lg:ml-0">
+                 <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none">
+                    {currentTabDetails.title}
+                 </h1>
+                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                    {currentTabDetails.desc}
+                 </p>
+              </div>
             </div>
+
             <div className="flex items-center space-x-4 sm:space-x-6">
               <div className="hidden md:flex items-center bg-slate-50 dark:bg-[#0f172a] rounded-full px-4 py-2 w-80 border border-slate-200 dark:border-slate-700 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 ring-blue-100 dark:ring-blue-900/30 transition-all">
                 <Search size={18} className="text-slate-400 mr-2" />
@@ -873,7 +904,7 @@ const App = () => {
                   )}
               </div>
 
-              {/* --- MANUAL LOCK BUTTON (Replaces simple initial) --- */}
+              {/* --- MANUAL LOCK BUTTON --- */}
               <button 
                 onClick={handleManualLock}
                 className="group relative h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/30 overflow-hidden transition-all hover:scale-95"
@@ -1094,7 +1125,7 @@ const App = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                        {crms.filter(c => safeSearch(c.jobId, searchTerm) || safeSearch(c.customerName, searchTerm) || safeSearch(c.description, searchTerm)).map((item) => {
+                        {crms.filter(c => safeSearch(c.jobId, searchTerm) || safeSearch(c.customerName, searchTerm) || safeSearch(c.description, searchTerm) || safeSearch(c.workStatus, searchTerm) || safeSearch(c.invoicingStatus, searchTerm) || safeSearch(c.collectionStatus, searchTerm) || safeSearch(c.clientType, searchTerm)).map((item) => {
                           
                           const linkedSale = sales.find(s => s.linkedJobId === item.id);
                           const relatedColls = linkedSale ? collections.filter(c => c.ref === linkedSale.invoiceNo).reduce((a,b)=>a+Number(b.amount),0) : 0;
@@ -1269,7 +1300,7 @@ const App = () => {
                 
                 {renderTable(
                   ['Entity Name', 'Contact Info', 'Tax / GST', 'Opening Bal.', 'Status'],
-                  (activeTab === 'customers' ? customers : suppliers).filter(c => safeSearch(c.name, searchTerm)),
+                  (activeTab === 'customers' ? customers : suppliers).filter(c => safeSearch(c.name, searchTerm) || safeSearch(c.phone, searchTerm) || safeSearch(c.email, searchTerm) || safeSearch(c.gst, searchTerm)),
                   activeTab,
                   (item) => (
                     <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
@@ -1300,7 +1331,7 @@ const App = () => {
                 </div>
                 {renderTable(
                   ['Product Name', 'Category', 'Stock Lvl', 'Cost Price', 'Selling Price'],
-                  products.filter(p => safeSearch(p.name, searchTerm)),
+                  products.filter(p => safeSearch(p.name, searchTerm) || safeSearch(p.category, searchTerm) || safeSearch(p.sellingPrice, searchTerm) || safeSearch(p.purchasePrice, searchTerm)),
                   'product',
                   (item) => (
                     <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
@@ -1328,7 +1359,7 @@ const App = () => {
                 
                 {renderTable(
                   ['Date', 'Invoice No', activeTab === 'sales' ? 'Customer' : 'Supplier', 'Executive', 'Grand Total', 'Status'],
-                  (activeTab === 'sales' ? sales : purchases).filter(i => safeSearch(i.invoiceNo, searchTerm) || safeSearch(i.customerName, searchTerm) || safeSearch(i.supplierName, searchTerm)),
+                  (activeTab === 'sales' ? sales : purchases).filter(i => safeSearch(i.invoiceNo, searchTerm) || safeSearch(i.customerName, searchTerm) || safeSearch(i.supplierName, searchTerm) || safeSearch(i.date, searchTerm) || safeSearch(i.grandTotal, searchTerm) || safeSearch(salesmen.find(s=>s.id === i.salesmanId)?.name, searchTerm)),
                   activeTab.slice(0, -1),
                   (item) => {
                     const relatedExps = activeTab === 'purchases' ? expenses.filter(e => (e.description === item.invoiceNo || e.ref === item.invoiceNo)).reduce((a,b)=>a+Number(b.amount),0) : 0;
@@ -1373,7 +1404,7 @@ const App = () => {
                 
                 {renderTable(
                   ['Date', 'Ref / Invoice Link', activeTab === 'collections' ? 'Customer' : 'Description', 'Executive', 'Amount', 'Method'],
-                  (activeTab === 'collections' ? collections : expenses).filter(i => safeSearch(i.ref, searchTerm) || safeSearch(i.customerName, searchTerm) || safeSearch(i.description, searchTerm)),
+                  (activeTab === 'collections' ? collections : expenses).filter(i => safeSearch(i.ref, searchTerm) || safeSearch(i.customerName, searchTerm) || safeSearch(i.description, searchTerm) || safeSearch(i.method, searchTerm) || safeSearch(i.amount, searchTerm) || safeSearch(i.date, searchTerm)),
                   activeTab.slice(0, -1),
                   (item) => (
                     <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
@@ -1401,7 +1432,7 @@ const App = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {salesmen.filter(s => safeSearch(s.name, searchTerm)).map(sm => (
+                  {salesmen.filter(s => safeSearch(s.name, searchTerm) || safeSearch(s.phone, searchTerm) || safeSearch(s.email, searchTerm)).map(sm => (
                     <div key={sm.id} className="bg-white dark:bg-[#1e293b] p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl dark:shadow-none transition-all relative overflow-hidden group">
                       <div className="flex items-center space-x-4 mb-6">
                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center text-2xl font-black shadow-lg shadow-indigo-500/20">{String(sm.name || 'U').charAt(0).toUpperCase()}</div>
