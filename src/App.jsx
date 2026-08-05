@@ -10,19 +10,18 @@ import {
   ShieldCheck, HandCoins, ShoppingBag, CreditCard, Menu, 
   Edit3, Receipt, Package, Truck, FileText, PieChart as PieChartIcon, 
   Bell, DownloadCloud, AlertTriangle, UsersRound, Activity, BookOpen, Image as ImageIcon,
-  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator, Database, ShoppingCart, Info, Table, CheckSquare
+  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator, Database, ShoppingCart, Info, Table, Wallet
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, increment, setDoc } from 'firebase/firestore';
 
-let firebaseConfig = {};
+let firebaseConfig;
 try {
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_FIREBASE_CONFIG) {
-    firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG);
-  }
+  firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG);
 } catch (error) {
-  console.error("Firebase config parsing error.", error);
+  console.error("Firebase config parsing error. Check Vercel Environment Variables.", error);
+  firebaseConfig = {}; 
 }
 
 const app = initializeApp(firebaseConfig);
@@ -30,10 +29,9 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-erp-v1';
 
-/* STREAMING_CHUNK:Constants and Helper Functions... */
 // --- SECURITY PINS ---
-const APP_PIN = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APP_PIN) || '1234';
-const ADMIN_PIN = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ADMIN_PIN) || '9999';
+const APP_PIN = import.meta.env.VITE_APP_PIN || '1234';
+const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || '9999';
 
 // --- HARDCODED ACRYLIC MATRIX CHART ---
 const STANDARD_MATRIX = {
@@ -53,11 +51,10 @@ const STANDARD_MATRIX = {
     "122 x 244": { "3": 520, "4": 620, "5": 800, "6": 950, "8": 1100, "10": 1300 }
 };
 
-// Map names to specific Area Values for Linear Interpolation
 const MATRIX_AREAS = [
     { label: "30 x 15", area: 450 },
     { label: "30 x 20 / A4", area: 600 },
-    { label: "A3", area: 1260 }, // Approx A3 Area
+    { label: "A3", area: 1260 },
     { label: "30 x 50", area: 1500 },
     { label: "35 x 50", area: 1750 },
     { label: "40 x 50", area: 2000 },
@@ -99,7 +96,6 @@ const cleanObject = (obj) => {
 const COLORS = ['#10b981', '#3b82f6', '#94a3b8', '#f43f5e', '#eab308', '#8b5cf6', '#06b6d4'];
 const AGING_COLORS = ['#38bdf8', '#fbbf24', '#34d399', '#a78bfa', '#fb923c', '#f43f5e'];
 
-/* STREAMING_CHUNK:Print and Export Utilities... */
 const triggerSystemPrint = async (customFilename) => {
   const element = document.getElementById('printable-area');
   if (!element) return;
@@ -160,7 +156,6 @@ const exportToExcel = async (data, filename) => {
   window.XLSX.writeFile(wb, `${String(filename).toUpperCase()}_REPORT_${new Date().toISOString().split('T')[0]}.xlsx`);
 };
 
-/* STREAMING_CHUNK:UI Components... */
 const CompanyLogo = ({ collapsed, settings }) => (
   <div className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} transition-all duration-300`}>
     {settings?.logo ? (
@@ -236,7 +231,6 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 }
 
-/* STREAMING_CHUNK:Main Application Initialization... */
 const App = () => {
   const [user, setUser] = useState(null);
   
@@ -273,7 +267,6 @@ const App = () => {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef(null);
 
-  /* STREAMING_CHUNK:Firebase Data States... */
   const [customers, setCustomers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -284,13 +277,17 @@ const App = () => {
   const [salesmen, setSalesmen] = useState([]);
   const [crms, setCrms] = useState([]);
   
+  // --- FORM ERROR & SUBMISSION STATES ---
+  const [formError, setFormError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // --- ESTIMATOR STATES ---
   const [estimatorItems, setEstimatorItems] = useState([]); 
   const [showEstimatorDB, setShowEstimatorDB] = useState(false);
   const [estimateCart, setEstimateCart] = useState([]);
   const [calcForm, setCalcForm] = useState({ 
     category: '', itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1,
-    matrixSize: '', matrixThick: '', isCustomMatrix: false // States for Custom Matrix Calculation
+    matrixSize: '', matrixThick: '', isCustomMatrix: false
   });
 
   const [settings, setSettings] = useState({ companyName: '', taxId: '', phone: '', email: '', address: '', logo: '' });
@@ -305,7 +302,6 @@ const App = () => {
   const [dbError, setDbError] = useState(false);
   const collapsed = isDesktop && !isSidebarHovered;
 
-  /* STREAMING_CHUNK:Effects and Event Listeners... */
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
     window.addEventListener('resize', handleResize);
@@ -400,7 +396,6 @@ const App = () => {
     return () => { unsubscribers.forEach(unsub => unsub()); unsubSettings(); };
   }, [user, isAppUnlocked]);
 
-  /* STREAMING_CHUNK:Security and Authentication Handlers... */
   const handleAppUnlock = (e) => {
     e.preventDefault();
     if (appPinInput === APP_PIN) {
@@ -442,7 +437,6 @@ const App = () => {
     });
   };
 
-  /* STREAMING_CHUNK:Analytics Calculations... */
   const analytics = useMemo(() => {
     const totalSales = sales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
     const totalPurchases = purchases.reduce((acc, p) => acc + (Number(p.grandTotal) || 0), 0);
@@ -555,9 +549,9 @@ const App = () => {
     return notifs;
   }, [products, topCustomersData]);
 
-  /* STREAMING_CHUNK:Form Modal Handlers... */
   const openModal = (type, data = null) => {
     const executeOpen = () => {
+      setFormError('');
       setFormData(data ? { ...data } : { 
         name: '', phone: '', email: '', gst: '', openingBalance: '', category: '', stock: '', 
         purchasePrice: '', sellingPrice: '', tax: '', minStock: '', amount: '', method: '', 
@@ -580,6 +574,8 @@ const App = () => {
     setModalState({ isOpen: false, type: null, data: null });
     setFormData({});
     setInvoiceItems([]);
+    setFormError('');
+    setIsSubmitting(false);
   };
 
   const handlePushToInvoice = (crmItem) => {
@@ -620,9 +616,11 @@ const App = () => {
     }
   };
 
-  const generateLedger = (type, entity) => {
+  // UPDATED: Now supports both Performance Ledger and Cash In Hand Ledger
+  const generateLedger = (type, entity, ledgerVariant = 'standard') => {
     let rows = [];
     let balance = Number(entity.openingBalance) || 0;
+    let entityTypeTitle = type;
     
     if (type === 'customer') {
         rows.push({ date: '-', ref: 'OP-BAL', desc: 'Opening Balance', debit: balance > 0 ? balance : 0, credit: balance < 0 ? Math.abs(balance) : 0, balance, rawDate: new Date(0) });
@@ -635,13 +633,22 @@ const App = () => {
         const e = expenses.filter(x => x.partyName === entity.name || x.supplierName === entity.name).map(x => ({ date: x.date, ref: x.ref || x.description || 'PAYMENT', desc: x.method || 'Payment Sent', debit: Number(x.amount), credit: 0, rawDate: new Date(x.date) }));
         [...p, ...e].sort((a,b) => a.rawDate - b.rawDate).forEach(r => { balance = balance - r.debit + r.credit; rows.push({ ...r, balance }); });
     } else if (type === 'salesman') {
-        const s = sales.filter(x => x.salesmanId === entity.id).map(x => ({ date: x.date, ref: x.invoiceNo, desc: `Sale (${x.customerName})`, debit: Number(x.grandTotal), credit: 0, rawDate: new Date(x.date) }));
-        const c = collections.filter(x => x.salesmanId === entity.id).map(x => ({ date: x.date, ref: x.ref || 'PAYMENT', desc: `Collection (${x.customerName})`, debit: 0, credit: Number(x.amount), rawDate: new Date(x.date) }));
-        let perfBal = 0;
-        [...s, ...c].sort((a,b) => a.rawDate - b.rawDate).forEach(r => { perfBal = perfBal + r.debit - r.credit; rows.push({ ...r, balance: perfBal }); });
+        if (ledgerVariant === 'cash') {
+            entityTypeTitle = 'Cash In Hand';
+            balance = 0; // Cash starts at 0 unless specified
+            const c = collections.filter(x => x.salesmanId === entity.id).map(x => ({ date: x.date, ref: x.ref || 'PAYMENT', desc: `Collected from ${x.customerName || '--'}`, debit: Number(x.amount), credit: 0, rawDate: new Date(x.date) }));
+            const e = expenses.filter(x => x.salesmanId === entity.id).map(x => ({ date: x.date, ref: x.description || 'EXPENSE', desc: `Paid for ${x.partyName || x.description || '--'}`, debit: 0, credit: Number(x.amount), rawDate: new Date(x.date) }));
+            [...c, ...e].sort((a,b) => a.rawDate - b.rawDate).forEach(r => { balance = balance + r.debit - r.credit; rows.push({ ...r, balance }); });
+        } else {
+            entityTypeTitle = 'Performance';
+            balance = 0;
+            const s = sales.filter(x => x.salesmanId === entity.id).map(x => ({ date: x.date, ref: x.invoiceNo, desc: `Sale (${x.customerName})`, debit: Number(x.grandTotal), credit: 0, rawDate: new Date(x.date) }));
+            const c = collections.filter(x => x.salesmanId === entity.id).map(x => ({ date: x.date, ref: x.ref || 'PAYMENT', desc: `Collection (${x.customerName})`, debit: 0, credit: Number(x.amount), rawDate: new Date(x.date) }));
+            [...s, ...c].sort((a,b) => a.rawDate - b.rawDate).forEach(r => { balance = balance + r.debit - r.credit; rows.push({ ...r, balance }); });
+        }
     }
 
-    setModalState({ isOpen: true, type: 'ledger', data: { entity, entityType: type, rows } });
+    setModalState({ isOpen: true, type: 'ledger', data: { entity, entityType: entityTypeTitle, rows } });
   };
 
   const handleCRMStatusChange = (id, field, value) => {
@@ -653,12 +660,27 @@ const App = () => {
     });
   };
 
-  /* STREAMING_CHUNK:Database Save Operations... */
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || isSubmitting) return;
     const { type, data } = modalState;
     const isEdit = !!data?.id;
+
+    // --- DUPLICATE PREVENTION LOGIC ---
+    if (type === 'customer' || type === 'supplier') {
+        const listToCheck = type === 'customer' ? customers : suppliers;
+        const inputName = String(formData.name || '').trim().toLowerCase();
+        const duplicate = listToCheck.find(item => String(item.name || '').trim().toLowerCase() === inputName && item.id !== data?.id);
+        
+        if (duplicate) {
+            setFormError(`A ${type} with this name already exists. Please edit the existing one to avoid duplicates.`);
+            return;
+        }
+    }
+
+    setIsSubmitting(true);
+    setFormError('');
+
     const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms', 'estimatorItem': 'estimator_items' };
     const colName = colMap[type];
     const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
@@ -708,7 +730,12 @@ const App = () => {
         else { await addDoc(collectionRef, { ...payload, createdAt: serverTimestamp() }); }
       }
       closeModal();
-    } catch (error) { console.error("Save error:", error); }
+    } catch (error) { 
+        console.error("Save error:", error); 
+        setFormError("Failed to save. Please try again.");
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   const handleSettingsSave = (e) => {
@@ -763,7 +790,6 @@ const App = () => {
     setInvoiceItems(invoiceItems.filter((_, index) => index !== indexToRemove));
   };
 
-  /* STREAMING_CHUNK:Advanced Estimator Logic with Interpolation... */
   const handleTierChange = (index, field, value) => {
       const newTiers = [...(formData.tiers || [])];
       newTiers[index][field] = Number(value) || 0;
@@ -782,7 +808,6 @@ const App = () => {
     if(!itemDb) return { total: 0, specs: '' };
     const q = Number(form.qty) || 1;
     
-    // 1. Standard Size Matrix (Interpolation for Custom Sizes included)
     if(itemDb.calcType === 'Standard_Matrix') {
         const mThick = form.matrixThick;
         if (!mThick) return { total: 0, specs: 'Please Select Thickness' };
@@ -791,20 +816,17 @@ const App = () => {
             const w = Number(form.width) || 0;
             const h = Number(form.height) || 0;
             if (w === 0 || h === 0) return { total: 0, specs: 'Enter Dimensions' };
-            const customArea = w * h; // Square CM
+            const customArea = w * h; 
             
             let lower = MATRIX_AREAS[0];
             let upper = MATRIX_AREAS[MATRIX_AREAS.length - 1];
             let unitPrice = 0;
 
             if (customArea <= lower.area) {
-                // Extrapolate downwards (or use exact ratio of smallest standard area)
                 unitPrice = (customArea / lower.area) * STANDARD_MATRIX[lower.label][mThick];
             } else if (customArea >= upper.area) {
-                // Extrapolate upwards (ratio of largest standard area)
                 unitPrice = (customArea / upper.area) * STANDARD_MATRIX[upper.label][mThick];
             } else {
-                // Linear Interpolation
                 for (let i = 0; i < MATRIX_AREAS.length - 1; i++) {
                     if (customArea >= MATRIX_AREAS[i].area && customArea <= MATRIX_AREAS[i+1].area) {
                         lower = MATRIX_AREAS[i];
@@ -814,14 +836,12 @@ const App = () => {
                 }
                 const priceLow = STANDARD_MATRIX[lower.label][mThick];
                 const priceHigh = STANDARD_MATRIX[upper.label][mThick];
-                // Y = y1 + ((x - x1) / (x2 - x1)) * (y2 - y1)
                 unitPrice = priceLow + ((customArea - lower.area) / (upper.area - lower.area)) * (priceHigh - priceLow);
             }
 
             return { total: unitPrice * q, specs: `Custom Size ${w}x${h}cm (${mThick}mm)` };
 
         } else {
-            // Standard Size Lookup
             const mSize = form.matrixSize;
             if(STANDARD_MATRIX[mSize] && STANDARD_MATRIX[mSize][mThick]) {
                  const price = STANDARD_MATRIX[mSize][mThick];
@@ -831,20 +851,17 @@ const App = () => {
         }
     }
 
-    // 2. Fixed Unit Based
     if(itemDb.calcType === 'Fixed') {
         const rate = Number(itemDb.rate) || 0;
         return { total: rate * q, specs: `Fixed Unit` };
     }
 
-    // 3. Time Based
     if(itemDb.calcType === 'Time') {
         const rate = Number(itemDb.rate) || 0;
         const mins = Number(form.minutes) || 0;
         return { total: mins * rate * q, specs: `${mins} Mins` };
     }
 
-    // 4. Tiered (Quantity Dependent)
     if(itemDb.calcType === 'Tiered') {
         let unitPrice = Number(itemDb.rate) || 0; 
         if (itemDb.tiers && itemDb.tiers.length > 0) {
@@ -855,7 +872,6 @@ const App = () => {
         return { total: unitPrice * q, specs: `Tier Rate Applied: ${formatCurrency(unitPrice)}/ea` };
     }
     
-    // 5. Area Calculations (Area, Area_Thickness, Sheet_Cut)
     const w = Number(form.width) || 0;
     const h = Number(form.height) || 0;
     const sqm = (w * h) / 10000;
@@ -869,7 +885,7 @@ const App = () => {
              if (matchedTier) materialRate = Number(matchedTier.price);
         }
 
-        const matCost = sqm * materialRate; // materialRate is per sqm for this thickness
+        const matCost = sqm * materialRate;
         
         if (itemDb.calcType === 'Sheet_Cut') {
             const timeRate = Number(itemDb.timeRate) || 0;
@@ -881,7 +897,6 @@ const App = () => {
         }
     }
     
-    // Default Area
     const rate = Number(itemDb.rate) || 0;
     return { total: sqm * rate * q, specs: `${w}x${h}cm (${sqm.toFixed(2)}sqm)` };
   };
@@ -892,7 +907,7 @@ const App = () => {
       if(!itemDb) return;
       
       const { total, specs } = calculateEstimateItemTotal(itemDb, calcForm);
-      if (total === 0) return; // Prevent adding if calculation is missing inputs
+      if (total === 0) return; 
       
       const cartItem = {
           id: Date.now(),
@@ -906,7 +921,6 @@ const App = () => {
       };
       
       setEstimateCart([...estimateCart, cartItem]);
-      // Reset form but keep category selected for speed
       setCalcForm({ category: calcForm.category, itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1, matrixSize: '', matrixThick: '', isCustomMatrix: false });
   };
 
@@ -931,7 +945,6 @@ const App = () => {
 
   const currentTabDetails = getTabDetails(activeTab);
 
-  /* STREAMING_CHUNK:App Lock UI Render... */
   if (!isAppUnlocked) {
     return (
       <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen font-sans selection:bg-blue-500/30 flex items-center justify-center`}>
@@ -979,7 +992,6 @@ const App = () => {
     </div>
   );
 
-  /* STREAMING_CHUNK:Main Application Layout... */
   return (
     <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-500/30`}>
       <div className="flex h-screen overflow-hidden">
@@ -1048,7 +1060,6 @@ const App = () => {
             <div className="flex items-center space-x-4">
               <button className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl" onClick={() => setIsMobileMenuOpen(true)}><Menu size={24}/></button>
               
-              {/* --- DYNAMIC PAGE TITLE --- */}
               <div className="hidden sm:flex flex-col ml-2 lg:ml-0">
                  <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none">
                     {currentTabDetails.title}
@@ -1065,7 +1076,6 @@ const App = () => {
                 <input type="text" placeholder="Global Entity Search..." className="bg-transparent border-none text-sm font-bold w-full focus:outline-none uppercase dark:text-white dark:placeholder-slate-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
               
-              {/* --- The Dark Mode Toggle Button --- */}
               <button onClick={toggleDarkMode} className="p-2 text-slate-400 hover:text-blue-500 dark:hover:text-cyan-400 transition-colors bg-slate-50 dark:bg-[#0f172a] rounded-full border border-slate-100 dark:border-slate-800">
                 {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
               </button>
@@ -1100,7 +1110,6 @@ const App = () => {
                   )}
               </div>
 
-              {/* --- MANUAL LOCK BUTTON --- */}
               <button 
                 onClick={handleManualLock}
                 className="group relative h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/30 overflow-hidden transition-all hover:scale-95"
@@ -1909,7 +1918,11 @@ const App = () => {
                       <td className={`px-6 py-4 font-black ${activeTab === 'collections' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{formatCurrency(item.amount)}</td>
                       <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">{String(item.method || 'Cash')}</td>
                       <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity no-print flex justify-end items-center">
-                        <button onClick={() => setPrintDoc({ isOpen: true, type: activeTab.slice(0, -1), data: item })} className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-800 rounded-lg"><Printer size={16}/></button>
+                        <button onClick={() => setPrintDoc({ isOpen: true, type: activeTab.slice(0, -1), data: item })} className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-800 rounded-lg" title="Print"><Printer size={16}/></button>
+                        
+                        {/* --- NEW EDIT BUTTON FOR VOUCHERS --- */}
+                        <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg" title={`Edit ${activeTab.slice(0, -1)}`}><Edit3 size={16}/></button>
+                        
                         <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, formatCurrency(item.amount))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
                       </td>
                     </tr>
@@ -1936,7 +1949,12 @@ const App = () => {
                         </div>
                       </div>
                       <div className="flex justify-end space-x-2 mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
-                        <button onClick={() => generateLedger('salesman', sm)} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-indigo-500 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors" title="View Performance Ledger"><BookOpen size={16}/></button>
+                        
+                        {/* --- NEW CASH IN HAND LEDGER BUTTON --- */}
+                        <button onClick={() => generateLedger('salesman', sm, 'cash')} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-emerald-500 dark:text-emerald-400 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors" title="View Cash In Hand Balance"><HandCoins size={16}/></button>
+
+                        <button onClick={() => generateLedger('salesman', sm, 'performance')} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-indigo-500 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors" title="View Sales Performance Ledger"><BookOpen size={16}/></button>
+                        
                         <button onClick={() => openModal('salesman', sm)} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors"><Edit3 size={16}/></button>
                         <button onClick={() => triggerDelete('salesman', sm.id, String(sm.name))} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-rose-500 dark:text-rose-400 rounded-xl hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors"><Trash2 size={16}/></button>
                       </div>
@@ -1999,8 +2017,15 @@ const App = () => {
                 <button onClick={closeModal} className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full transition-colors"><X size={20}/></button>
               </div>
               
-              <form onSubmit={handleSave} className="p-8 space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar">
+              <form onSubmit={handleSave} className="p-8 space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar relative">
                 
+                {/* FORM ERROR ALERT */}
+                {formError && (
+                    <div className="p-4 bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 rounded-2xl font-black text-xs uppercase tracking-widest border border-rose-200 dark:border-rose-500/30 flex items-center">
+                        <AlertTriangle size={16} className="mr-2 shrink-0"/> {formError}
+                    </div>
+                )}
+
                 {/* MODAL: PRICE ESTIMATOR ITEMS */}
                 {modalState.type === 'estimatorItem' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2251,8 +2276,10 @@ const App = () => {
                 )}
 
                 <div className="pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-end space-x-4">
-                  <button type="button" onClick={closeModal} className="px-8 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancel</button>
-                  <button type="submit" className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 transition-all">Save {String(modalState.type)}</button>
+                  <button type="button" onClick={closeModal} disabled={isSubmitting} className="px-8 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Cancel</button>
+                  <button type="submit" disabled={isSubmitting} className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                      {isSubmitting ? 'Saving...' : `Save ${String(modalState.type)}`}
+                  </button>
                 </div>
               </form>
             </div>
