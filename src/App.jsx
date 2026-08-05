@@ -124,7 +124,6 @@ const triggerSystemPrint = async (customFilename) => {
   const noPrintElements = element.querySelectorAll('.no-print');
   noPrintElements.forEach(el => el.style.display = 'none');
   
-  // Temporarily adjust text sizes for print if needed
   element.classList.add('print-mode');
   await window.html2pdf().set(opt).from(element).save();
   element.classList.remove('print-mode');
@@ -307,10 +306,7 @@ const App = () => {
     matrixSize: '', matrixThick: '', isCustomMatrix: false
   });
   
-  // Editable Override Price State
   const [manualEstimateTotal, setManualEstimateTotal] = useState('');
-
-  // Custom Modal for Estimator "Push To..."
   const [estimatorPushModal, setEstimatorPushModal] = useState({ isOpen: false, type: '', customerId: '' });
 
   const [settings, setSettings] = useState({ companyName: '', taxId: '', phone: '', email: '', address: '', logo: '' });
@@ -492,7 +488,6 @@ const App = () => {
     return Object.values(map).sort((a,b) => a.sortKey.localeCompare(b.sortKey)).slice(-12);
   }, [sales, purchases]);
 
-  // General chart aging
   const calculateAging = (invoices, payments, type) => {
     const bins = { 'No Due yet': 0, '0 - 30 Days': 0, '31 - 60 Days': 0, '61 - 90 Days': 0, '91 - 120 Days': 0, '120 +': 0 };
     const today = new Date();
@@ -519,7 +514,7 @@ const App = () => {
   const agingReceivables = useMemo(() => calculateAging(sales, collections, 'rec'), [sales, collections]);
   const agingPayables = useMemo(() => calculateAging(purchases, expenses, 'pay'), [purchases, expenses]);
 
-  // --- NEW: Detailed Entity Aging Report Generator ---
+  // --- Detailed Entity Aging Report Generator ---
   const buildAgingReport = (entities, invoices, payments, type) => {
     const today = new Date();
     let report = entities.map(entity => {
@@ -567,7 +562,6 @@ const App = () => {
 
   const customerAgingReport = useMemo(() => buildAgingReport(customers, sales, collections, 'customer'), [customers, sales, collections]);
   const supplierAgingReport = useMemo(() => buildAgingReport(suppliers, purchases, expenses, 'supplier'), [suppliers, purchases, expenses]);
-
 
   const topCustomersData = useMemo(() => {
     const map = {};
@@ -678,7 +672,7 @@ const App = () => {
       const customer = customers.find(c => c.id === estimatorPushModal.customerId);
       if(!customer) return;
 
-      const formattedItems = estimateCart.map((item, index) => ({
+      const formattedItems = estimateCart.map((item) => ({
           productId: '', 
           name: `${item.name}`, 
           description: `[${item.category}] ${item.specs}${item.desc ? `\nNote: ${item.desc}` : ''}`,
@@ -1429,6 +1423,174 @@ const App = () => {
               </div>
             )}
 
+            {/* --- CRM VIEW --- */}
+            {activeTab === 'crm' && (
+              <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1">
+                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+                  <div className="flex space-x-3">
+                      <button onClick={() => exportToExcel(crms, `CRM_JOBS_${new Date().toISOString().split('T')[0]}`)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export</button>
+                  </div>
+                  <button onClick={() => openModal('crm')} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Plus size={16} className="mr-2"/> Add New Job</button>
+                </div>
+                
+                <div className="bg-white dark:bg-[#1e293b] rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[1100px]">
+                      <thead className="bg-[#4a5568] text-[10px] uppercase tracking-widest font-black text-white">
+                        <tr>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Job ID</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Date</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Client Name</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 w-1/4">Work Details</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Client Type</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Exec</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-center">Work Status</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-center">Invoicing</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-center">Collection</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-right no-print">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                        {crms.filter(c => safeSearch(c.jobId, searchTerm) || safeSearch(c.customerName, searchTerm) || safeSearch(c.description, searchTerm) || safeSearch(c.workStatus, searchTerm) || safeSearch(c.invoicingStatus, searchTerm) || safeSearch(c.collectionStatus, searchTerm) || safeSearch(c.clientType, searchTerm)).map((item) => {
+                          
+                          const linkedSale = sales.find(s => s.linkedJobId === item.id);
+                          const relatedColls = linkedSale ? collections.filter(c => c.ref === linkedSale.invoiceNo).reduce((a,b)=>a+Number(b.amount),0) : 0;
+                          const pendingAmount = linkedSale ? Number(linkedSale.grandTotal) - relatedColls : 0;
+                          
+                          let displayInvStatus = item.invoicingStatus || 'Not invoiced';
+                          let displayCollStatus = item.collectionStatus || 'Pending';
+                          let invBadgeColor = 'bg-gray-100 text-gray-700';
+                          let collBadgeColor = 'bg-gray-100 text-gray-700';
+                          let isSmartLinked = false;
+
+                          if (linkedSale) {
+                              isSmartLinked = true;
+                              displayInvStatus = 'TAX Invoice Created';
+                              invBadgeColor = 'bg-emerald-600 text-white';
+                              
+                              if (pendingAmount <= 0) {
+                                  displayCollStatus = 'Collected';
+                                  collBadgeColor = 'bg-emerald-600 text-white';
+                              } else if (relatedColls > 0) {
+                                  displayCollStatus = 'Partial / Follow Up';
+                                  collBadgeColor = 'bg-amber-500 text-white';
+                              } else {
+                                  displayCollStatus = 'Pending Payment';
+                                  collBadgeColor = 'bg-rose-500 text-white';
+                              }
+                          } else {
+                              if(displayInvStatus === 'Not invoiced' || displayInvStatus === 'Not Invoiced') invBadgeColor = 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400';
+                              else if(displayInvStatus === 'Sample without payment' || displayInvStatus === 'Sample with...') invBadgeColor = 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+                              else if(displayInvStatus === 'Without Invoice') invBadgeColor = 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300';
+                              else if(displayInvStatus === 'Proforma Invoice created and sent') invBadgeColor = 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+                              else if(displayInvStatus === 'TAX Invoice Sent to Client') invBadgeColor = 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400';
+                              else invBadgeColor = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+
+                              if(displayCollStatus === 'Collected') collBadgeColor = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+                              else if(displayCollStatus === 'Collection Follow up') collBadgeColor = 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400';
+                          }
+
+                          return (
+                          <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
+                            <td className="px-4 py-3 uppercase tracking-wider">{item.jobId}</td>
+                            <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{item.date}</td>
+                            <td className="px-4 py-3 uppercase">{item.customerName}</td>
+                            <td className="px-4 py-3 uppercase max-w-xs">
+                                {item.items && item.items.length > 0 ? (
+                                    <div className="flex flex-col gap-2">
+                                        {item.items.map((i, idx) => (
+                                            <div key={idx} className="flex flex-col">
+                                                <span className="font-bold text-[10px] text-blue-600 dark:text-blue-400">• {i.name} (Qty: {i.qty})</span>
+                                                {i.description && <span className="text-[9px] opacity-70 ml-2 whitespace-pre-wrap">{i.description}</span>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <span className="truncate block" title={item.description}>{item.description || '--'}</span>
+                                )}
+                            </td>
+                            <td className="px-4 py-3">
+                                <span className={`px-2 py-1 rounded text-[9px] uppercase tracking-widest ${getCRMClientTypeStyle(item.clientType)}`}>
+                                    {item.clientType || 'Direct Client'}
+                                </span>
+                            </td>
+                            <td className="px-4 py-3 uppercase">{salesmen.find(s=>s.id === item.salesmanId)?.name || 'N/A'}</td>
+                            
+                            <td className="px-4 py-3 text-center">
+                                <select 
+                                    className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center ${getCRMWorkStatusStyle(item.workStatus)}`}
+                                    value={item.workStatus || 'Work Onboarded'}
+                                    onChange={(e) => handleCRMStatusChange(item.id, 'workStatus', e.target.value)}
+                                >
+                                    <option value="Price/Quotation Submitted">Price/Quotation Submitted</option>
+                                    <option value="Work Onboarded">Work Onboarded</option>
+                                    <option value="Work Finished">Work Finished</option>
+                                    <option value="Delivered">Delivered</option>
+                                    <option value="Cold Lead">Cold Lead</option>
+                                    <option value="Quote Rejected">Quote Rejected</option>
+                                    <option value="Quote Revised">Quote Revised</option>
+                                    <option value="Waiting Approval">Waiting Approval</option>
+                                    <option value="Canceled">Canceled</option>
+                                </select>
+                            </td>
+
+                            <td className="px-4 py-3 text-center">
+                                {isSmartLinked ? (
+                                    <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${invBadgeColor}`} title={`Auto-linked to Sale: ${linkedSale?.invoiceNo}`}>
+                                        {displayInvStatus} 🔗
+                                    </span>
+                                ) : (
+                                    <select 
+                                        className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center border-none ${invBadgeColor}`}
+                                        value={displayInvStatus}
+                                        onChange={(e) => handleCRMStatusChange(item.id, 'invoicingStatus', e.target.value)}
+                                    >
+                                        <option value="Not invoiced">Not invoiced</option>
+                                        <option value="TAX Invoice Created">TAX Invoice Created</option>
+                                        <option value="TAX Invoice Sent to Client">TAX Invoice Sent to Client</option>
+                                        <option value="Without Invoice">Without Invoice</option>
+                                        <option value="Proforma Invoice created and sent">Proforma Invoice created and sent</option>
+                                        <option value="Sample without payment">Sample without payment</option>
+                                    </select>
+                                )}
+                            </td>
+
+                            <td className="px-4 py-3 text-center">
+                                {isSmartLinked ? (
+                                    <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${collBadgeColor}`}>
+                                        {displayCollStatus}
+                                    </span>
+                                ) : (
+                                    <select 
+                                        className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center border-none ${collBadgeColor}`}
+                                        value={displayCollStatus}
+                                        onChange={(e) => handleCRMStatusChange(item.id, 'collectionStatus', e.target.value)}
+                                    >
+                                        <option value="Pending">Pending</option>
+                                        <option value="Collection Follow up">Collection Follow up</option>
+                                        <option value="Collected">Collected</option>
+                                    </select>
+                                )}
+                            </td>
+                            
+                            <td className="px-4 py-3 text-right space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end no-print">
+                              {/* --- PUSH TO INVOICE BUTTON --- */}
+                              {!isSmartLinked && (
+                                <button onClick={() => handlePushToInvoice(item)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg" title="Push to Sales Invoice"><FilePlus size={14}/></button>
+                              )}
+                              <button onClick={() => openModal('crm', item)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg" title="Edit Full Job"><Edit3 size={14}/></button>
+                              <button onClick={() => triggerDelete('crm', item.id, String(item.jobId))} className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg"><Trash2 size={14}/></button>
+                            </td>
+                          </tr>
+                        )})}
+                        {crms.length === 0 && <tr><td colSpan="10" className="py-12 text-center text-slate-300 dark:text-slate-600 uppercase tracking-widest">No Jobs Tracked Yet</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* --- AGING REPORTS VIEW --- */}
             {(activeTab === 'aging_customers' || activeTab === 'aging_suppliers') && (
                 <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1">
@@ -1579,6 +1741,44 @@ const App = () => {
                 </div>
             )}
 
+            {/* --- SETTINGS VIEW --- */}
+            {activeTab === 'settings' && (
+              <div className="max-w-4xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
+                <div className="bg-white dark:bg-[#1e293b] p-10 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
+                   <h2 className="text-2xl font-black uppercase tracking-tight text-slate-800 dark:text-white mb-8 border-b border-slate-100 dark:border-slate-800 pb-6">Company Profile Setup</h2>
+                   {settingsSuccess && <div className="mb-6 p-4 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold rounded-xl text-center border border-emerald-200 dark:border-emerald-500/30">Settings successfully updated!</div>}
+                   
+                   <form onSubmit={handleSettingsSave} className="space-y-6">
+                      <div className="flex items-center space-x-8 mb-8">
+                          <div className="relative group cursor-pointer">
+                              <div className="w-32 h-32 rounded-3xl border-4 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center bg-slate-50 dark:bg-[#0f172a] overflow-hidden">
+                                  {settings.logo ? <img src={settings.logo} className="w-full h-full object-contain" alt="Logo" /> : <ImageIcon size={32} className="text-slate-400 dark:text-slate-500 mb-2"/>}
+                              </div>
+                              <input type="file" accept="image/*" onChange={handleLogoUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                              <div className="absolute inset-0 bg-black/50 hidden group-hover:flex items-center justify-center rounded-3xl text-white font-bold text-xs pointer-events-none">Change Logo</div>
+                          </div>
+                          <div>
+                              <h3 className="font-black text-slate-800 dark:text-white uppercase">Brand Identity</h3>
+                              <p className="text-xs font-bold text-slate-400 dark:text-slate-500">Upload a high-res JPG or PNG for your invoices.</p>
+                          </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Registered Company Name *</label><input required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={settings.companyName || ''} onChange={e => setSettings({...settings, companyName: e.target.value})} /></div>
+                          <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Tax / GST / VAT ID</label><input className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20 uppercase" value={settings.taxId || ''} onChange={e => setSettings({...settings, taxId: e.target.value})} /></div>
+                          <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Official Phone Number</label><input className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={settings.phone || ''} onChange={e => setSettings({...settings, phone: e.target.value})} /></div>
+                          <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Support / Billing Email</label><input type="email" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={settings.email || ''} onChange={e => setSettings({...settings, email: e.target.value})} /></div>
+                          <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Headquarters Address</label><input className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={settings.address || ''} onChange={e => setSettings({...settings, address: e.target.value})} /></div>
+                      </div>
+                      
+                      <div className="pt-8 flex justify-end">
+                          <button type="submit" className="px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 transition-all">Save Global Settings</button>
+                      </div>
+                   </form>
+                </div>
+              </div>
+            )}
+
             {/* --- LIST VIEWS --- */}
             {(activeTab === 'customers' || activeTab === 'suppliers') && (
               <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
@@ -1643,7 +1843,7 @@ const App = () => {
               <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 gap-4 flex-wrap">
                   
-                  {/* --- NEW: Show Due Invoices Toggle --- */}
+                  {/* --- Show Due Invoices Toggle --- */}
                   <label className="flex items-center cursor-pointer space-x-2 bg-slate-50 dark:bg-[#0f172a] px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
                       <input 
                           type="checkbox" 
@@ -2022,7 +2222,6 @@ const App = () => {
                         <option value="">Select Exec...</option>{salesmen.map(s => <option key={s.id} value={s.id}>{String(s.name)}</option>)}
                       </select>
                     </div>
-                    <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Overall Job Notes (Optional)</label><textarea className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20 min-h-[100px]" value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} /></div>
                   </div>
                 )}
 
