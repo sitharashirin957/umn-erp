@@ -16,12 +16,13 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, increment, setDoc } from 'firebase/firestore';
 
-let firebaseConfig;
+let firebaseConfig = {};
 try {
-  firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG);
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_FIREBASE_CONFIG) {
+    firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG);
+  }
 } catch (error) {
-  console.error("Firebase config parsing error. Check Vercel Environment Variables.", error);
-  firebaseConfig = {}; 
+  console.error("Firebase config parsing error.", error);
 }
 
 const app = initializeApp(firebaseConfig);
@@ -29,9 +30,10 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-erp-v1';
 
+/* STREAMING_CHUNK:Constants and Helper Functions... */
 // --- SECURITY PINS ---
-const APP_PIN = import.meta.env.VITE_APP_PIN || '1234';
-const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || '9999';
+const APP_PIN = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APP_PIN) || '1234';
+const ADMIN_PIN = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ADMIN_PIN) || '9999';
 
 // --- HARDCODED ACRYLIC MATRIX CHART ---
 const STANDARD_MATRIX = {
@@ -51,6 +53,7 @@ const STANDARD_MATRIX = {
     "122 x 244": { "3": 520, "4": 620, "5": 800, "6": 950, "8": 1100, "10": 1300 }
 };
 
+// Map names to specific Area Values for Linear Interpolation
 const MATRIX_AREAS = [
     { label: "30 x 15", area: 450 },
     { label: "30 x 20 / A4", area: 600 },
@@ -85,7 +88,7 @@ const cleanObject = (obj) => {
       if (typeof obj[key] === 'object' && obj[key] !== null && !obj[key].toDate && !Array.isArray(obj[key])) {
         cleaned[key] = cleanObject(obj[key]);
       } else {
-        cleaned[key] = obj[key]; // Preserve Arrays like tiers and Dates
+        cleaned[key] = obj[key]; 
       }
     }
   }
@@ -96,6 +99,7 @@ const cleanObject = (obj) => {
 const COLORS = ['#10b981', '#3b82f6', '#94a3b8', '#f43f5e', '#eab308', '#8b5cf6', '#06b6d4'];
 const AGING_COLORS = ['#38bdf8', '#fbbf24', '#34d399', '#a78bfa', '#fb923c', '#f43f5e'];
 
+/* STREAMING_CHUNK:Print and Export Utilities... */
 const triggerSystemPrint = async (customFilename) => {
   const element = document.getElementById('printable-area');
   if (!element) return;
@@ -156,6 +160,7 @@ const exportToExcel = async (data, filename) => {
   window.XLSX.writeFile(wb, `${String(filename).toUpperCase()}_REPORT_${new Date().toISOString().split('T')[0]}.xlsx`);
 };
 
+/* STREAMING_CHUNK:UI Components... */
 const CompanyLogo = ({ collapsed, settings }) => (
   <div className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} transition-all duration-300`}>
     {settings?.logo ? (
@@ -231,6 +236,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 }
 
+/* STREAMING_CHUNK:Main Application Initialization... */
 const App = () => {
   const [user, setUser] = useState(null);
   
@@ -267,6 +273,7 @@ const App = () => {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef(null);
 
+  /* STREAMING_CHUNK:Firebase Data States... */
   const [customers, setCustomers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -290,6 +297,9 @@ const App = () => {
     matrixSize: '', matrixThick: '', isCustomMatrix: false
   });
   
+  // NEW: Editable Override Price State
+  const [manualEstimateTotal, setManualEstimateTotal] = useState('');
+
   // Custom Modal for Estimator "Push To..."
   const [estimatorPushModal, setEstimatorPushModal] = useState({ isOpen: false, type: '', customerId: '' });
 
@@ -305,6 +315,7 @@ const App = () => {
   const [dbError, setDbError] = useState(false);
   const collapsed = isDesktop && !isSidebarHovered;
 
+  /* STREAMING_CHUNK:Effects and Event Listeners... */
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
     window.addEventListener('resize', handleResize);
@@ -399,6 +410,7 @@ const App = () => {
     return () => { unsubscribers.forEach(unsub => unsub()); unsubSettings(); };
   }, [user, isAppUnlocked]);
 
+  /* STREAMING_CHUNK:Security and Authentication Handlers... */
   const handleAppUnlock = (e) => {
     e.preventDefault();
     if (appPinInput === APP_PIN) {
@@ -440,6 +452,7 @@ const App = () => {
     });
   };
 
+  /* STREAMING_CHUNK:Analytics Calculations... */
   const analytics = useMemo(() => {
     const totalSales = sales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
     const totalPurchases = purchases.reduce((acc, p) => acc + (Number(p.grandTotal) || 0), 0);
@@ -552,6 +565,7 @@ const App = () => {
     return notifs;
   }, [products, topCustomersData]);
 
+  /* STREAMING_CHUNK:Form Modal Handlers... */
   const openModal = (type, data = null) => {
     const executeOpen = () => {
       setFormError('');
@@ -591,7 +605,7 @@ const App = () => {
       linkedJobId: crmItem.id, 
       date: new Date().toISOString().split('T')[0],
       items: crmItem.items && crmItem.items.length > 0 
-        ? crmItem.items.map(i => ({...i, tax: 0})) // Map CRM items to invoice items
+        ? crmItem.items.map(i => ({...i, tax: 0})) 
         : [{ productId: '', name: 'CUSTOM JOB', description: crmItem.description || '', qty: 1, rate: 0, tax: 0, total: 0 }]
     };
     openModal('sale', preFilledData); 
@@ -605,10 +619,10 @@ const App = () => {
 
       const formattedItems = estimateCart.map((item, index) => ({
           productId: '', 
-          name: `${index + 1}. [${item.category}] ${item.name}`, 
-          description: `${item.specs}${item.desc ? `\n${item.desc}` : ''}`,
+          name: `${item.name}`, 
+          description: `[${item.category}] ${item.specs}${item.desc ? `\nNote: ${item.desc}` : ''}`,
           qty: item.qty,
-          rate: item.totalPrice / item.qty, 
+          rate: Number((item.totalPrice / item.qty).toFixed(2)), 
           tax: 0, 
           total: item.totalPrice
       }));
@@ -694,6 +708,7 @@ const App = () => {
     });
   };
 
+  /* STREAMING_CHUNK:Database Save Operations... */
   const handleSave = async (e) => {
     e.preventDefault();
     if (!user || isSubmitting) return;
@@ -825,6 +840,7 @@ const App = () => {
     setInvoiceItems(invoiceItems.filter((_, index) => index !== indexToRemove));
   };
 
+  /* STREAMING_CHUNK:Advanced Estimator Logic... */
   const handleTierChange = (index, field, value) => {
       const newTiers = [...(formData.tiers || [])];
       newTiers[index][field] = Number(value) || 0;
@@ -936,27 +952,34 @@ const App = () => {
     return { total: sqm * rate * q, specs: `${w}x${h}cm (${sqm.toFixed(2)}sqm)` };
   };
 
+  const selItemForCalc = useMemo(() => estimatorItems.find(i => i.id === calcForm.itemId), [estimatorItems, calcForm.itemId]);
+  const autoResult = useMemo(() => calculateEstimateItemTotal(selItemForCalc, calcForm), [selItemForCalc, calcForm]);
+
+  useEffect(() => {
+      setManualEstimateTotal(autoResult.total > 0 ? autoResult.total : '');
+  }, [autoResult.total]);
+
   const handleAddEstimateToCart = (e) => {
       e.preventDefault();
-      const itemDb = estimatorItems.find(i => i.id === calcForm.itemId);
-      if(!itemDb) return;
+      if(!selItemForCalc) return;
       
-      const { total, specs } = calculateEstimateItemTotal(itemDb, calcForm);
-      if (total === 0) return; 
+      const finalPrice = manualEstimateTotal !== '' ? Number(manualEstimateTotal) : autoResult.total;
+      if (finalPrice <= 0) return; 
       
       const cartItem = {
           id: Date.now(),
-          category: itemDb.category,
-          name: itemDb.name,
+          category: selItemForCalc.category,
+          name: selItemForCalc.name,
           desc: calcForm.desc,
-          specs: specs,
+          specs: autoResult.specs,
           qty: calcForm.qty,
-          rate: itemDb.rate,
-          totalPrice: total
+          rate: selItemForCalc.rate,
+          totalPrice: finalPrice
       };
       
       setEstimateCart([...estimateCart, cartItem]);
       setCalcForm({ category: calcForm.category, itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1, matrixSize: '', matrixThick: '', isCustomMatrix: false });
+      setManualEstimateTotal('');
   };
 
 
@@ -980,6 +1003,7 @@ const App = () => {
 
   const currentTabDetails = getTabDetails(activeTab);
 
+  /* STREAMING_CHUNK:App Lock UI Render... */
   if (!isAppUnlocked) {
     return (
       <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen font-sans selection:bg-blue-500/30 flex items-center justify-center`}>
@@ -1027,6 +1051,7 @@ const App = () => {
     </div>
   );
 
+  /* STREAMING_CHUNK:Main Application Layout... */
   return (
     <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-500/30`}>
       <div className="flex h-screen overflow-hidden">
@@ -1095,6 +1120,7 @@ const App = () => {
             <div className="flex items-center space-x-4">
               <button className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl" onClick={() => setIsMobileMenuOpen(true)}><Menu size={24}/></button>
               
+              {/* --- DYNAMIC PAGE TITLE --- */}
               <div className="hidden sm:flex flex-col ml-2 lg:ml-0">
                  <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none">
                     {currentTabDetails.title}
@@ -1111,6 +1137,7 @@ const App = () => {
                 <input type="text" placeholder="Global Entity Search..." className="bg-transparent border-none text-sm font-bold w-full focus:outline-none uppercase dark:text-white dark:placeholder-slate-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
               
+              {/* --- The Dark Mode Toggle Button --- */}
               <button onClick={toggleDarkMode} className="p-2 text-slate-400 hover:text-blue-500 dark:hover:text-cyan-400 transition-colors bg-slate-50 dark:bg-[#0f172a] rounded-full border border-slate-100 dark:border-slate-800">
                 {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
               </button>
@@ -1145,6 +1172,7 @@ const App = () => {
                   )}
               </div>
 
+              {/* --- MANUAL LOCK BUTTON --- */}
               <button 
                 onClick={handleManualLock}
                 className="group relative h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/30 overflow-hidden transition-all hover:scale-95"
@@ -1359,8 +1387,8 @@ const App = () => {
                              
                              <div className="w-px h-8 bg-slate-200 dark:bg-slate-700 mx-2"></div>
                              
-                             <button onClick={() => setEstimateCart([])} className="px-6 py-3 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors">Clear</button>
-                             <button onClick={() => setPrintDoc({ isOpen: true, type: 'estimate', data: { items: estimateCart, grandTotal: estimateCart.reduce((a,b)=>a+b.totalPrice, 0), date: new Date().toISOString().split('T')[0] } })} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Printer size={16} className="mr-2"/> Print</button>
+                             <button onClick={() => setEstimateCart([])} className="px-6 py-3 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors">Clear All</button>
+                             <button onClick={() => setPrintDoc({ isOpen: true, type: 'estimate', data: { items: estimateCart, grandTotal: estimateCart.reduce((a,b)=>a+b.totalPrice, 0), date: new Date().toISOString().split('T')[0] } })} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Printer size={16} className="mr-2"/> Print Estimate</button>
                           </>
                       )}
                   </div>
@@ -1408,7 +1436,7 @@ const App = () => {
                     /* CALCULATOR & CART VIEW */
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-fade-in-up">
                         
-                        {/* CALCULATOR PANEL (Left 4 cols) */}
+                        {/* CALCULATOR PANEL (Left 5 cols) */}
                         <div className="lg:col-span-5 bg-white dark:bg-[#1e293b] p-8 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-slate-800 relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-8 opacity-5 dark:opacity-10 pointer-events-none">
                                 <Calculator size={120} />
@@ -1577,11 +1605,19 @@ const App = () => {
                                                 <textarea rows="3" placeholder="Add custom notes (multi-line)..." className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-xs text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20 resize-y whitespace-pre-wrap" value={calcForm.desc} onChange={e => setCalcForm({...calcForm, desc: e.target.value})} />
                                             </div>
 
-                                            {/* LIVE CALCULATION RESULT */}
+                                            {/* --- EDITABLE LINE ESTIMATE --- */}
                                             <div className="mt-8 pt-6 border-t-2 border-dashed border-slate-200 dark:border-slate-700">
-                                                <div className="p-4 bg-slate-900 dark:bg-black rounded-2xl mt-4 flex justify-between items-center shadow-inner">
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Line Estimate</span>
-                                                    <span className="text-2xl font-black text-emerald-400">{formatCurrency(calculateEstimateItemTotal(selItem, calcForm).total)}</span>
+                                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-2 block">Line Estimate (SAR) - Editable</label>
+                                                <div className="p-2 bg-slate-900 dark:bg-black rounded-2xl flex justify-between items-center shadow-inner focus-within:ring-2 ring-emerald-500/50 transition-all">
+                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Total Amount</span>
+                                                    <input 
+                                                        type="number" 
+                                                        step="any"
+                                                        required
+                                                        className="w-32 md:w-48 p-2 bg-transparent border-none font-black text-emerald-400 text-2xl text-right focus:outline-none" 
+                                                        value={manualEstimateTotal}
+                                                        onChange={e => setManualEstimateTotal(e.target.value)}
+                                                    />
                                                 </div>
                                             </div>
 
@@ -1594,7 +1630,7 @@ const App = () => {
                             </form>
                         </div>
 
-                        {/* ESTIMATE CART (Right 8 cols) */}
+                        {/* ESTIMATE CART (Right 7 cols) */}
                         <div className="lg:col-span-7 bg-white dark:bg-[#1e293b] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
                             <div className="p-6 bg-slate-50/50 dark:bg-[#0f172a]/50 border-b border-slate-100 dark:border-slate-800 flex items-center">
                                 <ShoppingCart size={20} className="text-slate-400 mr-3"/>
@@ -1621,7 +1657,7 @@ const App = () => {
                                                 </div>
                                                 <div className="text-right flex flex-col items-end">
                                                     <span className="font-black text-lg text-slate-900 dark:text-slate-100">{formatCurrency(item.totalPrice)}</span>
-                                                    {item.rate && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Rate Used: SAR {item.rate}</span>}
+                                                    {item.rate && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Base Rate: SAR {item.rate}</span>}
                                                     <button onClick={() => setEstimateCart(estimateCart.filter(i => i.id !== item.id))} className="mt-2 p-1.5 text-rose-500 opacity-0 group-hover:opacity-100 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all" title="Remove Item"><Trash2 size={14}/></button>
                                                 </div>
                                             </div>
@@ -1712,15 +1748,18 @@ const App = () => {
                             <td className="px-4 py-3 uppercase tracking-wider">{item.jobId}</td>
                             <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{item.date}</td>
                             <td className="px-4 py-3 uppercase">{item.customerName}</td>
-                            <td className="px-4 py-3 uppercase truncate max-w-xs" title={item.items ? item.items.map(i=>i.name).join(', ') : item.description}>
+                            <td className="px-4 py-3 uppercase max-w-xs">
                                 {item.items && item.items.length > 0 ? (
-                                    <div className="flex flex-col gap-1">
+                                    <div className="flex flex-col gap-2">
                                         {item.items.map((i, idx) => (
-                                            <span key={idx} className="block truncate opacity-90">• {i.name}</span>
+                                            <div key={idx} className="flex flex-col">
+                                                <span className="font-bold text-[10px] text-blue-600 dark:text-blue-400">• {i.name} (Qty: {i.qty})</span>
+                                                {i.description && <span className="text-[9px] opacity-70 ml-2 whitespace-pre-wrap">{i.description}</span>}
+                                            </div>
                                         ))}
                                     </div>
                                 ) : (
-                                    item.description || '--'
+                                    <span className="truncate block" title={item.description}>{item.description || '--'}</span>
                                 )}
                             </td>
                             <td className="px-4 py-3">
@@ -1970,6 +2009,7 @@ const App = () => {
                       <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity no-print flex justify-end items-center">
                         <button onClick={() => setPrintDoc({ isOpen: true, type: activeTab.slice(0, -1), data: item })} className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-800 rounded-lg" title="Print"><Printer size={16}/></button>
                         
+                        {/* --- NEW EDIT BUTTON FOR VOUCHERS --- */}
                         <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg" title={`Edit ${activeTab.slice(0, -1)}`}><Edit3 size={16}/></button>
                         
                         <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, formatCurrency(item.amount))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
@@ -1999,6 +2039,7 @@ const App = () => {
                       </div>
                       <div className="flex justify-end space-x-2 mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
                         
+                        {/* --- NEW CASH IN HAND LEDGER BUTTON --- */}
                         <button onClick={() => generateLedger('salesman', sm, 'cash')} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-emerald-500 dark:text-emerald-400 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors" title="View Cash In Hand Balance"><Wallet size={16}/></button>
 
                         <button onClick={() => generateLedger('salesman', sm, 'performance')} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-indigo-500 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors" title="View Sales Performance Ledger"><BookOpen size={16}/></button>
@@ -2256,7 +2297,7 @@ const App = () => {
                       </select>
                     </div>
                     <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Sales Executive *</label>
-                      <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-800 dark:text-white uppercase" value={formData.salesmanId || ''} onChange={e => setFormData({...formData, salesmanId: e.target.value})}>
+                      <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase" value={formData.salesmanId || ''} onChange={e => setFormData({...formData, salesmanId: e.target.value})}>
                         <option value="">Select Exec...</option>{salesmen.map(s => <option key={s.id} value={s.id}>{String(s.name)}</option>)}
                       </select>
                     </div>
