@@ -10,7 +10,7 @@ import {
   ShieldCheck, HandCoins, ShoppingBag, CreditCard, Menu, 
   Edit3, Receipt, Package, Truck, FileText, PieChart as PieChartIcon, 
   Bell, DownloadCloud, AlertTriangle, UsersRound, Activity, BookOpen, Image as ImageIcon,
-  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator, Database, ShoppingCart, Info, Table, Wallet, SendToBack, ArrowRightCircle, BarChartHorizontal, Filter
+  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator, Database, ShoppingCart, Info, Table, Wallet, SendToBack, ArrowRightCircle
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
@@ -118,16 +118,12 @@ const triggerSystemPrint = async (customFilename) => {
     filename:     customFilename ? `${customFilename}.pdf` : `Document_${new Date().getTime()}.pdf`,
     image:        { type: 'jpeg', quality: 1 },
     html2canvas:  { scale: 2, useCORS: true, logging: false },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' } // Landscape better for Aging
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
 
   const noPrintElements = element.querySelectorAll('.no-print');
   noPrintElements.forEach(el => el.style.display = 'none');
-  
-  element.classList.add('print-mode');
   await window.html2pdf().set(opt).from(element).save();
-  element.classList.remove('print-mode');
-  
   noPrintElements.forEach(el => el.style.display = '');
 };
 
@@ -150,7 +146,7 @@ const exportToExcel = async (data, filename) => {
          cleanRow[cleanKey] = `${value.length} items`;
       } else if (value && typeof value === 'object' && value.seconds) {
          cleanRow[cleanKey] = new Date(value.seconds * 1000).toLocaleDateString();
-      } else if (typeof value === 'number' || (typeof value === 'string' && !isNaN(Number(value)) && key.toLowerCase().match(/amount|total|price|balance|rate|qty|debit|credit|due/))) {
+      } else if (typeof value === 'number' || (typeof value === 'string' && !isNaN(Number(value)) && key.toLowerCase().match(/amount|total|price|balance|rate|qty|debit|credit/))) {
          cleanRow[cleanKey] = Number(value) || 0;
       } else {
          cleanRow[cleanKey] = String(value || '');
@@ -292,11 +288,6 @@ const App = () => {
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // --- FILTER STATES ---
-  const [showOnlyDueSales, setShowOnlyDueSales] = useState(false);
-  const [showOnlyDuePurchases, setShowOnlyDuePurchases] = useState(false);
-  const [hideZeroAging, setHideZeroAging] = useState(true);
-
   // --- ESTIMATOR STATES ---
   const [estimatorItems, setEstimatorItems] = useState([]); 
   const [showEstimatorDB, setShowEstimatorDB] = useState(false);
@@ -306,7 +297,10 @@ const App = () => {
     matrixSize: '', matrixThick: '', isCustomMatrix: false
   });
   
+  // NEW: Editable Override Price State
   const [manualEstimateTotal, setManualEstimateTotal] = useState('');
+
+  // Custom Modal for Estimator "Push To..."
   const [estimatorPushModal, setEstimatorPushModal] = useState({ isOpen: false, type: '', customerId: '' });
 
   const [settings, setSettings] = useState({ companyName: '', taxId: '', phone: '', email: '', address: '', logo: '' });
@@ -514,55 +508,6 @@ const App = () => {
   const agingReceivables = useMemo(() => calculateAging(sales, collections, 'rec'), [sales, collections]);
   const agingPayables = useMemo(() => calculateAging(purchases, expenses, 'pay'), [purchases, expenses]);
 
-  // --- Detailed Entity Aging Report Generator ---
-  const buildAgingReport = (entities, invoices, payments, type) => {
-    const today = new Date();
-    let report = entities.map(entity => {
-        const row = { id: entity.id, name: entity.name, notDue: 0, d30: 0, d60: 0, d90: 0, d120: 0, d120p: 0, opBal: Number(entity.openingBalance) || 0, advances: 0, netDue: 0, totalInvoiceDue: 0 };
-
-        const eInvoices = invoices.filter(i => (type === 'customer' ? i.customerId : i.supplierId) === entity.id);
-        const ePayments = payments.filter(p => {
-            if (type === 'customer') return p.customerId === entity.id || p.customerName === entity.name;
-            return p.supplierId === entity.id || p.partyName === entity.name || p.supplierName === entity.name;
-        });
-
-        eInvoices.forEach(inv => {
-            const paidAgainstInv = ePayments.filter(p => p.ref === inv.invoiceNo || p.description === inv.invoiceNo).reduce((acc, curr) => acc + Number(curr.amount), 0);
-            const pending = Number(inv.grandTotal) - paidAgainstInv;
-
-            if (pending > 0 && inv.date) {
-                const diffDays = Math.floor((today - new Date(inv.date)) / (1000 * 60 * 60 * 24));
-                if (diffDays <= 0) row.notDue += pending;
-                else if (diffDays <= 30) row.d30 += pending;
-                else if (diffDays <= 60) row.d60 += pending;
-                else if (diffDays <= 90) row.d90 += pending;
-                else if (diffDays <= 120) row.d120 += pending;
-                else row.d120p += pending;
-                
-                row.totalInvoiceDue += pending;
-            }
-        });
-
-        const totalPaid = ePayments.reduce((acc, curr) => acc + Number(curr.amount), 0);
-        const totalAllocated = eInvoices.reduce((acc, inv) => {
-            return acc + ePayments.filter(p => p.ref === inv.invoiceNo || p.description === inv.invoiceNo).reduce((a,c) => a + Number(c.amount), 0);
-        }, 0);
-        
-        const unallocated = totalPaid - totalAllocated;
-        row.advances = unallocated > 0 ? unallocated : 0;
-        
-        // Net Due: Invoice Dues + Opening Balance - Advances (Wallet)
-        row.netDue = row.totalInvoiceDue + row.opBal - row.advances;
-
-        return row;
-    });
-
-    return report.sort((a, b) => b.netDue - a.netDue);
-  };
-
-  const customerAgingReport = useMemo(() => buildAgingReport(customers, sales, collections, 'customer'), [customers, sales, collections]);
-  const supplierAgingReport = useMemo(() => buildAgingReport(suppliers, purchases, expenses, 'supplier'), [suppliers, purchases, expenses]);
-
   const topCustomersData = useMemo(() => {
     const map = {};
     sales.forEach(s => {
@@ -672,7 +617,7 @@ const App = () => {
       const customer = customers.find(c => c.id === estimatorPushModal.customerId);
       if(!customer) return;
 
-      const formattedItems = estimateCart.map((item) => ({
+      const formattedItems = estimateCart.map((item, index) => ({
           productId: '', 
           name: `${item.name}`, 
           description: `[${item.category}] ${item.specs}${item.desc ? `\nNote: ${item.desc}` : ''}`,
@@ -1037,6 +982,7 @@ const App = () => {
       setManualEstimateTotal('');
   };
 
+
   const getTabDetails = (tabId) => {
     switch (tabId) {
       case 'dashboard': return { title: 'Business Overview', desc: 'Real-time Analytics & KPIs' };
@@ -1051,8 +997,6 @@ const App = () => {
       case 'salesmen': return { title: 'Sales Executives', desc: 'Manage Staff & Commissions' };
       case 'estimator': return { title: 'Price Estimator', desc: 'Custom Dimension Pricing Calculator' };
       case 'settings': return { title: 'System Settings', desc: 'Global Configuration & Profile' };
-      case 'aging_customers': return { title: 'Customer Aging', desc: 'Receivables Aging Report' };
-      case 'aging_suppliers': return { title: 'Supplier Aging', desc: 'Payables Aging Report' };
       default: return { title: 'Dashboard', desc: 'Overview' };
     }
   };
@@ -1163,11 +1107,6 @@ const App = () => {
                <NavItem id="estimator" icon={Calculator} label="Price Estimator" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             </div>
 
-            {/* --- NEW REPORT TABS --- */}
-            <p className={`text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 mt-8 ${collapsed ? 'text-center' : 'px-4'}`}>Reports</p>
-            <NavItem id="aging_customers" icon={BarChartHorizontal} label="Customer Aging" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
-            <NavItem id="aging_suppliers" icon={BarChartHorizontal} label="Supplier Aging" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
-
             <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
                <NavItem id="settings" icon={Settings} label="Company Profile" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             </div>
@@ -1181,6 +1120,7 @@ const App = () => {
             <div className="flex items-center space-x-4">
               <button className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl" onClick={() => setIsMobileMenuOpen(true)}><Menu size={24}/></button>
               
+              {/* --- DYNAMIC PAGE TITLE --- */}
               <div className="hidden sm:flex flex-col ml-2 lg:ml-0">
                  <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none">
                     {currentTabDetails.title}
@@ -1197,6 +1137,7 @@ const App = () => {
                 <input type="text" placeholder="Global Entity Search..." className="bg-transparent border-none text-sm font-bold w-full focus:outline-none uppercase dark:text-white dark:placeholder-slate-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
               
+              {/* --- The Dark Mode Toggle Button --- */}
               <button onClick={toggleDarkMode} className="p-2 text-slate-400 hover:text-blue-500 dark:hover:text-cyan-400 transition-colors bg-slate-50 dark:bg-[#0f172a] rounded-full border border-slate-100 dark:border-slate-800">
                 {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
               </button>
@@ -1231,6 +1172,7 @@ const App = () => {
                   )}
               </div>
 
+              {/* --- MANUAL LOCK BUTTON --- */}
               <button 
                 onClick={handleManualLock}
                 className="group relative h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/30 overflow-hidden transition-all hover:scale-95"
@@ -1423,6 +1365,317 @@ const App = () => {
               </div>
             )}
 
+            {/* --- PRICE ESTIMATOR VIEW --- */}
+            {activeTab === 'estimator' && (
+              <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1">
+                
+                {/* TOOLBAR */}
+                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+                  <div className="flex space-x-3">
+                     <button 
+                        onClick={() => requestAdminAuth(() => setShowEstimatorDB(!showEstimatorDB))} 
+                        className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center transition-colors border ${showEstimatorDB ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800/50' : 'bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/80'}`}
+                     >
+                        <Database size={16} className="mr-2"/> {showEstimatorDB ? 'Close Database' : 'Manage Items Database'}
+                     </button>
+                  </div>
+                  <div className="flex space-x-3">
+                      {estimateCart.length > 0 && (
+                          <>
+                             <button onClick={() => setEstimatorPushModal({isOpen: true, type: 'crm', customerId: ''})} className="px-6 py-3 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors flex items-center"><SendToBack size={14} className="mr-2"/> Push to CRM</button>
+                             <button onClick={() => setEstimatorPushModal({isOpen: true, type: 'invoice', customerId: ''})} className="px-6 py-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors flex items-center"><ArrowRightCircle size={14} className="mr-2"/> Push to Invoice</button>
+                             
+                             <div className="w-px h-8 bg-slate-200 dark:bg-slate-700 mx-2"></div>
+                             
+                             <button onClick={() => setEstimateCart([])} className="px-6 py-3 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors">Clear All</button>
+                             <button onClick={() => setPrintDoc({ isOpen: true, type: 'estimate', data: { items: estimateCart, grandTotal: estimateCart.reduce((a,b)=>a+b.totalPrice, 0), date: new Date().toISOString().split('T')[0] } })} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Printer size={16} className="mr-2"/> Print Estimate</button>
+                          </>
+                      )}
+                  </div>
+                </div>
+
+                {/* MAIN ESTIMATOR GRID */}
+                {showEstimatorDB ? (
+                    /* DATABASE MANAGEMENT VIEW */
+                    <div className="space-y-6 animate-fade-in-up">
+                        <div className="flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/10 p-6 rounded-[2rem] border border-indigo-100 dark:border-indigo-800/30">
+                            <div>
+                                <h3 className="text-lg font-black text-indigo-900 dark:text-indigo-400 uppercase tracking-tight">Estimator Database</h3>
+                                <p className="text-xs font-bold text-indigo-500/70 uppercase tracking-widest mt-1">Add base rates and calculation formulas</p>
+                            </div>
+                            <button onClick={() => openModal('estimatorItem')} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/30 hover:scale-95 transition-all flex items-center"><Plus size={16} className="mr-2"/> Add New Item</button>
+                        </div>
+                        {renderTable(
+                            ['Category', 'Item Name', 'Calculation Method', 'Base Rate'],
+                            estimatorItems.filter(i => safeSearch(i.name, searchTerm) || safeSearch(i.category, searchTerm)),
+                            'estimatorItem',
+                            (item) => (
+                                <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                                    <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">{String(item.category || '')}</td>
+                                    <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.name || '')}</td>
+                                    <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">
+                                        <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
+                                            {item.calcType === 'Standard_Matrix' ? 'Standard Size Matrix' : String(item.calcType || 'Area')}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 font-black text-blue-600 dark:text-blue-400 tracking-wider">
+                                        {item.calcType === 'Standard_Matrix' ? <span className="text-indigo-500 text-[10px] uppercase">Auto Chart</span> :
+                                         item.calcType === 'Tiered' ? 'Tiered Pricing' : 
+                                         (item.calcType === 'Area_Thickness' || item.calcType === 'Sheet_Cut') && item.thicknessTiers?.length > 0 ? 'Thickness Based' : 
+                                         formatCurrency(item.rate)}
+                                    </td>
+                                    <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
+                                        <button onClick={() => openModal('estimatorItem', item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg"><Edit3 size={16}/></button>
+                                        <button onClick={() => triggerDelete('estimatorItem', item.id, String(item.name))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
+                                    </td>
+                                </tr>
+                            )
+                        )}
+                    </div>
+                ) : (
+                    /* CALCULATOR & CART VIEW */
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-fade-in-up">
+                        
+                        {/* CALCULATOR PANEL (Left 5 cols) */}
+                        <div className="lg:col-span-5 bg-white dark:bg-[#1e293b] p-8 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-slate-800 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-8 opacity-5 dark:opacity-10 pointer-events-none">
+                                <Calculator size={120} />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight mb-6">Price Estimator</h3>
+                            
+                            <form onSubmit={handleAddEstimateToCart} className="space-y-5 relative z-10">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Select Category *</label>
+                                    <select 
+                                        required
+                                        className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20"
+                                        value={calcForm.category}
+                                        onChange={(e) => setCalcForm({...calcForm, category: e.target.value, itemId: ''})}
+                                    >
+                                        <option value="">Choose Category...</option>
+                                        {[...new Set(estimatorItems.map(i => i.category))].map(cat => (
+                                            <option key={cat} value={cat}>{String(cat)}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Select Item Type *</label>
+                                    <select 
+                                        required
+                                        className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20"
+                                        value={calcForm.itemId}
+                                        onChange={(e) => setCalcForm({...calcForm, itemId: e.target.value})}
+                                        disabled={!calcForm.category}
+                                    >
+                                        <option value="">Choose Item...</option>
+                                        {estimatorItems.filter(i => i.category === calcForm.category).map(item => (
+                                            <option key={item.id} value={item.id}>{String(item.name)} {item.calcType !== 'Tiered' && item.calcType !== 'Standard_Matrix' && (!item.thicknessTiers || item.thicknessTiers.length === 0) && `(SAR ${item.rate})`}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* DYNAMIC FIELDS BASED ON CALC TYPE */}
+                                {(() => {
+                                    const selItem = estimatorItems.find(i => i.id === calcForm.itemId);
+                                    if(!selItem) return null;
+
+                                    return (
+                                        <div className="space-y-5 pt-2">
+                                            
+                                            {/* Standard Matrix Input Group */}
+                                            {selItem.calcType === 'Standard_Matrix' && (
+                                                <div className="bg-indigo-50 dark:bg-indigo-900/10 p-6 rounded-2xl border border-indigo-100 dark:border-indigo-800/30">
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <label className="text-[10px] font-black uppercase text-indigo-800 dark:text-indigo-400 tracking-widest flex items-center">
+                                                            <Table size={14} className="mr-2"/> Matrix Chart Sizing
+                                                        </label>
+                                                        <label className="flex items-center cursor-pointer space-x-2">
+                                                            <input 
+                                                                type="checkbox" 
+                                                                className="w-4 h-4 text-indigo-600 rounded bg-white dark:bg-slate-800 border-indigo-300 focus:ring-indigo-500"
+                                                                checked={calcForm.isCustomMatrix || false}
+                                                                onChange={(e) => setCalcForm({...calcForm, isCustomMatrix: e.target.checked, matrixSize: '', width: '', height: ''})}
+                                                            />
+                                                            <span className="text-[9px] font-bold uppercase text-slate-500">Use Custom Dimensions</span>
+                                                        </label>
+                                                    </div>
+
+                                                    <div className="space-y-4">
+                                                        {calcForm.isCustomMatrix ? (
+                                                            <div className="grid grid-cols-2 gap-4 animate-fade-in-up">
+                                                                <div className="space-y-1">
+                                                                    <label className="text-[9px] font-bold uppercase text-slate-500">Width (CM) *</label>
+                                                                    <input type="number" required placeholder="0" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-indigo-100 dark:border-indigo-800/50 font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-indigo-500/20 shadow-sm" value={calcForm.width} onChange={e => setCalcForm({...calcForm, width: e.target.value})} />
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <label className="text-[9px] font-bold uppercase text-slate-500">Height (CM) *</label>
+                                                                    <input type="number" required placeholder="0" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-indigo-100 dark:border-indigo-800/50 font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-indigo-500/20 shadow-sm" value={calcForm.height} onChange={e => setCalcForm({...calcForm, height: e.target.value})} />
+                                                                </div>
+                                                                <p className="col-span-2 text-[9px] font-bold text-indigo-400 text-center leading-tight">Prices are proportionally calculated based on standard chart limits.</p>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="space-y-1">
+                                                                <label className="text-[9px] font-bold uppercase text-slate-500">Select Standard Size *</label>
+                                                                <select required className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-indigo-100 dark:border-indigo-800/50 font-black text-slate-900 dark:text-white uppercase focus:ring-2 ring-indigo-500/20 shadow-sm" value={calcForm.matrixSize} onChange={e => setCalcForm({...calcForm, matrixSize: e.target.value})}>
+                                                                    <option value="">Select Size...</option>
+                                                                    {Object.keys(STANDARD_MATRIX).map(s => <option key={s} value={s}>{s}</option>)}
+                                                                </select>
+                                                            </div>
+                                                        )}
+                                                        
+                                                        <div className="space-y-1 pt-2 border-t border-indigo-100 dark:border-indigo-800/30">
+                                                            <label className="text-[9px] font-bold uppercase text-slate-500">Select Thickness (mm) *</label>
+                                                            <div className="flex gap-2 flex-wrap">
+                                                                {[3, 4, 5, 6, 8, 10].map(t => (
+                                                                    <button 
+                                                                        type="button" 
+                                                                        key={t}
+                                                                        onClick={() => setCalcForm({...calcForm, matrixThick: String(t)})}
+                                                                        className={`flex-1 py-2 px-3 rounded-lg font-black text-xs transition-all border ${calcForm.matrixThick === String(t) ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/30 scale-105' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}
+                                                                    >
+                                                                        {t}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                            {/* Hidden input to ensure required validation passes */}
+                                                            <input type="text" className="h-0 w-0 opacity-0 p-0 m-0 absolute -z-10" required value={calcForm.matrixThick || ''} onChange={()=>{}} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Tiered Info Alert */}
+                                            {selItem.calcType === 'Tiered' && (
+                                                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl flex gap-3 text-indigo-800 dark:text-indigo-300 mb-4">
+                                                    <Info size={18} className="shrink-0"/>
+                                                    <div className="text-xs">
+                                                        <p className="font-black uppercase tracking-widest mb-1">Tiered Pricing Active</p>
+                                                        <p className="font-bold opacity-80">The unit price will automatically decrease based on the quantity you enter.</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Area Based Inputs */}
+                                            {(selItem.calcType === 'Area' || selItem.calcType === 'Area_Thickness' || selItem.calcType === 'Sheet_Cut') && (
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Width (CM) *</label>
+                                                        <input type="number" required placeholder="0" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.width} onChange={e => setCalcForm({...calcForm, width: e.target.value})} />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Height (CM) *</label>
+                                                        <input type="number" required placeholder="0" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.height} onChange={e => setCalcForm({...calcForm, height: e.target.value})} />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Thickness Input with Smart Dropdown */}
+                                            {(selItem.calcType === 'Area_Thickness' || selItem.calcType === 'Sheet_Cut') && (
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Thickness (MM) *</label>
+                                                    {selItem.thicknessTiers && selItem.thicknessTiers.length > 0 ? (
+                                                        <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.thickness} onChange={e => setCalcForm({...calcForm, thickness: e.target.value})}>
+                                                            <option value="">Select Thickness...</option>
+                                                            {selItem.thicknessTiers.map(t => (
+                                                                <option key={t.thickness} value={t.thickness}>{t.thickness} mm (SAR {t.price}/sqm)</option>
+                                                            ))}
+                                                        </select>
+                                                    ) : (
+                                                        <input type="number" required placeholder="e.g., 3" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.thickness} onChange={e => setCalcForm({...calcForm, thickness: e.target.value})} />
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Time Based Input */}
+                                            {(selItem.calcType === 'Time' || selItem.calcType === 'Sheet_Cut') && (
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Minutes Required *</label>
+                                                    <input type="number" required placeholder="e.g., 15" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.minutes} onChange={e => setCalcForm({...calcForm, minutes: e.target.value})} />
+                                                </div>
+                                            )}
+
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Quantity *</label>
+                                                <input type="number" min="1" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.qty} onChange={e => setCalcForm({...calcForm, qty: e.target.value})} />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Remarks / Description</label>
+                                                <textarea rows="3" placeholder="Add custom notes (multi-line)..." className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-xs text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20 resize-y whitespace-pre-wrap" value={calcForm.desc} onChange={e => setCalcForm({...calcForm, desc: e.target.value})} />
+                                            </div>
+
+                                            {/* --- EDITABLE LINE ESTIMATE --- */}
+                                            <div className="mt-8 pt-6 border-t-2 border-dashed border-slate-200 dark:border-slate-700">
+                                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-2 block">Line Estimate (SAR) - Editable</label>
+                                                <div className="p-2 bg-slate-900 dark:bg-black rounded-2xl flex justify-between items-center shadow-inner focus-within:ring-2 ring-emerald-500/50 transition-all">
+                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Total Amount</span>
+                                                    <input 
+                                                        type="number" 
+                                                        step="any"
+                                                        required
+                                                        className="w-32 md:w-48 p-2 bg-transparent border-none font-black text-emerald-400 text-2xl text-right focus:outline-none" 
+                                                        value={manualEstimateTotal}
+                                                        onChange={e => setManualEstimateTotal(e.target.value)}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <button type="submit" className="w-full py-4 mt-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/30 hover:scale-95 transition-all">
+                                                Add to Estimate List
+                                            </button>
+                                        </div>
+                                    );
+                                })()}
+                            </form>
+                        </div>
+
+                        {/* ESTIMATE CART (Right 7 cols) */}
+                        <div className="lg:col-span-7 bg-white dark:bg-[#1e293b] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
+                            <div className="p-6 bg-slate-50/50 dark:bg-[#0f172a]/50 border-b border-slate-100 dark:border-slate-800 flex items-center">
+                                <ShoppingCart size={20} className="text-slate-400 mr-3"/>
+                                <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-tight">Estimate Preview</h3>
+                            </div>
+                            
+                            <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
+                                {estimateCart.length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 space-y-4 py-20">
+                                        <ClipboardList size={48} className="opacity-50"/>
+                                        <p className="text-xs font-black uppercase tracking-widest">No items added yet</p>
+                                    </div>
+                                ) : (
+                                    <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                                        {estimateCart.map((item, idx) => (
+                                            <div key={item.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group flex items-start justify-between">
+                                                <div className="flex-1 pr-4">
+                                                    <div className="flex items-center space-x-2 mb-1">
+                                                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-[8px] font-black uppercase tracking-widest">{idx + 1}. {item.category}</span>
+                                                    </div>
+                                                    <h4 className="font-black text-sm text-slate-800 dark:text-white uppercase">{item.name}</h4>
+                                                    {item.desc && <p className="text-xs font-bold text-slate-500 mt-0.5 whitespace-pre-wrap">{item.desc}</p>}
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Specs: {item.specs} | Qty: <span className="text-slate-700 dark:text-slate-300">{item.qty}</span></p>
+                                                </div>
+                                                <div className="text-right flex flex-col items-end">
+                                                    <span className="font-black text-lg text-slate-900 dark:text-slate-100">{formatCurrency(item.totalPrice)}</span>
+                                                    {item.rate && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Base Rate: SAR {item.rate}</span>}
+                                                    <button onClick={() => setEstimateCart(estimateCart.filter(i => i.id !== item.id))} className="mt-2 p-1.5 text-rose-500 opacity-0 group-hover:opacity-100 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all" title="Remove Item"><Trash2 size={14}/></button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="p-6 bg-slate-900 dark:bg-black text-white flex justify-between items-center mt-auto">
+                                <span className="text-xs font-black uppercase tracking-widest text-slate-400">Grand Total Estimate</span>
+                                <span className="text-3xl font-black text-emerald-400">{formatCurrency(estimateCart.reduce((a,b)=>a+b.totalPrice, 0))}</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+              </div>
+            )}
+
             {/* --- CRM VIEW --- */}
             {activeTab === 'crm' && (
               <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1">
@@ -1591,156 +1844,6 @@ const App = () => {
               </div>
             )}
 
-            {/* --- AGING REPORTS VIEW --- */}
-            {(activeTab === 'aging_customers' || activeTab === 'aging_suppliers') && (
-                <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1">
-                    
-                    {/* Header & Controls */}
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white dark:bg-[#1e293b] p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 gap-4">
-                        <div>
-                            <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight">
-                                {activeTab === 'aging_customers' ? 'Customer Aging Report' : 'Supplier Aging Report'}
-                            </h2>
-                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Up to {new Date().toLocaleDateString()}</p>
-                        </div>
-                        <div className="flex items-center space-x-3 w-full md:w-auto">
-                            <label className="flex items-center cursor-pointer space-x-2 mr-2">
-                                <input 
-                                    type="checkbox" 
-                                    className="w-5 h-5 text-blue-600 rounded bg-slate-50 dark:bg-slate-800 border-slate-300 focus:ring-blue-500"
-                                    checked={hideZeroAging}
-                                    onChange={(e) => setHideZeroAging(e.target.checked)}
-                                />
-                                <span className="text-xs font-bold uppercase text-slate-600 dark:text-slate-400 select-none">Hide Zero Balance</span>
-                            </label>
-                            
-                            <button onClick={() => exportToExcel(
-                                    (activeTab === 'aging_customers' ? customerAgingReport : supplierAgingReport).filter(r => hideZeroAging ? r.netDue !== 0 : true).map(r => ({
-                                        "Ledger Name": r.name,
-                                        "No Due Yet": r.notDue,
-                                        "1-30 Days": r.d30,
-                                        "31-60 Days": r.d60,
-                                        "61-90 Days": r.d90,
-                                        "91-120 Days": r.d120,
-                                        "120+ Days": r.d120p,
-                                        "Opening Balance": r.opBal,
-                                        "Advances": r.advances,
-                                        "Net Due Amount": r.netDue
-                                    })), 
-                                    activeTab
-                                )} 
-                                className="p-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0" title="Export Excel">
-                                <DownloadCloud size={20}/>
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Summary Cards */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {[
-                            { label: 'No Due Yet', key: 'notDue', color: 'text-slate-500' },
-                            { label: '1-30 Days', key: 'd30', color: 'text-emerald-500' },
-                            { label: '31-60 Days', key: 'd60', color: 'text-emerald-600' },
-                            { label: '61-90 Days', key: 'd90', color: 'text-amber-500' },
-                            { label: '91-120 Days', key: 'd120', color: 'text-orange-500' },
-                            { label: '120+ Days', key: 'd120p', color: 'text-rose-500' }
-                        ].map(bucket => {
-                            const total = (activeTab === 'aging_customers' ? customerAgingReport : supplierAgingReport).reduce((acc, row) => acc + row[bucket.key], 0);
-                            return (
-                                <div key={bucket.key} className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col items-center text-center">
-                                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">{bucket.label}</span>
-                                    <span className={`text-lg font-black ${total > 0 ? bucket.color : 'text-slate-300 dark:text-slate-600'}`}>{formatCurrency(total)}</span>
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Total Summary Strip */}
-                    <div className="bg-slate-900 dark:bg-black text-white p-6 rounded-[2rem] shadow-lg flex flex-wrap justify-between items-center gap-4">
-                        {(() => {
-                            const rep = activeTab === 'aging_customers' ? customerAgingReport : supplierAgingReport;
-                            const tInvoiceDue = rep.reduce((a, b) => a + b.totalInvoiceDue, 0);
-                            const tOpBal = rep.reduce((a, b) => a + b.opBal, 0);
-                            const tAdvances = rep.reduce((a, b) => a + b.advances, 0);
-                            const tNetDue = rep.reduce((a, b) => a + b.netDue, 0);
-
-                            return (
-                                <>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Total Invoice Due</span>
-                                        <span className="text-xl font-black text-slate-200">{formatCurrency(tInvoiceDue)}</span>
-                                    </div>
-                                    <div className="text-slate-600 font-black text-xl">+</div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Opening Balances</span>
-                                        <span className="text-xl font-black text-slate-200">{formatCurrency(tOpBal)}</span>
-                                    </div>
-                                    <div className="text-slate-600 font-black text-xl">-</div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Unallocated / Advances</span>
-                                        <span className="text-xl font-black text-amber-400">{formatCurrency(tAdvances)}</span>
-                                    </div>
-                                    <div className="text-slate-600 font-black text-xl">=</div>
-                                    <div className="flex flex-col items-end">
-                                        <span className="text-[10px] text-cyan-400 font-black uppercase tracking-widest">Net Due Amount</span>
-                                        <span className="text-3xl font-black text-white">{formatCurrency(tNetDue)}</span>
-                                    </div>
-                                </>
-                            );
-                        })()}
-                    </div>
-
-                    {/* Aging Data Table */}
-                    <div className="bg-white dark:bg-[#1e293b] rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden mt-6">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse min-w-[1200px]">
-                                <thead className="bg-[#4a5568] text-[10px] uppercase tracking-widest font-black text-white">
-                                    <tr>
-                                        <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Sl. No.</th>
-                                        <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 w-1/4">Ledger Name</th>
-                                        <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-right">No Due Yet</th>
-                                        <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-right">1-30 Days</th>
-                                        <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-right">31-60 Days</th>
-                                        <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-right">61-90 Days</th>
-                                        <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-right">91-120 Days</th>
-                                        <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-right">120+ Days</th>
-                                        <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-right">Op. Balance</th>
-                                        <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-right text-amber-300">Wallet/Adv</th>
-                                        <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-right text-cyan-300">Net Due</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-[11px] font-bold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-[#0f172a]">
-                                    {(activeTab === 'aging_customers' ? customerAgingReport : supplierAgingReport)
-                                        .filter(row => hideZeroAging ? row.netDue !== 0 : true)
-                                        .map((row, idx) => (
-                                        <tr key={row.id} className="hover:bg-white dark:hover:bg-[#1e293b] transition-colors">
-                                            <td className="px-4 py-3">{idx + 1}</td>
-                                            <td className="px-4 py-3 font-black uppercase text-slate-900 dark:text-white truncate">{row.name}</td>
-                                            
-                                            <td className={`px-4 py-3 text-right ${row.notDue > 0 ? 'text-slate-600 dark:text-slate-400' : 'text-slate-300 dark:text-slate-600 font-normal'}`}>{row.notDue > 0 ? formatCurrency(row.notDue) : '0'}</td>
-                                            <td className={`px-4 py-3 text-right ${row.d30 > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-300 dark:text-slate-600 font-normal'}`}>{row.d30 > 0 ? formatCurrency(row.d30) : '0'}</td>
-                                            <td className={`px-4 py-3 text-right ${row.d60 > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-300 dark:text-slate-600 font-normal'}`}>{row.d60 > 0 ? formatCurrency(row.d60) : '0'}</td>
-                                            <td className={`px-4 py-3 text-right ${row.d90 > 0 ? 'text-amber-600 dark:text-amber-500' : 'text-slate-300 dark:text-slate-600 font-normal'}`}>{row.d90 > 0 ? formatCurrency(row.d90) : '0'}</td>
-                                            <td className={`px-4 py-3 text-right ${row.d120 > 0 ? 'text-orange-600 dark:text-orange-500' : 'text-slate-300 dark:text-slate-600 font-normal'}`}>{row.d120 > 0 ? formatCurrency(row.d120) : '0'}</td>
-                                            <td className={`px-4 py-3 text-right ${row.d120p > 0 ? 'text-rose-600 dark:text-rose-500 font-black' : 'text-slate-300 dark:text-slate-600 font-normal'}`}>{row.d120p > 0 ? formatCurrency(row.d120p) : '0'}</td>
-                                            
-                                            <td className={`px-4 py-3 text-right ${row.opBal !== 0 ? 'text-slate-600 dark:text-slate-400' : 'text-slate-300 dark:text-slate-600 font-normal'}`}>{row.opBal !== 0 ? formatCurrency(row.opBal) : '0'}</td>
-                                            <td className={`px-4 py-3 text-right ${row.advances > 0 ? 'text-amber-600 dark:text-amber-500 font-black' : 'text-slate-300 dark:text-slate-600 font-normal'}`}>{row.advances > 0 ? formatCurrency(row.advances) : '0'}</td>
-                                            
-                                            <td className={`px-4 py-3 text-right font-black ${row.netDue > 0 ? 'text-slate-900 dark:text-white' : row.netDue < 0 ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 font-normal'}`}>{row.netDue !== 0 ? formatCurrency(row.netDue) : '0'}</td>
-                                        </tr>
-                                    ))}
-                                    {(activeTab === 'aging_customers' ? customerAgingReport : supplierAgingReport).filter(row => hideZeroAging ? row.netDue !== 0 : true).length === 0 && (
-                                        <tr><td colSpan="11" className="py-12 text-center text-slate-400 uppercase tracking-widest font-black">No Pending Dues Found</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                </div>
-            )}
-
             {/* --- SETTINGS VIEW --- */}
             {activeTab === 'settings' && (
               <div className="max-w-4xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
@@ -1841,40 +1944,14 @@ const App = () => {
 
             {(activeTab === 'sales' || activeTab === 'purchases') && (
               <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
-                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 gap-4 flex-wrap">
-                  
-                  {/* --- Show Due Invoices Toggle --- */}
-                  <label className="flex items-center cursor-pointer space-x-2 bg-slate-50 dark:bg-[#0f172a] px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
-                      <input 
-                          type="checkbox" 
-                          className="w-4 h-4 text-rose-500 rounded bg-white dark:bg-slate-800 border-slate-300 focus:ring-rose-500"
-                          checked={activeTab === 'sales' ? showOnlyDueSales : showOnlyDuePurchases}
-                          onChange={(e) => activeTab === 'sales' ? setShowOnlyDueSales(e.target.checked) : setShowOnlyDuePurchases(e.target.checked)}
-                      />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 flex items-center">
-                         <Filter size={14} className="mr-1"/> Show Only Due
-                      </span>
-                  </label>
-
-                  <div className="flex space-x-3">
-                    <button onClick={() => exportToExcel(activeTab === 'sales' ? sales : purchases, `${settings?.companyName || 'MY'}_${activeTab.toUpperCase()}_REPORT_${new Date().toISOString().split('T')[0]}`)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"><DownloadCloud size={16} className="mr-2"/> Export</button>
-                    <button onClick={() => openModal(activeTab.slice(0, -1))} className={`px-8 py-3 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg flex items-center hover:scale-95 transition-all ${activeTab === 'sales' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/30' : 'bg-gradient-to-r from-slate-700 to-slate-900 shadow-slate-900/30'}`}><Plus size={16} className="mr-2"/> Generate {activeTab.slice(0, -1)}</button>
-                  </div>
+                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+                  <button onClick={() => exportToExcel(activeTab === 'sales' ? sales : purchases, `${settings?.companyName || 'MY'}_${activeTab.toUpperCase()}_REPORT_${new Date().toISOString().split('T')[0]}`)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
+                  <button onClick={() => openModal(activeTab.slice(0, -1))} className={`px-8 py-3 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg flex items-center hover:scale-95 transition-all ${activeTab === 'sales' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/30' : 'bg-gradient-to-r from-slate-700 to-slate-900 shadow-slate-900/30'}`}><Plus size={16} className="mr-2"/> Generate {activeTab.slice(0, -1)}</button>
                 </div>
                 
                 {renderTable(
                   ['Date', 'Invoice No', activeTab === 'sales' ? 'Customer' : 'Supplier', 'Executive', 'Grand Total', 'Status'],
-                  (activeTab === 'sales' ? sales : purchases).filter(i => {
-                      if (!safeSearch(i.invoiceNo, searchTerm) && !safeSearch(i.customerName, searchTerm) && !safeSearch(i.supplierName, searchTerm) && !safeSearch(i.date, searchTerm) && !safeSearch(i.grandTotal, searchTerm) && !safeSearch(salesmen.find(s=>s.id === i.salesmanId)?.name, searchTerm)) return false;
-                      
-                      const relatedExps = activeTab === 'purchases' ? expenses.filter(e => (e.description === i.invoiceNo || e.ref === i.invoiceNo)).reduce((a,b)=>a+Number(b.amount),0) : 0;
-                      const relatedColls = activeTab === 'sales' ? collections.filter(c => c.ref === i.invoiceNo).reduce((a,b)=>a+Number(b.amount),0) : 0;
-                      const paidAmount = activeTab === 'sales' ? relatedColls : relatedExps;
-                      const pendingAmount = Number(i.grandTotal) - paidAmount;
-                      
-                      if ((activeTab === 'sales' ? showOnlyDueSales : showOnlyDuePurchases) && pendingAmount <= 0) return false;
-                      return true;
-                  }),
+                  (activeTab === 'sales' ? sales : purchases).filter(i => safeSearch(i.invoiceNo, searchTerm) || safeSearch(i.customerName, searchTerm) || safeSearch(i.supplierName, searchTerm) || safeSearch(i.date, searchTerm) || safeSearch(i.grandTotal, searchTerm) || safeSearch(salesmen.find(s=>s.id === i.salesmanId)?.name, searchTerm)),
                   activeTab.slice(0, -1),
                   (item) => {
                     const relatedExps = activeTab === 'purchases' ? expenses.filter(e => (e.description === item.invoiceNo || e.ref === item.invoiceNo)).reduce((a,b)=>a+Number(b.amount),0) : 0;
@@ -1932,6 +2009,7 @@ const App = () => {
                       <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity no-print flex justify-end items-center">
                         <button onClick={() => setPrintDoc({ isOpen: true, type: activeTab.slice(0, -1), data: item })} className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-800 rounded-lg" title="Print"><Printer size={16}/></button>
                         
+                        {/* --- NEW EDIT BUTTON FOR VOUCHERS --- */}
                         <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg" title={`Edit ${activeTab.slice(0, -1)}`}><Edit3 size={16}/></button>
                         
                         <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, formatCurrency(item.amount))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
@@ -1961,6 +2039,7 @@ const App = () => {
                       </div>
                       <div className="flex justify-end space-x-2 mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
                         
+                        {/* --- NEW CASH IN HAND LEDGER BUTTON --- */}
                         <button onClick={() => generateLedger('salesman', sm, 'cash')} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-emerald-500 dark:text-emerald-400 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors" title="View Cash In Hand Balance"><Wallet size={16}/></button>
 
                         <button onClick={() => generateLedger('salesman', sm, 'performance')} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-indigo-500 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors" title="View Sales Performance Ledger"><BookOpen size={16}/></button>
@@ -1984,7 +2063,7 @@ const App = () => {
           </div>
         </main>
 
-        {/* --- ESTIMATOR PUSH MODAL --- */}
+        {/* --- ESTIMATOR PUSH MODAL (NEW) --- */}
         {estimatorPushModal.isOpen && (
             <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4 transition-all">
                 <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl border border-slate-200 dark:border-slate-800 animate-fade-in-up">
@@ -2401,7 +2480,7 @@ const App = () => {
               </div>
             </div>
 
-            <div id="printable-area" className="max-w-[297mm] lg:max-w-[210mm] mx-auto bg-white min-h-[297mm] p-[15mm] shadow-2xl relative font-sans text-slate-900 mb-20 print:shadow-none print:max-w-full" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
+            <div id="printable-area" className="max-w-[210mm] mx-auto bg-white min-h-[297mm] p-[15mm] shadow-2xl relative font-sans text-slate-900 mb-20 print:shadow-none" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
               <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8 mb-8">
                 <div className="w-64 text-slate-900">
                     {settings?.logo ? <img src={settings.logo} className="w-16 h-16 object-contain mb-2 rounded-xl" alt="Logo"/> : <div className="text-3xl font-black tracking-tighter mb-2 text-slate-900">C<span className="text-blue-500">E</span></div>}
@@ -2413,23 +2492,20 @@ const App = () => {
                      printDoc.type === 'purchase' ? 'PURCHASE ORDER' : 
                      printDoc.type === 'collection' ? 'PAYMENT RECEIPT' : 
                      printDoc.type === 'estimate' ? 'PRICE ESTIMATE' : 
-                     printDoc.type === 'ledger' ? 'STATEMENT OF ACCOUNT' : 
-                     printDoc.type === 'aging_customers' ? 'CUSTOMER AGING REPORT' :
-                     printDoc.type === 'aging_suppliers' ? 'SUPPLIER AGING REPORT' :
-                     'EXPENSE VOUCHER'}
+                     printDoc.type === 'ledger' ? 'STATEMENT OF ACCOUNT' : 'EXPENSE VOUCHER'}
                   </h1>
-                  {printDoc.type !== 'estimate' && printDoc.type !== 'aging_customers' && printDoc.type !== 'aging_suppliers' && (
+                  {printDoc.type !== 'estimate' && (
                       <p className="text-lg font-black text-blue-600">
                         {String(printDoc.data?.invoiceNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
                       </p>
                   )}
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">
-                    Date: {String(printDoc.data?.date || (printDoc.data?.createdAt?.toDate ? printDoc.data.createdAt.toDate().toISOString().split('T')[0] : new Date().toLocaleDateString()))}
+                    Date: {String(printDoc.data?.date || (printDoc.data?.createdAt?.toDate ? printDoc.data.createdAt.toDate().toISOString().split('T')[0] : ''))}
                   </p>
                 </div>
               </div>
 
-              {printDoc.type !== 'estimate' && printDoc.type !== 'aging_customers' && printDoc.type !== 'aging_suppliers' && (
+              {printDoc.type !== 'estimate' && (
                   <div className="grid grid-cols-2 gap-12 mb-12">
                     <div className="border-l-4 border-blue-600 pl-4">
                       <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Issued By</h2>
@@ -2468,43 +2544,6 @@ const App = () => {
                   </table>
               ) : 
               
-              printDoc.type === 'aging_customers' || printDoc.type === 'aging_suppliers' ? (
-                 <>
-                    <table className="w-full text-left border-collapse mb-12 print-table">
-                        <thead className="bg-slate-50 border-y-2 border-slate-900">
-                            <tr>
-                                <th className="py-3 px-2 text-[9px] font-black uppercase text-slate-600">Ledger Name</th>
-                                <th className="py-3 px-2 text-[9px] font-black uppercase text-slate-600 text-right">Not Due</th>
-                                <th className="py-3 px-2 text-[9px] font-black uppercase text-slate-600 text-right">1-30 Days</th>
-                                <th className="py-3 px-2 text-[9px] font-black uppercase text-slate-600 text-right">31-60</th>
-                                <th className="py-3 px-2 text-[9px] font-black uppercase text-slate-600 text-right">61-90</th>
-                                <th className="py-3 px-2 text-[9px] font-black uppercase text-slate-600 text-right">91-120</th>
-                                <th className="py-3 px-2 text-[9px] font-black uppercase text-slate-600 text-right">120+</th>
-                                <th className="py-3 px-2 text-[9px] font-black uppercase text-slate-600 text-right">Op.Bal</th>
-                                <th className="py-3 px-2 text-[9px] font-black uppercase text-slate-600 text-right">Advance</th>
-                                <th className="py-3 px-2 text-[9px] font-black uppercase text-slate-600 text-right">Net Due</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 text-[10px] font-bold uppercase text-slate-800">
-                            {printDoc.data?.map((r, idx) => (
-                                <tr key={idx}>
-                                    <td className="py-2 px-2 font-black truncate max-w-[150px]">{r.name}</td>
-                                    <td className="py-2 px-2 text-right">{r.notDue > 0 ? formatCurrency(r.notDue) : '0'}</td>
-                                    <td className="py-2 px-2 text-right text-emerald-600">{r.d30 > 0 ? formatCurrency(r.d30) : '0'}</td>
-                                    <td className="py-2 px-2 text-right text-emerald-600">{r.d60 > 0 ? formatCurrency(r.d60) : '0'}</td>
-                                    <td className="py-2 px-2 text-right text-amber-600">{r.d90 > 0 ? formatCurrency(r.d90) : '0'}</td>
-                                    <td className="py-2 px-2 text-right text-orange-600">{r.d120 > 0 ? formatCurrency(r.d120) : '0'}</td>
-                                    <td className="py-2 px-2 text-right text-rose-600">{r.d120p > 0 ? formatCurrency(r.d120p) : '0'}</td>
-                                    <td className="py-2 px-2 text-right">{r.opBal !== 0 ? formatCurrency(r.opBal) : '0'}</td>
-                                    <td className="py-2 px-2 text-right">{r.advances > 0 ? formatCurrency(r.advances) : '0'}</td>
-                                    <td className="py-2 px-2 text-right font-black">{formatCurrency(r.netDue)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                 </>
-              ) :
-
               printDoc.type === 'estimate' ? (
                  <>
                   <table className="w-full text-left border-collapse mb-12">
@@ -2601,7 +2640,7 @@ const App = () => {
                           </div>
                           <div>
                               <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Notes / Description</p>
-                              <p className="font-bold text-sm text-slate-700 uppercase whitespace-pre-wrap">{String(printDoc.data?.description || printDoc.data?.ref || '--')}</p>
+                              <p className="font-bold text-sm text-slate-700 uppercase">{String(printDoc.data?.description || printDoc.data?.ref || '--')}</p>
                           </div>
                       </div>
                   </div>
