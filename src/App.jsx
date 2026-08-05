@@ -16,13 +16,12 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, increment, setDoc } from 'firebase/firestore';
 
-let firebaseConfig = {};
+let firebaseConfig;
 try {
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_FIREBASE_CONFIG) {
-    firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG);
-  }
+  firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG);
 } catch (error) {
-  console.error("Firebase config parsing error.", error);
+  console.error("Firebase config parsing error. Check Vercel Environment Variables.", error);
+  firebaseConfig = {}; 
 }
 
 const app = initializeApp(firebaseConfig);
@@ -30,10 +29,9 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-erp-v1';
 
-/* STREAMING_CHUNK:Constants and Helper Functions... */
 // --- SECURITY PINS ---
-const APP_PIN = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APP_PIN) || '1234';
-const ADMIN_PIN = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ADMIN_PIN) || '9999';
+const APP_PIN = import.meta.env.VITE_APP_PIN || '1234';
+const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || '9999';
 
 // --- HARDCODED ACRYLIC MATRIX CHART ---
 const STANDARD_MATRIX = {
@@ -53,7 +51,6 @@ const STANDARD_MATRIX = {
     "122 x 244": { "3": 520, "4": 620, "5": 800, "6": 950, "8": 1100, "10": 1300 }
 };
 
-// Map names to specific Area Values for Linear Interpolation
 const MATRIX_AREAS = [
     { label: "30 x 15", area: 450 },
     { label: "30 x 20 / A4", area: 600 },
@@ -99,7 +96,6 @@ const cleanObject = (obj) => {
 const COLORS = ['#10b981', '#3b82f6', '#94a3b8', '#f43f5e', '#eab308', '#8b5cf6', '#06b6d4'];
 const AGING_COLORS = ['#38bdf8', '#fbbf24', '#34d399', '#a78bfa', '#fb923c', '#f43f5e'];
 
-/* STREAMING_CHUNK:Print and Export Utilities... */
 const triggerSystemPrint = async (customFilename) => {
   const element = document.getElementById('printable-area');
   if (!element) return;
@@ -160,7 +156,6 @@ const exportToExcel = async (data, filename) => {
   window.XLSX.writeFile(wb, `${String(filename).toUpperCase()}_REPORT_${new Date().toISOString().split('T')[0]}.xlsx`);
 };
 
-/* STREAMING_CHUNK:UI Components... */
 const CompanyLogo = ({ collapsed, settings }) => (
   <div className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} transition-all duration-300`}>
     {settings?.logo ? (
@@ -236,7 +231,6 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 }
 
-/* STREAMING_CHUNK:Main Application Initialization... */
 const App = () => {
   const [user, setUser] = useState(null);
   
@@ -273,7 +267,6 @@ const App = () => {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef(null);
 
-  /* STREAMING_CHUNK:Firebase Data States... */
   const [customers, setCustomers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -312,7 +305,6 @@ const App = () => {
   const [dbError, setDbError] = useState(false);
   const collapsed = isDesktop && !isSidebarHovered;
 
-  /* STREAMING_CHUNK:Effects and Event Listeners... */
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
     window.addEventListener('resize', handleResize);
@@ -407,7 +399,6 @@ const App = () => {
     return () => { unsubscribers.forEach(unsub => unsub()); unsubSettings(); };
   }, [user, isAppUnlocked]);
 
-  /* STREAMING_CHUNK:Security and Authentication Handlers... */
   const handleAppUnlock = (e) => {
     e.preventDefault();
     if (appPinInput === APP_PIN) {
@@ -449,7 +440,6 @@ const App = () => {
     });
   };
 
-  /* STREAMING_CHUNK:Analytics Calculations... */
   const analytics = useMemo(() => {
     const totalSales = sales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
     const totalPurchases = purchases.reduce((acc, p) => acc + (Number(p.grandTotal) || 0), 0);
@@ -562,7 +552,6 @@ const App = () => {
     return notifs;
   }, [products, topCustomersData]);
 
-  /* STREAMING_CHUNK:Form Modal Handlers... */
   const openModal = (type, data = null) => {
     const executeOpen = () => {
       setFormError('');
@@ -571,7 +560,7 @@ const App = () => {
         purchasePrice: '', sellingPrice: '', tax: '', minStock: '', amount: '', method: '', 
         description: '', ref: '', rate: '', timeRate: '', calcType: 'Area', tiers: [], thicknessTiers: []
       });
-      if (type === 'sale' || type === 'purchase') {
+      if (type === 'sale' || type === 'purchase' || type === 'crm') {
         setInvoiceItems(data?.items || [{ productId: '', name: '', description: '', qty: 1, rate: 0, tax: 0, total: 0 }]);
       }
       setModalState({ isOpen: true, type, data });
@@ -601,58 +590,49 @@ const App = () => {
       salesmanId: crmItem.salesmanId || '',
       linkedJobId: crmItem.id, 
       date: new Date().toISOString().split('T')[0],
-      items: [{
-        productId: '',
-        name: 'CUSTOM JOB',
-        description: crmItem.description || '', 
-        qty: 1,
-        rate: 0,
-        tax: 0,
-        total: 0
-      }]
+      items: crmItem.items && crmItem.items.length > 0 
+        ? crmItem.items.map(i => ({...i, tax: 0})) // Map CRM items to invoice items
+        : [{ productId: '', name: 'CUSTOM JOB', description: crmItem.description || '', qty: 1, rate: 0, tax: 0, total: 0 }]
     };
     openModal('sale', preFilledData); 
   };
 
-  // --- NEW: Handle Push from Estimator to CRM or Invoice ---
+  // --- Handle Push from Estimator to CRM or Invoice ---
   const handleEstimatorPushSubmit = (e) => {
       e.preventDefault();
       const customer = customers.find(c => c.id === estimatorPushModal.customerId);
       if(!customer) return;
 
-      // Format items for target
-      let descString = estimateCart.map(item => `[${item.category}] ${item.name} (${item.specs}) - Qty: ${item.qty}`).join('\n');
+      const formattedItems = estimateCart.map((item, index) => ({
+          productId: '', 
+          name: `${index + 1}. [${item.category}] ${item.name}`, 
+          description: `${item.specs}${item.desc ? `\n${item.desc}` : ''}`,
+          qty: item.qty,
+          rate: item.totalPrice / item.qty, 
+          tax: 0, 
+          total: item.totalPrice
+      }));
       
       if (estimatorPushModal.type === 'crm') {
           setActiveTab('crm');
           openModal('crm', {
               customerId: customer.id,
               customerName: customer.name,
-              description: `Estimate Generated Jobs:\n${descString}`,
-              date: new Date().toISOString().split('T')[0]
+              partyName: customer.name,
+              date: new Date().toISOString().split('T')[0],
+              items: formattedItems
           });
       } else if (estimatorPushModal.type === 'invoice') {
           setActiveTab('sales');
-          const invoiceFormattedItems = estimateCart.map(item => ({
-              productId: '', // Unlinked custom item
-              name: `[${item.category}] ${item.name}`,
-              description: `${item.specs} ${item.desc ? `- ${item.desc}` : ''}`,
-              qty: item.qty,
-              rate: item.totalPrice / item.qty, // Calculate unit rate
-              tax: 0, // default 0
-              total: item.totalPrice
-          }));
-
           openModal('sale', {
               customerId: customer.id,
               customerName: customer.name,
               partyName: customer.name,
               date: new Date().toISOString().split('T')[0],
-              items: invoiceFormattedItems
+              items: formattedItems
           });
       }
       setEstimatorPushModal({isOpen: false, type: '', customerId: ''});
-      setEstimateCart([]); // Optional: Clear cart after push
   };
 
   const handleQuickPayment = (item, type, pendingAmount) => {
@@ -671,7 +651,6 @@ const App = () => {
     }
   };
 
-  // UPDATED: Now supports both Performance Ledger and Cash In Hand Ledger
   const generateLedger = (type, entity, ledgerVariant = 'standard') => {
     let rows = [];
     let balance = Number(entity.openingBalance) || 0;
@@ -690,7 +669,7 @@ const App = () => {
     } else if (type === 'salesman') {
         if (ledgerVariant === 'cash') {
             entityTypeTitle = 'Cash In Hand';
-            balance = 0; // Cash starts at 0 unless specified
+            balance = 0; 
             const c = collections.filter(x => x.salesmanId === entity.id).map(x => ({ date: x.date, ref: x.ref || 'PAYMENT', desc: `Collected from ${x.customerName || '--'}`, debit: Number(x.amount), credit: 0, rawDate: new Date(x.date) }));
             const e = expenses.filter(x => x.salesmanId === entity.id).map(x => ({ date: x.date, ref: x.description || 'EXPENSE', desc: `Paid for ${x.partyName || x.description || '--'}`, debit: 0, credit: Number(x.amount), rawDate: new Date(x.date) }));
             [...c, ...e].sort((a,b) => a.rawDate - b.rawDate).forEach(r => { balance = balance + r.debit - r.credit; rows.push({ ...r, balance }); });
@@ -715,14 +694,12 @@ const App = () => {
     });
   };
 
-  /* STREAMING_CHUNK:Database Save Operations... */
   const handleSave = async (e) => {
     e.preventDefault();
     if (!user || isSubmitting) return;
     const { type, data } = modalState;
     const isEdit = !!data?.id;
 
-    // --- DUPLICATE PREVENTION LOGIC ---
     if (type === 'customer' || type === 'supplier') {
         const listToCheck = type === 'customer' ? customers : suppliers;
         const inputName = String(formData.name || '').trim().toLowerCase();
@@ -744,7 +721,7 @@ const App = () => {
     let payload = cleanObject({ ...formData });
 
     try {
-      if (type === 'sale' || type === 'purchase') {
+      if (['sale', 'purchase', 'crm'].includes(type)) {
         const subTotal = invoiceItems.reduce((acc, item) => acc + (Number(item.qty) * Number(item.rate)), 0);
         const taxTotal = invoiceItems.reduce((acc, item) => acc + ((Number(item.qty) * Number(item.rate) * Number(item.tax)) / 100), 0);
         const discount = Number(payload.discount) || 0;
@@ -755,32 +732,34 @@ const App = () => {
           date: payload.date || new Date().toISOString().split('T')[0],
         });
 
-        if (!isEdit) {
+        if (!isEdit && (type === 'sale' || type === 'purchase')) {
           payload.invoiceNo = generateID(type === 'sale' ? 'INV' : 'PUR', type === 'sale' ? sales.length : purchases.length);
         }
-
-        const batch = writeBatch(db);
-        invoiceItems.forEach(item => {
-          if (item.productId) {
-            const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', item.productId);
-            const qtyChange = type === 'sale' ? -Number(item.qty) : Number(item.qty);
-            batch.update(prodRef, { stock: increment(qtyChange) });
-          }
-        });
         
-        const docRef = isEdit ? doc(collectionRef, data.id) : doc(collectionRef);
-        batch.set(docRef, { ...payload, createdAt: isEdit ? data.createdAt : serverTimestamp() }, { merge: true });
-        await batch.commit();
+        if (!isEdit && type === 'crm') {
+            payload.jobId = generateID('JB', crms.length);
+            payload.workStatus = 'Work Onboarded';
+            payload.invoicingStatus = 'Not invoiced';
+            payload.collectionStatus = 'Pending';
+        }
 
-      } else if (type === 'crm') {
-         if (!isEdit) {
-             payload.jobId = generateID('JB', crms.length);
-             payload.workStatus = 'Work Onboarded';
-             payload.invoicingStatus = 'Not invoiced';
-             payload.collectionStatus = 'Pending';
-         }
-         if (isEdit) { await updateDoc(doc(collectionRef, data.id), payload); } 
-         else { await addDoc(collectionRef, { ...payload, createdAt: serverTimestamp() }); }
+        if (type === 'sale' || type === 'purchase') {
+            const batch = writeBatch(db);
+            invoiceItems.forEach(item => {
+              if (item.productId) {
+                const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', item.productId);
+                const qtyChange = type === 'sale' ? -Number(item.qty) : Number(item.qty);
+                batch.update(prodRef, { stock: increment(qtyChange) });
+              }
+            });
+            const docRef = isEdit ? doc(collectionRef, data.id) : doc(collectionRef);
+            batch.set(docRef, { ...payload, createdAt: isEdit ? data.createdAt : serverTimestamp() }, { merge: true });
+            await batch.commit();
+        } else {
+            if (isEdit) { await updateDoc(doc(collectionRef, data.id), payload); } 
+            else { await addDoc(collectionRef, { ...payload, createdAt: serverTimestamp() }); }
+        }
+
       } else {
         if (isEdit) { await updateDoc(doc(collectionRef, data.id), payload); } 
         else { await addDoc(collectionRef, { ...payload, createdAt: serverTimestamp() }); }
@@ -846,7 +825,6 @@ const App = () => {
     setInvoiceItems(invoiceItems.filter((_, index) => index !== indexToRemove));
   };
 
-  /* STREAMING_CHUNK:Advanced Estimator Logic with Interpolation... */
   const handleTierChange = (index, field, value) => {
       const newTiers = [...(formData.tiers || [])];
       newTiers[index][field] = Number(value) || 0;
@@ -865,7 +843,6 @@ const App = () => {
     if(!itemDb) return { total: 0, specs: '' };
     const q = Number(form.qty) || 1;
     
-    // 1. Standard Size Matrix (Interpolation for Custom Sizes included)
     if(itemDb.calcType === 'Standard_Matrix') {
         const mThick = form.matrixThick;
         if (!mThick) return { total: 0, specs: 'Please Select Thickness' };
@@ -874,20 +851,17 @@ const App = () => {
             const w = Number(form.width) || 0;
             const h = Number(form.height) || 0;
             if (w === 0 || h === 0) return { total: 0, specs: 'Enter Dimensions' };
-            const customArea = w * h; // Square CM
+            const customArea = w * h; 
             
             let lower = MATRIX_AREAS[0];
             let upper = MATRIX_AREAS[MATRIX_AREAS.length - 1];
             let unitPrice = 0;
 
             if (customArea <= lower.area) {
-                // Extrapolate downwards (or use exact ratio of smallest standard area)
                 unitPrice = (customArea / lower.area) * STANDARD_MATRIX[lower.label][mThick];
             } else if (customArea >= upper.area) {
-                // Extrapolate upwards (ratio of largest standard area)
                 unitPrice = (customArea / upper.area) * STANDARD_MATRIX[upper.label][mThick];
             } else {
-                // Linear Interpolation
                 for (let i = 0; i < MATRIX_AREAS.length - 1; i++) {
                     if (customArea >= MATRIX_AREAS[i].area && customArea <= MATRIX_AREAS[i+1].area) {
                         lower = MATRIX_AREAS[i];
@@ -897,14 +871,12 @@ const App = () => {
                 }
                 const priceLow = STANDARD_MATRIX[lower.label][mThick];
                 const priceHigh = STANDARD_MATRIX[upper.label][mThick];
-                // Y = y1 + ((x - x1) / (x2 - x1)) * (y2 - y1)
                 unitPrice = priceLow + ((customArea - lower.area) / (upper.area - lower.area)) * (priceHigh - priceLow);
             }
 
             return { total: unitPrice * q, specs: `Custom Size ${w}x${h}cm (${mThick}mm)` };
 
         } else {
-            // Standard Size Lookup
             const mSize = form.matrixSize;
             if(STANDARD_MATRIX[mSize] && STANDARD_MATRIX[mSize][mThick]) {
                  const price = STANDARD_MATRIX[mSize][mThick];
@@ -914,20 +886,17 @@ const App = () => {
         }
     }
 
-    // 2. Fixed Unit Based
     if(itemDb.calcType === 'Fixed') {
         const rate = Number(itemDb.rate) || 0;
         return { total: rate * q, specs: `Fixed Unit` };
     }
 
-    // 3. Time Based
     if(itemDb.calcType === 'Time') {
         const rate = Number(itemDb.rate) || 0;
         const mins = Number(form.minutes) || 0;
         return { total: mins * rate * q, specs: `${mins} Mins` };
     }
 
-    // 4. Tiered (Quantity Dependent)
     if(itemDb.calcType === 'Tiered') {
         let unitPrice = Number(itemDb.rate) || 0; 
         if (itemDb.tiers && itemDb.tiers.length > 0) {
@@ -938,7 +907,6 @@ const App = () => {
         return { total: unitPrice * q, specs: `Tier Rate Applied: ${formatCurrency(unitPrice)}/ea` };
     }
     
-    // 5. Area Calculations (Area, Area_Thickness, Sheet_Cut)
     const w = Number(form.width) || 0;
     const h = Number(form.height) || 0;
     const sqm = (w * h) / 10000;
@@ -952,7 +920,7 @@ const App = () => {
              if (matchedTier) materialRate = Number(matchedTier.price);
         }
 
-        const matCost = sqm * materialRate; // materialRate is per sqm for this thickness
+        const matCost = sqm * materialRate;
         
         if (itemDb.calcType === 'Sheet_Cut') {
             const timeRate = Number(itemDb.timeRate) || 0;
@@ -964,7 +932,6 @@ const App = () => {
         }
     }
     
-    // Default Area
     const rate = Number(itemDb.rate) || 0;
     return { total: sqm * rate * q, specs: `${w}x${h}cm (${sqm.toFixed(2)}sqm)` };
   };
@@ -975,7 +942,7 @@ const App = () => {
       if(!itemDb) return;
       
       const { total, specs } = calculateEstimateItemTotal(itemDb, calcForm);
-      if (total === 0) return; // Prevent adding if calculation is missing inputs
+      if (total === 0) return; 
       
       const cartItem = {
           id: Date.now(),
@@ -989,7 +956,6 @@ const App = () => {
       };
       
       setEstimateCart([...estimateCart, cartItem]);
-      // Reset form but keep category selected for speed
       setCalcForm({ category: calcForm.category, itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1, matrixSize: '', matrixThick: '', isCustomMatrix: false });
   };
 
@@ -1014,7 +980,6 @@ const App = () => {
 
   const currentTabDetails = getTabDetails(activeTab);
 
-  /* STREAMING_CHUNK:App Lock UI Render... */
   if (!isAppUnlocked) {
     return (
       <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen font-sans selection:bg-blue-500/30 flex items-center justify-center`}>
@@ -1062,7 +1027,6 @@ const App = () => {
     </div>
   );
 
-  /* STREAMING_CHUNK:Main Application Layout... */
   return (
     <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-500/30`}>
       <div className="flex h-screen overflow-hidden">
@@ -1131,7 +1095,6 @@ const App = () => {
             <div className="flex items-center space-x-4">
               <button className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl" onClick={() => setIsMobileMenuOpen(true)}><Menu size={24}/></button>
               
-              {/* --- DYNAMIC PAGE TITLE --- */}
               <div className="hidden sm:flex flex-col ml-2 lg:ml-0">
                  <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none">
                     {currentTabDetails.title}
@@ -1148,7 +1111,6 @@ const App = () => {
                 <input type="text" placeholder="Global Entity Search..." className="bg-transparent border-none text-sm font-bold w-full focus:outline-none uppercase dark:text-white dark:placeholder-slate-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
               
-              {/* --- The Dark Mode Toggle Button --- */}
               <button onClick={toggleDarkMode} className="p-2 text-slate-400 hover:text-blue-500 dark:hover:text-cyan-400 transition-colors bg-slate-50 dark:bg-[#0f172a] rounded-full border border-slate-100 dark:border-slate-800">
                 {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
               </button>
@@ -1183,7 +1145,6 @@ const App = () => {
                   )}
               </div>
 
-              {/* --- MANUAL LOCK BUTTON --- */}
               <button 
                 onClick={handleManualLock}
                 className="group relative h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/30 overflow-hidden transition-all hover:scale-95"
@@ -1613,7 +1574,7 @@ const App = () => {
 
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Remarks / Description</label>
-                                                <input type="text" placeholder="Add custom notes..." className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-xs text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={calcForm.desc} onChange={e => setCalcForm({...calcForm, desc: e.target.value})} />
+                                                <textarea rows="3" placeholder="Add custom notes (multi-line)..." className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-xs text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20 resize-y whitespace-pre-wrap" value={calcForm.desc} onChange={e => setCalcForm({...calcForm, desc: e.target.value})} />
                                             </div>
 
                                             {/* LIVE CALCULATION RESULT */}
@@ -1648,14 +1609,14 @@ const App = () => {
                                     </div>
                                 ) : (
                                     <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
-                                        {estimateCart.map((item) => (
-                                            <div key={item.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group flex items-center justify-between">
+                                        {estimateCart.map((item, idx) => (
+                                            <div key={item.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group flex items-start justify-between">
                                                 <div className="flex-1 pr-4">
                                                     <div className="flex items-center space-x-2 mb-1">
-                                                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-[8px] font-black uppercase tracking-widest">{item.category}</span>
+                                                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-[8px] font-black uppercase tracking-widest">{idx + 1}. {item.category}</span>
                                                     </div>
                                                     <h4 className="font-black text-sm text-slate-800 dark:text-white uppercase">{item.name}</h4>
-                                                    {item.desc && <p className="text-xs font-bold text-slate-500 mt-0.5">{item.desc}</p>}
+                                                    {item.desc && <p className="text-xs font-bold text-slate-500 mt-0.5 whitespace-pre-wrap">{item.desc}</p>}
                                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Specs: {item.specs} | Qty: <span className="text-slate-700 dark:text-slate-300">{item.qty}</span></p>
                                                 </div>
                                                 <div className="text-right flex flex-col items-end">
@@ -1697,7 +1658,7 @@ const App = () => {
                           <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Job ID</th>
                           <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Date</th>
                           <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Client Name</th>
-                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 w-1/4">Work Description</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 w-1/4">Work Details</th>
                           <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Client Type</th>
                           <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Exec</th>
                           <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-center">Work Status</th>
@@ -1751,7 +1712,17 @@ const App = () => {
                             <td className="px-4 py-3 uppercase tracking-wider">{item.jobId}</td>
                             <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{item.date}</td>
                             <td className="px-4 py-3 uppercase">{item.customerName}</td>
-                            <td className="px-4 py-3 uppercase truncate max-w-xs" title={item.description}>{item.description}</td>
+                            <td className="px-4 py-3 uppercase truncate max-w-xs" title={item.items ? item.items.map(i=>i.name).join(', ') : item.description}>
+                                {item.items && item.items.length > 0 ? (
+                                    <div className="flex flex-col gap-1">
+                                        {item.items.map((i, idx) => (
+                                            <span key={idx} className="block truncate opacity-90">• {i.name}</span>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    item.description || '--'
+                                )}
+                            </td>
                             <td className="px-4 py-3">
                                 <span className={`px-2 py-1 rounded text-[9px] uppercase tracking-widest ${getCRMClientTypeStyle(item.clientType)}`}>
                                     {item.clientType || 'Direct Client'}
@@ -1999,7 +1970,6 @@ const App = () => {
                       <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity no-print flex justify-end items-center">
                         <button onClick={() => setPrintDoc({ isOpen: true, type: activeTab.slice(0, -1), data: item })} className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-800 rounded-lg" title="Print"><Printer size={16}/></button>
                         
-                        {/* --- NEW EDIT BUTTON FOR VOUCHERS --- */}
                         <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg" title={`Edit ${activeTab.slice(0, -1)}`}><Edit3 size={16}/></button>
                         
                         <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, formatCurrency(item.amount))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
@@ -2029,7 +1999,6 @@ const App = () => {
                       </div>
                       <div className="flex justify-end space-x-2 mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
                         
-                        {/* --- NEW CASH IN HAND LEDGER BUTTON --- */}
                         <button onClick={() => generateLedger('salesman', sm, 'cash')} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-emerald-500 dark:text-emerald-400 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors" title="View Cash In Hand Balance"><Wallet size={16}/></button>
 
                         <button onClick={() => generateLedger('salesman', sm, 'performance')} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-indigo-500 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors" title="View Sales Performance Ledger"><BookOpen size={16}/></button>
@@ -2269,7 +2238,7 @@ const App = () => {
                                     onChange={e => setFormData({...formData, linkedJobId: e.target.value})}>
                                 <option value="">No Link (Independent Invoice)</option>
                                 {crms.filter(c => c.customerId === formData.customerId).map(job => (
-                                    <option key={job.id} value={job.id}>{job.jobId} - {job.description.slice(0,40)}...</option>
+                                    <option key={job.id} value={job.id}>{job.jobId} - {job.items && job.items[0] ? job.items[0].name.slice(0,40) : '--'}...</option>
                                 ))}
                             </select>
                          </div>
@@ -2286,12 +2255,11 @@ const App = () => {
                         <option value="Agency">Agency</option>
                       </select>
                     </div>
-                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Sales Executive *</label>
+                    <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Sales Executive *</label>
                       <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-800 dark:text-white uppercase" value={formData.salesmanId || ''} onChange={e => setFormData({...formData, salesmanId: e.target.value})}>
                         <option value="">Select Exec...</option>{salesmen.map(s => <option key={s.id} value={s.id}>{String(s.name)}</option>)}
                       </select>
                     </div>
-                    <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Work Description (Detailed) *</label><textarea required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20 min-h-[100px]" value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} /></div>
                   </div>
                 )}
 
@@ -2339,42 +2307,61 @@ const App = () => {
                   </div>
                 )}
 
-                {['sale', 'purchase'].includes(modalState.type) && (
+                {['sale', 'purchase', 'crm'].includes(modalState.type) && (
                   <div className="space-y-6">
-                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Sales Executive *</label>
-                      <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase" value={formData.salesmanId || ''} onChange={e => setFormData({...formData, salesmanId: e.target.value})}>
-                        <option value="">Select Staff...</option>{salesmen.map(s => <option key={s.id} value={s.id}>{String(s.name)}</option>)}
-                      </select>
-                    </div>
+                    {modalState.type !== 'crm' && (
+                        <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Sales Executive *</label>
+                          <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase" value={formData.salesmanId || ''} onChange={e => setFormData({...formData, salesmanId: e.target.value})}>
+                            <option value="">Select Staff...</option>{salesmen.map(s => <option key={s.id} value={s.id}>{String(s.name)}</option>)}
+                          </select>
+                        </div>
+                    )}
+                    
                     <div className="bg-slate-50 dark:bg-[#0f172a] p-6 rounded-3xl border border-slate-100 dark:border-slate-800">
-                      <h3 className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 mb-4">Item Details</h3>
+                      <h3 className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 mb-4">{modalState.type === 'crm' ? 'Job Tracking Items' : 'Item Details'}</h3>
                       
                       {/* TABLE HEADER FOR ITEM DETAILS */}
                       <div className="hidden md:flex gap-3 px-2 pb-2 border-b border-slate-200 dark:border-slate-700 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                         <div className="w-[30%]">Product</div>
-                         <div className="flex-1">Description (Optional)</div>
-                         <div className="w-20 text-center">Qty</div>
-                         <div className="w-28 text-right">Rate</div>
-                         <div className="w-32 text-right">Total</div>
+                         <div className="w-[25%]">Item Name / Product</div>
+                         <div className="flex-1">Description / Specifications</div>
+                         <div className="w-16 text-center">Qty</div>
+                         <div className="w-24 text-right">Rate</div>
+                         {modalState.type !== 'crm' && <div className="w-16 text-center">Tax %</div>}
+                         <div className="w-28 text-right">Total</div>
                          <div className="w-10"></div>
                       </div>
 
                       <div className="space-y-3 mt-3">
                         {invoiceItems.map((item, idx) => (
                           <div key={idx} className="flex flex-col md:flex-row gap-3 items-start md:items-center p-3 md:p-0 bg-white dark:bg-[#1e293b] md:bg-transparent rounded-xl md:rounded-none border border-slate-200 dark:border-slate-700 md:border-none">
-                            <select required className="w-full md:w-[30%] p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white uppercase text-xs" value={item.productId || ''} onChange={(e) => handleItemChange(idx, 'productId', e.target.value)}>
-                              <option value="">Select Product...</option>{products.map(p => <option key={p.id} value={p.id}>{String(p.name)}</option>)}
-                            </select>
                             
-                            {/* CUSTOM DESCRIPTION FIELD */}
-                            <input type="text" placeholder="Custom Description" className="w-full md:flex-1 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-xs placeholder:text-slate-400" value={item.description || ''} onChange={(e) => handleItemChange(idx, 'description', e.target.value)} />
+                            <div className="w-full md:w-[25%] flex flex-col gap-2">
+                                {modalState.type !== 'crm' && (
+                                    <select className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white uppercase text-xs" value={item.productId || ''} onChange={(e) => handleItemChange(idx, 'productId', e.target.value)}>
+                                        <option value="">Select Product...</option>{products.map(p => <option key={p.id} value={p.id}>{String(p.name)}</option>)}
+                                    </select>
+                                )}
+                                <input type="text" placeholder="Custom Item Name" required className="w-full p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-xs placeholder:text-slate-400 uppercase" value={item.name || ''} onChange={(e) => handleItemChange(idx, 'name', e.target.value)} />
+                            </div>
+
+                            {/* CUSTOM DESCRIPTION FIELD (MULTI-LINE) */}
+                            <textarea 
+                                placeholder="Detailed Description / Specifications (Multi-line)..." 
+                                className="w-full md:flex-1 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-xs placeholder:text-slate-400 custom-scrollbar resize-y whitespace-pre-wrap min-h-[70px]" 
+                                rows="3"
+                                value={item.description || ''} 
+                                onChange={(e) => handleItemChange(idx, 'description', e.target.value)} 
+                            />
                             
                             <div className="flex gap-3 w-full md:w-auto">
-                              <input type="number" placeholder="Qty" required className="flex-1 md:w-20 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-center text-xs" value={item.qty || ''} onChange={(e) => handleItemChange(idx, 'qty', e.target.value)} />
-                              <input type="number" placeholder="Rate" required className="flex-1 md:w-28 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-right text-xs" value={item.rate || ''} onChange={(e) => handleItemChange(idx, 'rate', e.target.value)} />
+                              <input type="number" placeholder="Qty" required className="flex-1 md:w-16 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-center text-xs" value={item.qty || ''} onChange={(e) => handleItemChange(idx, 'qty', e.target.value)} />
+                              <input type="number" placeholder="Rate" required className="flex-1 md:w-24 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-right text-xs" value={item.rate || ''} onChange={(e) => handleItemChange(idx, 'rate', e.target.value)} />
+                              {modalState.type !== 'crm' && (
+                                 <input type="number" placeholder="Tax" className="flex-1 md:w-16 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-center text-xs" value={item.tax || ''} onChange={(e) => handleItemChange(idx, 'tax', e.target.value)} />
+                              )}
                             </div>
                             
-                            <div className="w-full md:w-32 p-3 bg-slate-200 dark:bg-slate-800 rounded-xl font-black text-right text-xs text-slate-800 dark:text-slate-200 border border-transparent dark:border-slate-700">{formatCurrency(item.total)}</div>
+                            <div className="w-full md:w-28 p-3 bg-slate-200 dark:bg-slate-800 rounded-xl font-black text-right text-xs text-slate-800 dark:text-slate-200 border border-transparent dark:border-slate-700">{formatCurrency(item.total)}</div>
                             
                             {/* DELETE ROW BUTTON */}
                             <button type="button" onClick={() => removeRow(idx)} className="w-full md:w-10 p-3 flex justify-center text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-xl transition-colors shrink-0" title="Remove Item">
@@ -2382,7 +2369,7 @@ const App = () => {
                             </button>
                           </div>
                         ))}
-                        <button type="button" onClick={() => setInvoiceItems([...invoiceItems, { productId: '', name: '', description: '', qty: 1, rate: 0, tax: 0, total: 0 }])} className="text-blue-600 dark:text-blue-400 font-black text-[10px] uppercase tracking-widest flex items-center p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg mt-2 transition-colors"><Plus size={14} className="mr-1"/> Add Row</button>
+                        <button type="button" onClick={() => setInvoiceItems([...invoiceItems, { productId: '', name: '', description: '', qty: 1, rate: 0, tax: 0, total: 0 }])} className="text-blue-600 dark:text-blue-400 font-black text-[10px] uppercase tracking-widest flex items-center p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg mt-2 transition-colors"><Plus size={14} className="mr-1"/> Add Item Row</button>
                       </div>
                     </div>
                   </div>
@@ -2534,8 +2521,8 @@ const App = () => {
                           <td className="py-5 px-2 text-slate-400">{idx + 1}</td>
                           <td className="py-5 px-2 text-slate-900">
                             <div><span className="text-blue-600">[{item.category}]</span> {item.name}</div>
-                            <div className="text-xs text-slate-500 mt-1 font-bold">{item.specs}</div>
-                            {item.desc && <div className="text-[10px] text-slate-400 mt-1 font-normal normal-case">{item.desc}</div>}
+                            <div className="text-xs text-slate-500 mt-1 font-bold whitespace-pre-wrap">{item.specs}</div>
+                            {item.desc && <div className="text-[10px] text-slate-400 mt-1 font-normal normal-case whitespace-pre-wrap">{item.desc}</div>}
                           </td>
                           <td className="py-5 px-2 text-center text-slate-700">{item.qty}</td>
                           <td className="py-5 px-2 text-right text-slate-700">{formatCurrency(item.totalPrice / item.qty)}</td>
@@ -2572,7 +2559,7 @@ const App = () => {
                           <td className="py-5 px-2 text-slate-400">{idx + 1}</td>
                           <td className="py-5 px-2 text-slate-900">
                             <div>{String(item.name || '')}</div>
-                            {item.description && <div className="text-xs text-slate-500 mt-1 font-normal normal-case">{item.description}</div>}
+                            {item.description && <div className="text-xs text-slate-500 mt-1 font-normal normal-case whitespace-pre-wrap">{item.description}</div>}
                           </td>
                           <td className="py-5 px-2 text-center text-slate-700">{String(item.qty || 0)}</td>
                           <td className="py-5 px-2 text-right text-slate-700">{formatCurrency(item.rate)}</td>
