@@ -9,7 +9,7 @@ import {
   ShieldCheck, HandCoins, ShoppingBag, CreditCard, Menu, 
   Edit3, Receipt, Package, Truck, FileText, PieChart as PieChartIcon, 
   Bell, DownloadCloud, AlertTriangle, UsersRound, Activity, BookOpen, Image as ImageIcon,
-  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator, Database, ShoppingCart, Info, Table, Wallet, SendToBack, ArrowRightCircle, BarChartHorizontal, Filter
+  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator, Database, ShoppingCart, Info, Table, Wallet, SendToBack, ArrowRightCircle, BarChartHorizontal, Filter, FileSignature
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
@@ -73,8 +73,9 @@ const formatCurrency = (num) => new Intl.NumberFormat('en-US', { style: 'currenc
 const generateID = (prefix, length) => `${prefix}-${String(length + 1).padStart(5, '0')}`;
 
 const getBadgeStyle = (status) => {
-  if (status === 'Paid' || status === 'Active' || status === 'Collected') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30 border';
-  if (status === 'Partial' || status === 'Collection Follow up') return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border-amber-200 dark:border-amber-500/30 border';
+  if (status === 'Paid' || status === 'Active' || status === 'Collected' || status === 'Converted') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30 border';
+  if (status === 'Partial' || status === 'Collection Follow up' || status?.includes('Follow Up')) return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border-amber-200 dark:border-amber-500/30 border';
+  if (status === 'Dropped') return 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400 border-slate-300 dark:border-slate-600 border line-through';
   return 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 border-rose-200 dark:border-rose-500/30 border';
 };
 
@@ -271,6 +272,7 @@ const App = () => {
   const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]);
   const [purchases, setPurchases] = useState([]);
+  const [quotations, setQuotations] = useState([]);
   const [collections, setCollections] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [salesmen, setSalesmen] = useState([]);
@@ -415,7 +417,7 @@ const App = () => {
       customers: setCustomers, suppliers: setSuppliers, products: setProducts,
       sales: setSales, purchases: setPurchases, collections: setCollections, 
       expenses: setExpenses, salesmen: setSalesmen, crms: setCrms,
-      estimator_items: setEstimatorItems
+      estimator_items: setEstimatorItems, quotations: setQuotations
     };
 
     const unsubscribers = Object.entries(collectionsMap).map(([colName, setter]) => 
@@ -584,8 +586,23 @@ const App = () => {
              notifs.push({ id: `top-${idx}`, type: 'info', icon: TrendingUp, title: 'Top Performer', desc: `${c.name} is your top customer.` });
         }
     });
+    quotations.forEach(q => {
+        if (q.status !== 'Converted' && q.status !== 'Dropped') {
+            const qDate = new Date(q.date || (q.createdAt?.seconds ? q.createdAt.seconds * 1000 : new Date()));
+            const diffDays = Math.floor((new Date() - qDate) / (1000 * 60 * 60 * 24));
+            const salesman = salesmen.find(s=>s.id === q.salesmanId)?.name || 'Unknown Exec';
+            
+            if (diffDays >= 30 && q.status !== 'Follow Up (1 Month)') {
+                notifs.push({ id: `q-30d-${q.id}`, type: 'warning', icon: AlertTriangle, title: 'Quote Follow-up: 1 Month', desc: `${q.quotationNo} for ${q.customerName}. Exec: ${salesman}` });
+            } else if (diffDays >= 7 && diffDays < 30 && q.status !== 'Follow Up (1 Week)' && q.status !== 'Follow Up (1 Month)') {
+                notifs.push({ id: `q-7d-${q.id}`, type: 'warning', icon: AlertTriangle, title: 'Quote Follow-up: 1 Week', desc: `${q.quotationNo} for ${q.customerName}. Exec: ${salesman}` });
+            } else if (diffDays >= 2 && diffDays < 7 && q.status !== 'Follow Up (48 Hrs)' && q.status !== 'Follow Up (1 Week)' && q.status !== 'Follow Up (1 Month)') {
+                notifs.push({ id: `q-2d-${q.id}`, type: 'warning', icon: AlertTriangle, title: 'Quote Follow-up: 48 Hours', desc: `${q.quotationNo} for ${q.customerName}. Exec: ${salesman}` });
+            }
+        }
+    });
     return notifs;
-  }, [products, topCustomersData]);
+  }, [products, topCustomersData, quotations, salesmen]);
 
   const openModal = (type, data = null) => {
     const executeOpen = () => {
@@ -595,7 +612,7 @@ const App = () => {
         purchasePrice: '', sellingPrice: '', tax: '', minStock: '', amount: '', method: '', 
         description: '', ref: '', rate: '', timeRate: '', calcType: 'Area', tiers: [], thicknessTiers: []
       });
-      if (type === 'sale' || type === 'purchase' || type === 'crm') {
+      if (type === 'sale' || type === 'purchase' || type === 'crm' || type === 'quotation') {
         setInvoiceItems(data?.items || [{ productId: '', name: '', description: '', qty: 1, rate: 0, tax: 0, total: 0 }]);
       }
       setModalState({ isOpen: true, type, data });
@@ -632,6 +649,20 @@ const App = () => {
     openModal('sale', preFilledData); 
   };
 
+  const handlePushQuoteTo = (quote, target) => {
+    setActiveTab(target === 'sale' ? 'sales' : 'crm');
+    const itemsWithoutTax = quote.items ? quote.items.map(i => ({...i, tax: target === 'crm' ? 0 : i.tax})) : [];
+    openModal(target, {
+        customerId: quote.customerId,
+        customerName: quote.customerName,
+        partyName: quote.partyName,
+        salesmanId: quote.salesmanId,
+        items: itemsWithoutTax,
+        linkedQuoteId: quote.id,
+        date: new Date().toISOString().split('T')[0]
+    });
+  };
+
   const handleEstimatorPushSubmit = (e) => {
       e.preventDefault();
       const customer = customers.find(c => c.id === estimatorPushModal.customerId);
@@ -659,6 +690,15 @@ const App = () => {
       } else if (estimatorPushModal.type === 'invoice') {
           setActiveTab('sales');
           openModal('sale', {
+              customerId: customer.id,
+              customerName: customer.name,
+              partyName: customer.name,
+              date: new Date().toISOString().split('T')[0],
+              items: formattedItems
+          });
+      } else if (estimatorPushModal.type === 'quotation') {
+          setActiveTab('quotations');
+          openModal('quotation', {
               customerId: customer.id,
               customerName: customer.name,
               partyName: customer.name,
@@ -719,12 +759,12 @@ const App = () => {
     setModalState({ isOpen: true, type: 'ledger', data: { entity, entityType: entityTypeTitle, rows } });
   };
 
-  const handleCRMStatusChange = (id, field, value) => {
+  const handleStatusChange = (id, field, value, collectionName = 'crms') => {
     requestAdminAuth(async () => {
         if(!user) return;
         try {
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'crms', id), { [field]: value });
-        } catch(e) { console.error("Error updating CRM status", e); }
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionName, id), { [field]: value });
+        } catch(e) { console.error("Error updating status", e); }
     });
   };
 
@@ -748,14 +788,14 @@ const App = () => {
     setIsSubmitting(true);
     setFormError('');
 
-    const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms', 'estimatorItem': 'estimator_items' };
+    const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms', 'estimatorItem': 'estimator_items', 'quotation': 'quotations' };
     const colName = colMap[type];
     const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
     
     let payload = cleanObject({ ...formData });
 
     try {
-      if (['sale', 'purchase', 'crm'].includes(type)) {
+      if (['sale', 'purchase', 'crm', 'quotation'].includes(type)) {
         const subTotal = invoiceItems.reduce((acc, item) => acc + (Number(item.qty) * Number(item.rate)), 0);
         const taxTotal = invoiceItems.reduce((acc, item) => acc + ((Number(item.qty) * Number(item.rate) * Number(item.tax)) / 100), 0);
         const discount = Number(payload.discount) || 0;
@@ -775,6 +815,11 @@ const App = () => {
             payload.workStatus = 'Work Onboarded';
             payload.invoicingStatus = 'Not invoiced';
             payload.collectionStatus = 'Pending';
+        }
+
+        if (!isEdit && type === 'quotation') {
+            payload.quotationNo = generateID('QTE', quotations.length);
+            payload.status = 'Draft';
         }
 
         if (type === 'sale' || type === 'purchase') {
@@ -831,7 +876,7 @@ const App = () => {
   const executeDelete = async () => {
     if (!confirmDelete.id || !confirmDelete.type || !user) return;
     try {
-      const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms', 'estimatorItem': 'estimator_items' };
+      const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms', 'estimatorItem': 'estimator_items', 'quotation': 'quotations' };
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', colMap[confirmDelete.type], confirmDelete.id));
       setConfirmDelete({ isOpen: false, type: '', id: null, title: '' });
     } catch (e) { console.error("Delete Error", e); }
@@ -844,7 +889,7 @@ const App = () => {
       const prod = products.find(p => p.id === value);
       if (prod) {
         newItems[index].name = prod.name;
-        newItems[index].rate = modalState.type === 'sale' ? prod.sellingPrice : prod.purchasePrice;
+        newItems[index].rate = (modalState.type === 'sale' || modalState.type === 'quotation') ? prod.sellingPrice : prod.purchasePrice;
         newItems[index].tax = prod.tax || 0;
       }
     }
@@ -1011,6 +1056,7 @@ const App = () => {
       case 'dashboard': return { title: 'Business Overview', desc: 'Real-time Analytics & KPIs' };
       case 'crm': return { title: 'CRM & Job Tracker', desc: 'Manage Client Projects & Lifecycles' };
       case 'sales': return { title: 'Sales & Invoices', desc: 'Manage Billing & Receivables' };
+      case 'quotations': return { title: 'Sales Quotations', desc: 'Manage Quotes & Follow-ups' };
       case 'purchases': return { title: 'Purchase Orders', desc: 'Manage Supplier Bills & Payables' };
       case 'collections': return { title: 'Payment Collections', desc: 'Track Received Payments' };
       case 'expenses': return { title: 'Business Expenses', desc: 'Track Outward Cashflow' };
@@ -1112,6 +1158,7 @@ const App = () => {
             <p className={`text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 mt-6 ${collapsed ? 'text-center' : 'px-4'}`}>Core Operations</p>
             <NavItem id="dashboard" icon={LayoutDashboard} label="Dashboard" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="crm" icon={ClipboardList} label="CRM / Job Tracker" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
+            <NavItem id="quotations" icon={FileSignature} label="Sales Quotations" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="sales" icon={Receipt} label="Sales Invoices" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="purchases" icon={ShoppingBag} label="Purchases" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             
@@ -1378,6 +1425,7 @@ const App = () => {
               </div>
             )}
 
+            {/* --- PRICE ESTIMATOR VIEW --- */}
             {activeTab === 'estimator' && (
               <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 
@@ -1393,6 +1441,7 @@ const App = () => {
                   <div className="flex space-x-3">
                       {estimateCart.length > 0 && (
                           <>
+                             <button onClick={() => setEstimatorPushModal({isOpen: true, type: 'quotation', customerId: ''})} className="px-6 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center"><FileSignature size={14} className="mr-2"/> Push to Quotation</button>
                              <button onClick={() => setEstimatorPushModal({isOpen: true, type: 'crm', customerId: ''})} className="px-6 py-3 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors flex items-center"><SendToBack size={14} className="mr-2"/> Push to CRM</button>
                              <button onClick={() => setEstimatorPushModal({isOpen: true, type: 'invoice', customerId: ''})} className="px-6 py-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors flex items-center"><ArrowRightCircle size={14} className="mr-2"/> Push to Invoice</button>
                              
@@ -1772,7 +1821,7 @@ const App = () => {
                                 <select 
                                     className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center ${getCRMWorkStatusStyle(item.workStatus)}`}
                                     value={item.workStatus || 'Work Onboarded'}
-                                    onChange={(e) => handleCRMStatusChange(item.id, 'workStatus', e.target.value)}
+                                    onChange={(e) => handleStatusChange(item.id, 'workStatus', e.target.value, 'crms')}
                                 >
                                     <option value="Price/Quotation Submitted">Price/Quotation Submitted</option>
                                     <option value="Work Onboarded">Work Onboarded</option>
@@ -1795,7 +1844,7 @@ const App = () => {
                                     <select 
                                         className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center border-none ${invBadgeColor}`}
                                         value={displayInvStatus}
-                                        onChange={(e) => handleCRMStatusChange(item.id, 'invoicingStatus', e.target.value)}
+                                        onChange={(e) => handleStatusChange(item.id, 'invoicingStatus', e.target.value, 'crms')}
                                     >
                                         <option value="Not invoiced">Not invoiced</option>
                                         <option value="TAX Invoice Created">TAX Invoice Created</option>
@@ -1816,7 +1865,7 @@ const App = () => {
                                     <select 
                                         className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center border-none ${collBadgeColor}`}
                                         value={displayCollStatus}
-                                        onChange={(e) => handleCRMStatusChange(item.id, 'collectionStatus', e.target.value)}
+                                        onChange={(e) => handleStatusChange(item.id, 'collectionStatus', e.target.value, 'crms')}
                                     >
                                         <option value="Pending">Pending</option>
                                         <option value="Collection Follow up">Collection Follow up</option>
@@ -1835,6 +1884,81 @@ const App = () => {
                           </tr>
                         )})}
                         {crms.length === 0 && <tr><td colSpan="10" className="py-12 text-center text-slate-300 dark:text-slate-600 uppercase tracking-widest">No Jobs Tracked Yet</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* --- QUOTATIONS VIEW --- */}
+            {activeTab === 'quotations' && (
+              <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1">
+                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+                  <div className="flex space-x-3">
+                      <button onClick={() => exportToExcel(quotations, `QUOTATIONS_${new Date().toISOString().split('T')[0]}`)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export</button>
+                  </div>
+                  <button onClick={() => openModal('quotation')} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Plus size={16} className="mr-2"/> Add New Quotation</button>
+                </div>
+                
+                <div className="bg-white dark:bg-[#1e293b] rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[1100px]">
+                      <thead className="bg-[#4a5568] text-[10px] uppercase tracking-widest font-black text-white">
+                        <tr>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Quote ID</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Date</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Client Name</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">Exec</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-right">Amount</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-center">Status</th>
+                          <th className="px-4 py-4 border-b border-slate-200 dark:border-slate-700 text-right no-print">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                        {quotations.filter(q => safeSearch(q.quotationNo, searchTerm) || safeSearch(q.customerName, searchTerm) || safeSearch(q.status, searchTerm)).map((item) => {
+                          
+                          const isConverted = item.status === 'Converted';
+                          const isDropped = item.status === 'Dropped';
+                          
+                          return (
+                          <tr key={item.id} className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group ${isDropped ? 'opacity-50' : ''}`}>
+                            <td className="px-4 py-4 uppercase tracking-wider text-blue-600 dark:text-blue-400 font-black">{item.quotationNo}</td>
+                            <td className="px-4 py-4 text-slate-500 dark:text-slate-400">{item.date}</td>
+                            <td className="px-4 py-4 uppercase">{item.customerName}</td>
+                            <td className="px-4 py-4 uppercase">{salesmen.find(s=>s.id === item.salesmanId)?.name || 'N/A'}</td>
+                            <td className="px-4 py-4 text-right font-black text-slate-900 dark:text-white">{formatCurrency(item.grandTotal)}</td>
+                            
+                            <td className="px-4 py-4 text-center">
+                                <select 
+                                    className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center ${getBadgeStyle(item.status)}`}
+                                    value={item.status || 'Draft'}
+                                    onChange={(e) => handleStatusChange(item.id, 'status', e.target.value, 'quotations')}
+                                >
+                                    <option value="Draft">Draft</option>
+                                    <option value="Sent">Sent (Pending)</option>
+                                    <option value="Follow Up (48 Hrs)">Follow Up (48 Hrs)</option>
+                                    <option value="Follow Up (1 Week)">Follow Up (1 Week)</option>
+                                    <option value="Follow Up (1 Month)">Follow Up (1 Month)</option>
+                                    <option value="Converted">Converted</option>
+                                    <option value="Dropped">Dropped</option>
+                                </select>
+                            </td>
+
+                            <td className="px-4 py-4 text-right space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end no-print">
+                              {!isConverted && !isDropped && (
+                                <>
+                                  <button onClick={() => handlePushQuoteTo(item, 'crm')} className="p-1.5 text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg" title="Push to CRM Job Tracker"><SendToBack size={16}/></button>
+                                  <button onClick={() => handlePushQuoteTo(item, 'sale')} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg" title="Push to Sales Invoice"><FilePlus size={16}/></button>
+                                </>
+                              )}
+                              <button onClick={() => setPrintDoc({ isOpen: true, type: 'quotation', data: item })} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-50 dark:hover:bg-slate-900/30 rounded-lg" title="Print Quotation"><Printer size={16}/></button>
+                              <button onClick={() => openModal('quotation', item)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg" title="Edit Quotation"><Edit3 size={16}/></button>
+                              <button onClick={() => triggerDelete('quotation', item.id, String(item.quotationNo))} className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg"><Trash2 size={16}/></button>
+                            </td>
+                          </tr>
+                        )})}
+                        {quotations.length === 0 && <tr><td colSpan="7" className="py-12 text-center text-slate-300 dark:text-slate-600 uppercase tracking-widest">No Quotations Generated Yet</td></tr>}
                       </tbody>
                     </table>
                   </div>
@@ -1961,169 +2085,6 @@ const App = () => {
               </div>
             )}
 
-            {(activeTab === 'customers' || activeTab === 'suppliers') && (
-              <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
-                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-                  <button onClick={() => exportToExcel(activeTab === 'customers' ? customers : suppliers, activeTab)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
-                  <button onClick={() => openModal(activeTab.slice(0, -1))} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Plus size={16} className="mr-2"/> Add {activeTab.slice(0, -1)}</button>
-                </div>
-                
-                {renderTable(
-                  ['Entity Name', 'Contact Info', 'Tax / GST', 'Opening Bal.', 'Status'],
-                  (activeTab === 'customers' ? customers : suppliers).filter(c => safeSearch(c.name, searchTerm) || safeSearch(c.phone, searchTerm) || safeSearch(c.email, searchTerm) || safeSearch(c.gst, searchTerm)),
-                  activeTab,
-                  (item) => (
-                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                      <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.name || '')}</td>
-                      <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400">
-                        <div><Phone size={12} className="inline mr-2 opacity-70"/>{String(item.phone || 'N/A')}</div>
-                        <div className="mt-1"><Mail size={12} className="inline mr-2 opacity-70"/>{String(item.email || 'N/A')}</div>
-                      </td>
-                      <td className="px-6 py-4 font-bold text-xs uppercase text-slate-700 dark:text-slate-300">{String(item.gst || 'UNREGISTERED')}</td>
-                      <td className="px-6 py-4 font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(item.openingBalance)}</td>
-                      <td className="px-6 py-4"><span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-200 dark:border-emerald-500/30">Active</span></td>
-                      <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
-                        <button onClick={() => generateLedger(activeTab.slice(0, -1), item)} className="p-2 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg" title="View Ledger"><BookOpen size={16}/></button>
-                        <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg"><Edit3 size={16}/></button>
-                        <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, String(item.name))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
-                      </td>
-                    </tr>
-                  )
-                )}
-              </div>
-            )}
-
-            {activeTab === 'products' && (
-              <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
-                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-                  <button onClick={() => exportToExcel(products, 'products')} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
-                  <button onClick={() => openModal('product')} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase flex items-center hover:scale-95 transition-all shadow-lg shadow-blue-500/30"><Plus size={16} className="mr-2"/> Add Product</button>
-                </div>
-                {renderTable(
-                  ['Product Name', 'Category', 'Stock Lvl', 'Cost Price', 'Selling Price'],
-                  products.filter(p => safeSearch(p.name, searchTerm) || safeSearch(p.category, searchTerm) || safeSearch(p.sellingPrice, searchTerm) || safeSearch(p.purchasePrice, searchTerm)),
-                  'product',
-                  (item) => (
-                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                      <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.name || '')}</td>
-                      <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">{String(item.category || 'General')}</td>
-                      <td className="px-6 py-4"><span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${Number(item.stock) <= Number(item.minStock) ? 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/30' : 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/30'}`}>{String(item.stock || 0)} Units</span></td>
-                      <td className="px-6 py-4 font-black text-slate-500 dark:text-slate-400">{formatCurrency(item.purchasePrice)}</td>
-                      <td className="px-6 py-4 font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(item.sellingPrice)}</td>
-                      <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => openModal('product', item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg"><Edit3 size={16}/></button>
-                        <button onClick={() => triggerDelete('product', item.id, String(item.name))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
-                      </td>
-                    </tr>
-                  )
-                )}
-              </div>
-            )}
-
-            {(activeTab === 'sales' || activeTab === 'purchases') && (
-              <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
-                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-                  <button onClick={() => exportToExcel(activeTab === 'sales' ? sales : purchases, `${settings?.companyName || 'MY'}_${activeTab.toUpperCase()}_REPORT_${new Date().toISOString().split('T')[0]}`)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
-                  <button onClick={() => openModal(activeTab.slice(0, -1))} className={`px-8 py-3 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg flex items-center hover:scale-95 transition-all ${activeTab === 'sales' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/30' : 'bg-gradient-to-r from-slate-700 to-slate-900 shadow-slate-900/30'}`}><Plus size={16} className="mr-2"/> Generate {activeTab.slice(0, -1)}</button>
-                </div>
-                
-                {renderTable(
-                  ['Date', 'Invoice No', activeTab === 'sales' ? 'Customer' : 'Supplier', 'Executive', 'Grand Total', 'Status'],
-                  (activeTab === 'sales' ? sales : purchases).filter(i => safeSearch(i.invoiceNo, searchTerm) || safeSearch(i.customerName, searchTerm) || safeSearch(i.supplierName, searchTerm) || safeSearch(i.date, searchTerm) || safeSearch(i.grandTotal, searchTerm) || safeSearch(salesmen.find(s=>s.id === i.salesmanId)?.name, searchTerm)),
-                  activeTab.slice(0, -1),
-                  (item) => {
-                    const relatedExps = activeTab === 'purchases' ? expenses.filter(e => (e.description === item.invoiceNo || e.ref === item.invoiceNo)).reduce((a,b)=>a+Number(b.amount),0) : 0;
-                    const relatedColls = activeTab === 'sales' ? collections.filter(c => c.ref === item.invoiceNo).reduce((a,b)=>a+Number(b.amount),0) : 0;
-                    const paidAmount = activeTab === 'sales' ? relatedColls : relatedExps;
-                    const pendingAmount = Number(item.grandTotal) - paidAmount;
-                    const status = pendingAmount <= 0 ? 'Paid' : (paidAmount > 0 ? 'Partial' : 'Unpaid');
-
-                    return (
-                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                      <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">{String(item.date || '')}</td>
-                      <td className="px-6 py-4 text-xs font-black text-blue-600 dark:text-blue-400 tracking-wider flex items-center">
-                          {String(item.invoiceNo || '')}
-                          {item.linkedJobId && <ClipboardList size={14} className="ml-2 text-indigo-400" title="Linked to CRM Job"/>}
-                      </td>
-                      <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.customerName || item.supplierName || '')}</td>
-                      <td className="px-6 py-4 font-bold text-xs uppercase text-slate-400 dark:text-slate-500">{String(salesmen.find(s=>s.id === item.salesmanId)?.name || 'N/A')}</td>
-                      <td className={`px-6 py-4 font-black ${activeTab === 'sales' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100'}`}>{formatCurrency(item.grandTotal)}</td>
-                      <td className="px-6 py-4"><span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${getBadgeStyle(status)}`}>{status}</span></td>
-                      <td className="px-6 py-4 text-right space-x-2 flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        
-                        {pendingAmount > 0 && (
-                          <button onClick={() => handleQuickPayment(item, activeTab.slice(0, -1), pendingAmount)} className="p-2 text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg shrink-0" title={`Settle Pending: ${formatCurrency(pendingAmount)}`}><HandCoins size={16}/></button>
-                        )}
-
-                        <button onClick={() => setPrintDoc({ isOpen: true, type: activeTab.slice(0, -1), data: item })} className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-800 rounded-lg shrink-0" title="Download PDF"><Printer size={16}/></button>
-                        <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg shrink-0"><Edit3 size={16}/></button>
-                        <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, String(item.invoiceNo))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg shrink-0"><Trash2 size={16}/></button>
-                      </td>
-                    </tr>
-                  )}
-                )}
-              </div>
-            )}
-
-            {(activeTab === 'collections' || activeTab === 'expenses') && (
-              <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
-                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-                  <button onClick={() => exportToExcel(activeTab === 'collections' ? collections : expenses, activeTab)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
-                  <button onClick={() => openModal(activeTab.slice(0, -1))} className={`px-8 py-3 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg flex items-center hover:scale-95 transition-all ${activeTab === 'collections' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/30' : 'bg-gradient-to-r from-rose-500 to-rose-600 shadow-rose-500/30'}`}><Plus size={16} className="mr-2"/> Record {activeTab.slice(0, -1)}</button>
-                </div>
-                
-                {renderTable(
-                  ['Date', 'Ref / Invoice Link', activeTab === 'collections' ? 'Customer' : 'Description', 'Executive', 'Amount', 'Method'],
-                  (activeTab === 'collections' ? collections : expenses).filter(i => safeSearch(i.ref, searchTerm) || safeSearch(i.customerName, searchTerm) || safeSearch(i.description, searchTerm) || safeSearch(i.method, searchTerm) || safeSearch(i.amount, searchTerm) || safeSearch(i.date, searchTerm)),
-                  activeTab.slice(0, -1),
-                  (item) => (
-                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                      <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">{String(item.date || (item.createdAt?.toDate ? item.createdAt.toDate().toISOString().split('T')[0] : ''))}</td>
-                      <td className="px-6 py-4 text-xs font-black text-blue-600 dark:text-blue-400 tracking-wider uppercase">{String(item.ref || item.category || 'N/A')}</td>
-                      <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.customerName || item.description || '--')}</td>
-                      <td className="px-6 py-4 font-bold text-xs uppercase text-slate-400 dark:text-slate-500">{String(salesmen.find(s=>s.id === item.salesmanId)?.name || 'N/A')}</td>
-                      <td className={`px-6 py-4 font-black ${activeTab === 'collections' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{formatCurrency(item.amount)}</td>
-                      <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">{String(item.method || 'Cash')}</td>
-                      <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity no-print flex justify-end items-center">
-                        <button onClick={() => setPrintDoc({ isOpen: true, type: activeTab.slice(0, -1), data: item })} className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-800 rounded-lg" title="Print"><Printer size={16}/></button>
-                        <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg" title={`Edit ${activeTab.slice(0, -1)}`}><Edit3 size={16}/></button>
-                        <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, formatCurrency(item.amount))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
-                      </td>
-                    </tr>
-                  )
-                )}
-              </div>
-            )}
-
-            {activeTab === 'salesmen' && (
-              <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
-                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-                  <button onClick={() => exportToExcel(salesmen, 'salesmen')} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
-                  <button onClick={() => openModal('salesman')} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Plus size={16} className="mr-2"/> Register Staff</button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {salesmen.filter(s => safeSearch(s.name, searchTerm) || safeSearch(s.phone, searchTerm) || safeSearch(s.email, searchTerm)).map(sm => (
-                    <div key={sm.id} className="bg-white dark:bg-[#1e293b] p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl dark:shadow-none transition-all relative overflow-hidden group">
-                      <div className="flex items-center space-x-4 mb-6">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center text-2xl font-black shadow-lg shadow-indigo-500/20">{String(sm.name || 'U').charAt(0).toUpperCase()}</div>
-                        <div>
-                          <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">{String(sm.name || '')}</h3>
-                          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest"><Phone size={10} className="inline mr-1"/>{String(sm.phone || 'N/A')}</p>
-                        </div>
-                      </div>
-                      <div className="flex justify-end space-x-2 mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
-                        <button onClick={() => generateLedger('salesman', sm, 'cash')} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-emerald-500 dark:text-emerald-400 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors" title="View Cash In Hand Balance"><Wallet size={16}/></button>
-                        <button onClick={() => generateLedger('salesman', sm, 'performance')} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-indigo-500 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors" title="View Sales Performance Ledger"><BookOpen size={16}/></button>
-                        <button onClick={() => openModal('salesman', sm)} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors"><Edit3 size={16}/></button>
-                        <button onClick={() => triggerDelete('salesman', sm.id, String(sm.name))} className="p-3 bg-slate-50 dark:bg-[#0f172a] text-rose-500 dark:text-rose-400 rounded-xl hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors"><Trash2 size={16}/></button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div className="mt-auto pt-16 pb-8 flex flex-col items-center justify-center space-y-2 opacity-60 hover:opacity-100 transition-opacity duration-500 no-print group">
                 <div className="h-px w-24 bg-gradient-to-r from-transparent via-blue-500 to-transparent group-hover:w-48 transition-all duration-700"></div>
                 <p className="text-[10px] font-black uppercase tracking-[0.5em] bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-cyan-400 dark:to-blue-500 drop-shadow-sm hover:scale-110 transition-transform duration-500 cursor-default">
@@ -2134,15 +2095,22 @@ const App = () => {
           </div>
         </main>
 
+        {/* --- ESTIMATOR PUSH MODAL --- */}
         {estimatorPushModal.isOpen && (
             <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4 transition-all">
                 <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl border border-slate-200 dark:border-slate-800 animate-fade-in-up">
                     <div className="flex flex-col items-center">
-                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${estimatorPushModal.type === 'crm' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'}`}>
-                            {estimatorPushModal.type === 'crm' ? <SendToBack size={28} /> : <ArrowRightCircle size={28} />}
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+                            estimatorPushModal.type === 'crm' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' : 
+                            estimatorPushModal.type === 'quotation' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 
+                            'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                        }`}>
+                            {estimatorPushModal.type === 'crm' ? <SendToBack size={28} /> : 
+                             estimatorPushModal.type === 'quotation' ? <FileSignature size={28} /> : 
+                             <ArrowRightCircle size={28} />}
                         </div>
                         <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-1 text-center">
-                            Push to {estimatorPushModal.type === 'crm' ? 'CRM Job Tracker' : 'Sales Invoice'}
+                            Push to {estimatorPushModal.type === 'crm' ? 'CRM Job Tracker' : estimatorPushModal.type === 'quotation' ? 'Sales Quotation' : 'Sales Invoice'}
                         </h2>
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6 text-center">Select a customer to link this estimate</p>
                         
@@ -2159,7 +2127,13 @@ const App = () => {
 
                             <div className="flex space-x-3">
                                 <button type="button" onClick={() => setEstimatorPushModal({ isOpen: false, type: '', customerId: '' })} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancel</button>
-                                <button type="submit" className={`flex-1 py-4 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-95 transition-all ${estimatorPushModal.type === 'crm' ? 'bg-gradient-to-r from-purple-500 to-purple-600 shadow-purple-500/30' : 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/30'}`}>Create {estimatorPushModal.type === 'crm' ? 'Job' : 'Invoice'}</button>
+                                <button type="submit" className={`flex-1 py-4 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-95 transition-all ${
+                                    estimatorPushModal.type === 'crm' ? 'bg-gradient-to-r from-purple-500 to-purple-600 shadow-purple-500/30' : 
+                                    estimatorPushModal.type === 'quotation' ? 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-blue-500/30' :
+                                    'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/30'
+                                }`}>
+                                    Create {estimatorPushModal.type === 'crm' ? 'Job' : estimatorPushModal.type === 'quotation' ? 'Quote' : 'Invoice'}
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -2306,7 +2280,7 @@ const App = () => {
                                         </div>
                                     ))}
                                 </div>
-                                <button type="button" onClick={() => setFormData({...formData, thicknessTiers: [...(formData.thicknessTiers || []), { thickness: 0, price: 0, smallAreaPrice: '' }]})} className="mt-4 px-4 py-2 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-blue-200 transition-colors">+ Add Thickness Rate</button>
+                                <button type="button" onClick={() => setFormData({...formData, thicknessTiers: [...(formData.thicknessTiers || []), { thickness: 0, price: 0, smallAreaPrice: 0 }]})} className="mt-4 px-4 py-2 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-blue-200 transition-colors">+ Add Thickness Rate</button>
                             </div>
                             {formData.calcType === 'Sheet_Cut' && (
                                 <div className="space-y-2">
@@ -2324,13 +2298,13 @@ const App = () => {
                   </div>
                 )}
 
-                {['sale', 'purchase', 'expense', 'collection', 'crm'].includes(modalState.type) && (
+                {['sale', 'purchase', 'expense', 'collection', 'crm', 'quotation'].includes(modalState.type) && (
                   <div className="p-6 bg-slate-50 dark:bg-[#0f172a] rounded-3xl border border-slate-200 dark:border-slate-800 mb-6 shadow-inner dark:shadow-none">
                      <label className="block text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 mb-3">Select Entity / Customer *</label>
                      <select required className="w-full p-4 bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 font-black text-slate-800 dark:text-white uppercase focus:ring-2 ring-blue-500/20 shadow-sm" 
                              value={formData.customerId || formData.supplierId || formData.partyName || ''} 
                              onChange={e => {
-                               if(modalState.type === 'sale' || modalState.type === 'collection' || modalState.type === 'crm') {
+                               if(modalState.type === 'sale' || modalState.type === 'collection' || modalState.type === 'crm' || modalState.type === 'quotation') {
                                  const entity = customers.find(c => c.id === e.target.value);
                                  if(entity) setFormData({...formData, customerId: entity.id, customerName: entity.name, partyName: entity.name});
                                } else if (modalState.type === 'purchase') {
@@ -2341,10 +2315,10 @@ const App = () => {
                                }
                              }}>
                        <option value="">Choose Existing Entity...</option>
-                       {(['sale', 'collection', 'crm'].includes(modalState.type) ? customers : suppliers).map(c => <option key={c.id} value={c.id}>{String(c.name)}</option>)}
+                       {(['sale', 'collection', 'crm', 'quotation'].includes(modalState.type) ? customers : suppliers).map(c => <option key={c.id} value={c.id}>{String(c.name)}</option>)}
                      </select>
 
-                     {modalState.type === 'sale' && formData.customerId && (
+                     {modalState.type === 'sale' && formData.customerId && !formData.linkedQuoteId && (
                          <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                             <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-2">Smart Link to CRM Job (Optional)</label>
                             <select className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-800 dark:text-white uppercase text-xs focus:ring-2 ring-indigo-500/20" 
@@ -2421,7 +2395,7 @@ const App = () => {
                   </div>
                 )}
 
-                {['sale', 'purchase', 'crm'].includes(modalState.type) && (
+                {['sale', 'purchase', 'crm', 'quotation'].includes(modalState.type) && (
                   <div className="space-y-6">
                     {modalState.type !== 'crm' && (
                         <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Sales Executive *</label>
@@ -2543,7 +2517,7 @@ const App = () => {
               </div>
               <div className="flex space-x-4">
                 <button onClick={() => {
-                  const refNo = printDoc.data?.invoiceNo || printDoc.data?.ref || printDoc.data?.entity?.name || 'DOC';
+                  const refNo = printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.ref || printDoc.data?.entity?.name || 'DOC';
                   triggerSystemPrint(`${settings?.companyName || 'MY'}_${String(printDoc.type).toUpperCase()}_${refNo}`);
                 }} className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 flex items-center transition-all"><DownloadCloud size={18} className="mr-2"/> Generate PDF</button>
                 <button onClick={() => setPrintDoc({ isOpen: false, type: '', data: null })} className="p-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition-colors"><X size={20}/></button>
@@ -2559,6 +2533,7 @@ const App = () => {
                 <div className="text-right">
                   <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 mb-1">
                     {printDoc.type === 'sale' ? 'INVOICE' : 
+                     printDoc.type === 'quotation' ? 'SALES QUOTATION' : 
                      printDoc.type === 'purchase' ? 'PURCHASE ORDER' : 
                      printDoc.type === 'collection' ? 'PAYMENT RECEIPT' : 
                      printDoc.type === 'estimate' ? 'PRICE ESTIMATE' : 
@@ -2566,7 +2541,7 @@ const App = () => {
                   </h1>
                   {printDoc.type !== 'estimate' && (
                       <p className="text-lg font-black text-blue-600">
-                        {String(printDoc.data?.invoiceNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
+                        {String(printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
                       </p>
                   )}
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">
@@ -2586,7 +2561,7 @@ const App = () => {
                     </div>
                     <div className="border-l-4 border-slate-900 pl-4">
                       <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
-                        {printDoc.type === 'sale' ? 'Billed To Customer' : 
+                        {printDoc.type === 'sale' || printDoc.type === 'quotation' ? 'Billed To Customer' : 
                          printDoc.type === 'purchase' ? 'Supplier Details' : 
                          printDoc.type === 'ledger' ? `${printDoc.data?.entityType} Details` :
                          printDoc.type === 'collection' ? 'Received From' : 'Expense Account'}
@@ -2651,7 +2626,7 @@ const App = () => {
                  </>
               ) :
 
-              ['sale', 'purchase'].includes(printDoc.type) ? (
+              ['sale', 'purchase', 'quotation'].includes(printDoc.type) ? (
                 <>
                   <table className="w-full text-left border-collapse mb-12">
                     <thead className="bg-slate-50 border-y-2 border-slate-900">
