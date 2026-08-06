@@ -1961,44 +1961,6 @@ const App = () => {
               <th className="py-4 px-4 text-xs font-black text-blue-500 uppercase tracking-widest text-right">Total Due</th>
             </tr>
           </thead>
-          <tbody>
-            {buildAgingReport()
-              .filter(item => {
-                const isOnlyDue = activeTab === 'customer_aging' ? showOnlyDueSales : showOnlyDuePurchases;
-                return isOnlyDue ? item.totalDue > 0 : true;
-              })
-              .map((item, index) => (
-                <tr key={index} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group border-b border-slate-50 dark:border-slate-800/30 last:border-0">
-                  <td className="py-4 px-4 font-black uppercase text-slate-800 dark:text-white">
-                    {item.entityName || 'UNKNOWN'}
-                  </td>
-                  <td className="py-4 px-4 text-right text-sm font-bold text-slate-600 dark:text-slate-300">
-                    {formatCurrency(item.days30 || 0)}
-                  </td>
-                  <td className="py-4 px-4 text-right text-sm font-bold text-slate-600 dark:text-slate-300">
-                    {formatCurrency(item.days60 || 0)}
-                  </td>
-                  <td className="py-4 px-4 text-right text-sm font-bold text-slate-600 dark:text-slate-300">
-                    {formatCurrency(item.days90 || 0)}
-                  </td>
-                  <td className="py-4 px-4 text-right text-sm font-bold text-rose-500 dark:text-rose-400">
-                    {formatCurrency(item.days120 || 0)}
-                  </td>
-                  <td className="py-4 px-4 text-right text-sm font-black text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 rounded-r-xl">
-                    {formatCurrency(item.totalDue || 0)}
-                  </td>
-                </tr>
-            ))}
-            
-            {/* ഡാറ്റ ഒന്നും ഇല്ലെങ്കിൽ കാണിക്കാൻ */}
-            {buildAgingReport().length === 0 && (
-              <tr>
-                <td colSpan="6" className="py-12 text-center text-sm font-bold text-slate-400">
-                  No aging records found.
-                </td>
-              </tr>
-            )}
-          </tbody>
         </table>
       </div>
     </div>
