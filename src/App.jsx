@@ -1925,7 +1925,58 @@ const App = () => {
                 </div>
               </div>
             )}
+{/* --- AGING REPORTS VIEW --- */}
+{(activeTab === 'customer_aging' || activeTab === 'supplier_aging') && (
+  <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
+    <div className="bg-white dark:bg-[#1e293b] p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+      
+      {/* Header & Filter */}
+      <div className="flex justify-between items-center mb-6 border-b border-slate-100 dark:border-slate-700/50 pb-4">
+        <h2 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-widest">
+          {activeTab === 'customer_aging' ? 'Customer Aging Details' : 'Supplier Aging Details'}
+        </h2>
+        <button 
+          onClick={() => activeTab === 'customer_aging' ? setShowOnlyDueSales(!showOnlyDueSales) : setShowOnlyDuePurchases(!showOnlyDuePurchases)}
+          className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center transition-all ${
+            (activeTab === 'customer_aging' ? showOnlyDueSales : showOnlyDuePurchases) 
+              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' 
+              : 'bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Filter size={14} className="mr-2" />
+          Show Only Due
+        </button>
+      </div>
 
+      {/* Aging Table */}
+      <div className="overflow-x-auto custom-scrollbar">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-slate-100 dark:border-slate-800">
+              <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">Entity Name</th>
+              <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">0-30 Days</th>
+              <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">31-60 Days</th>
+              <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">61-90 Days</th>
+              <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">90+ Days</th>
+              <th className="py-4 px-4 text-xs font-black text-blue-500 uppercase tracking-widest text-right">Total Due</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colSpan="6" className="py-12 text-center">
+                 <span className="text-sm font-bold text-slate-400 dark:text-slate-600">Aging logic data will be mapped here...</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <div className="mt-8 flex justify-center opacity-40 hover:opacity-100 transition-opacity">
+        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">© UMNABEEL 2026</span>
+    </div>
+  </div>
+)}
             {/* --- LIST VIEWS --- */}
             {(activeTab === 'customers' || activeTab === 'suppliers') && (
               <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
