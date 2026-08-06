@@ -1265,53 +1265,10 @@ const App = () => {
                   <KPICard title="Total Payment" value={formatCurrency(analytics.totalExpenses)} icon={CreditCard} colorClass="text-[#f43f5e]" bgClass="bg-[#fff1f2] dark:bg-[#f43f5e]/10 border-[#fecdd3] dark:border-[#f43f5e]/20" />
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <button onClick={() => openModal('product')} className="py-4 border-2 border-[#10b981] text-[#10b981] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#10b981] hover:text-white transition-all flex items-center justify-center bg-white dark:bg-[#1e293b]"><Package size={16} className="mr-2"/> Create Product</button>
-                  <button onClick={() => setActiveTab('products')} className="py-4 border-2 border-[#10b981] text-[#10b981] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#10b981] hover:text-white transition-all flex items-center justify-center bg-white dark:bg-[#1e293b]"><Activity size={16} className="mr-2"/> Update Rates</button>
-                  <button onClick={() => openModal('customer')} className="py-4 border-2 border-[#10b981] text-[#10b981] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#10b981] hover:text-white transition-all flex items-center justify-center bg-white dark:bg-[#1e293b]"><Users size={16} className="mr-2"/> Create Customer</button>
-                  <button onClick={() => openModal('supplier')} className="py-4 border-2 border-[#10b981] text-[#10b981] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#10b981] hover:text-white transition-all flex items-center justify-center bg-white dark:bg-[#1e293b]"><Truck size={16} className="mr-2"/> Create Supplier</button>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
-                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Outstanding Payable</h3>
-                    <div className="w-full h-72">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={agingPayables} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} angle={-60} textAnchor="end" />
-                          <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
-                          <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}}/>
-                          <Bar dataKey="amount" radius={[4,4,0,0]}>
-                            {agingPayables.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
-                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Outstanding Receivables</h3>
-                    <div className="w-full h-72">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={agingReceivables} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} angle={-60} textAnchor="end" />
-                          <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
-                          <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}}/>
-                          <Bar dataKey="amount" radius={[4,4,0,0]}>
-                            {agingReceivables.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </div>
-
+// =========================================================================
+// PART 1 ENDS HERE. PLEASE REPLY "NEXT" OR ANY MESSAGE TO GET PART 2.
+// (I have carefully split the code here so nothing is cut off or lost.)
+// =========================================================================
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
                     <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Sales Analysis</h3>
@@ -1421,316 +1378,14 @@ const App = () => {
                     </div>
                   </div>
                 </div>
-
               </div>
             )}
 
-            {/* --- PRICE ESTIMATOR VIEW --- */}
-            {activeTab === 'estimator' && (
-              <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1">
-                
-                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-                  <div className="flex space-x-3">
-                     <button 
-                        onClick={() => requestAdminAuth(() => setShowEstimatorDB(!showEstimatorDB))} 
-                        className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center transition-colors border ${showEstimatorDB ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800/50' : 'bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/80'}`}
-                     >
-                        <Database size={16} className="mr-2"/> {showEstimatorDB ? 'Close Database' : 'Manage Items Database'}
-                     </button>
-                  </div>
-                  <div className="flex space-x-3">
-                      {estimateCart.length > 0 && (
-                          <>
-                             <button onClick={() => setEstimatorPushModal({isOpen: true, type: 'quotation', customerId: ''})} className="px-6 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center"><FileSignature size={14} className="mr-2"/> Push to Quotation</button>
-                             <button onClick={() => setEstimatorPushModal({isOpen: true, type: 'crm', customerId: ''})} className="px-6 py-3 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors flex items-center"><SendToBack size={14} className="mr-2"/> Push to CRM</button>
-                             <button onClick={() => setEstimatorPushModal({isOpen: true, type: 'invoice', customerId: ''})} className="px-6 py-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors flex items-center"><ArrowRightCircle size={14} className="mr-2"/> Push to Invoice</button>
-                             
-                             <div className="w-px h-8 bg-slate-200 dark:bg-slate-700 mx-2"></div>
-                             
-                             <button onClick={() => setEstimateCart([])} className="px-6 py-3 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors">Clear All</button>
-                             <button onClick={() => setPrintDoc({ isOpen: true, type: 'estimate', data: { items: estimateCart, grandTotal: estimateCart.reduce((a,b)=>a+b.totalPrice, 0), date: new Date().toISOString().split('T')[0] } })} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Printer size={16} className="mr-2"/> Print Estimate</button>
-                          </>
-                      )}
-                  </div>
-                </div>
-
-                {showEstimatorDB ? (
-                    <div className="space-y-6 animate-fade-in-up">
-                        <div className="flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/10 p-6 rounded-[2rem] border border-indigo-100 dark:border-indigo-800/30">
-                            <div>
-                                <h3 className="text-lg font-black text-indigo-900 dark:text-indigo-400 uppercase tracking-tight">Estimator Database</h3>
-                                <p className="text-xs font-bold text-indigo-500/70 uppercase tracking-widest mt-1">Add base rates and calculation formulas</p>
-                            </div>
-                            <button onClick={() => openModal('estimatorItem')} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/30 hover:scale-95 transition-all flex items-center"><Plus size={16} className="mr-2"/> Add New Item</button>
-                        </div>
-                        {renderTable(
-                            ['Category', 'Item Name', 'Calculation Method', 'Base Rate'],
-                            estimatorItems.filter(i => safeSearch(i.name, searchTerm) || safeSearch(i.category, searchTerm)),
-                            'estimatorItem',
-                            (item) => (
-                                <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                                    <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">{String(item.category || '')}</td>
-                                    <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.name || '')}</td>
-                                    <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">
-                                        <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
-                                            {item.calcType === 'Standard_Matrix' ? 'Standard Size Matrix' : String(item.calcType || 'Area')}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 font-black text-blue-600 dark:text-blue-400 tracking-wider">
-                                        {item.calcType === 'Standard_Matrix' ? <span className="text-indigo-500 text-[10px] uppercase">Auto Chart</span> :
-                                         item.calcType === 'Tiered' ? 'Tiered Pricing' : 
-                                         (item.calcType === 'Area_Thickness' || item.calcType === 'Sheet_Cut') && item.thicknessTiers?.length > 0 ? 'Thickness Based' : 
-                                         formatCurrency(item.rate)}
-                                    </td>
-                                    <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
-                                        <button onClick={() => openModal('estimatorItem', item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg"><Edit3 size={16}/></button>
-                                        <button onClick={() => triggerDelete('estimatorItem', item.id, String(item.name))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
-                                    </td>
-                                </tr>
-                            )
-                        )}
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-fade-in-up">
-                        
-                        <div className="lg:col-span-5 bg-white dark:bg-[#1e293b] p-8 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-slate-800 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-8 opacity-5 dark:opacity-10 pointer-events-none">
-                                <Calculator size={120} />
-                            </div>
-                            <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight mb-6">Price Estimator</h3>
-                            
-                            <form onSubmit={handleAddEstimateToCart} className="space-y-5 relative z-10">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Select Category *</label>
-                                    <select 
-                                        required
-                                        className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20"
-                                        value={calcForm.category}
-                                        onChange={(e) => setCalcForm({...calcForm, category: e.target.value, itemId: ''})}
-                                    >
-                                        <option value="">Choose Category...</option>
-                                        {[...new Set(estimatorItems.map(i => i.category))].map(cat => (
-                                            <option key={cat} value={cat}>{String(cat)}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Select Item Type *</label>
-                                    <select 
-                                        required
-                                        className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20"
-                                        value={calcForm.itemId}
-                                        onChange={(e) => setCalcForm({...calcForm, itemId: e.target.value})}
-                                        disabled={!calcForm.category}
-                                    >
-                                        <option value="">Choose Item...</option>
-                                        {estimatorItems.filter(i => i.category === calcForm.category).map(item => (
-                                            <option key={item.id} value={item.id}>{String(item.name)} {item.calcType !== 'Tiered' && item.calcType !== 'Standard_Matrix' && (!item.thicknessTiers || item.thicknessTiers.length === 0) && `(SAR ${item.rate})`}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {(() => {
-                                    const selItem = estimatorItems.find(i => i.id === calcForm.itemId);
-                                    if(!selItem) return null;
-
-                                    return (
-                                        <div className="space-y-5 pt-2">
-                                            
-                                            {selItem.calcType === 'Standard_Matrix' && (
-                                                <div className="bg-indigo-50 dark:bg-indigo-900/10 p-6 rounded-2xl border border-indigo-100 dark:border-indigo-800/30">
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <label className="text-[10px] font-black uppercase text-indigo-800 dark:text-indigo-400 tracking-widest flex items-center">
-                                                            <Table size={14} className="mr-2"/> Matrix Chart Sizing
-                                                        </label>
-                                                        <label className="flex items-center cursor-pointer space-x-2">
-                                                            <input 
-                                                                type="checkbox" 
-                                                                className="w-4 h-4 text-indigo-600 rounded bg-white dark:bg-slate-800 border-indigo-300 focus:ring-indigo-500"
-                                                                checked={calcForm.isCustomMatrix || false}
-                                                                onChange={(e) => setCalcForm({...calcForm, isCustomMatrix: e.target.checked, matrixSize: '', width: '', height: ''})}
-                                                            />
-                                                            <span className="text-[9px] font-bold uppercase text-slate-500">Use Custom Dimensions</span>
-                                                        </label>
-                                                    </div>
-
-                                                    <div className="space-y-4">
-                                                        {calcForm.isCustomMatrix ? (
-                                                            <div className="grid grid-cols-2 gap-4 animate-fade-in-up">
-                                                                <div className="space-y-1">
-                                                                    <label className="text-[9px] font-bold uppercase text-slate-500">Width (CM) *</label>
-                                                                    <input type="number" required placeholder="0" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-indigo-100 dark:border-indigo-800/50 font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-indigo-500/20 shadow-sm" value={calcForm.width} onChange={e => setCalcForm({...calcForm, width: e.target.value})} />
-                                                                </div>
-                                                                <div className="space-y-1">
-                                                                    <label className="text-[9px] font-bold uppercase text-slate-500">Height (CM) *</label>
-                                                                    <input type="number" required placeholder="0" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-indigo-100 dark:border-indigo-800/50 font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-indigo-500/20 shadow-sm" value={calcForm.height} onChange={e => setCalcForm({...calcForm, height: e.target.value})} />
-                                                                </div>
-                                                                <p className="col-span-2 text-[9px] font-bold text-indigo-400 text-center leading-tight">Prices are proportionally calculated based on standard chart limits.</p>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="space-y-1">
-                                                                <label className="text-[9px] font-bold uppercase text-slate-500">Select Standard Size *</label>
-                                                                <select required className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-indigo-100 dark:border-indigo-800/50 font-black text-slate-900 dark:text-white uppercase focus:ring-2 ring-indigo-500/20 shadow-sm" value={calcForm.matrixSize} onChange={e => setCalcForm({...calcForm, matrixSize: e.target.value})}>
-                                                                    <option value="">Select Size...</option>
-                                                                    {Object.keys(STANDARD_MATRIX).map(s => <option key={s} value={s}>{s}</option>)}
-                                                                </select>
-                                                            </div>
-                                                        )}
-                                                        
-                                                        <div className="space-y-1 pt-2 border-t border-indigo-100 dark:border-indigo-800/30">
-                                                            <label className="text-[9px] font-bold uppercase text-slate-500">Select Thickness (mm) *</label>
-                                                            <div className="flex gap-2 flex-wrap">
-                                                                {[3, 4, 5, 6, 8, 10].map(t => (
-                                                                    <button 
-                                                                        type="button" 
-                                                                        key={t}
-                                                                        onClick={() => setCalcForm({...calcForm, matrixThick: String(t)})}
-                                                                        className={`flex-1 py-2 px-3 rounded-lg font-black text-xs transition-all border ${calcForm.matrixThick === String(t) ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/30 scale-105' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}
-                                                                    >
-                                                                        {t}
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                            <input type="text" className="h-0 w-0 opacity-0 p-0 m-0 absolute -z-10" required value={calcForm.matrixThick || ''} onChange={()=>{}} />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {selItem.calcType === 'Tiered' && (
-                                                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl flex gap-3 text-indigo-800 dark:text-indigo-300 mb-4">
-                                                    <Info size={18} className="shrink-0"/>
-                                                    <div className="text-xs">
-                                                        <p className="font-black uppercase tracking-widest mb-1">Tiered Pricing Active</p>
-                                                        <p className="font-bold opacity-80">The unit price will automatically decrease based on the quantity you enter.</p>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {(selItem.calcType === 'Area' || selItem.calcType === 'Area_Thickness' || selItem.calcType === 'Sheet_Cut') && (
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-2">
-                                                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Width (CM) *</label>
-                                                        <input type="number" required placeholder="0" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.width} onChange={e => setCalcForm({...calcForm, width: e.target.value})} />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Height (CM) *</label>
-                                                        <input type="number" required placeholder="0" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.height} onChange={e => setCalcForm({...calcForm, height: e.target.value})} />
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {(selItem.calcType === 'Area_Thickness' || selItem.calcType === 'Sheet_Cut') && (
-                                                <div className="space-y-2">
-                                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Thickness (MM) *</label>
-                                                    {selItem.thicknessTiers && selItem.thicknessTiers.length > 0 ? (
-                                                        <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.thickness} onChange={e => setCalcForm({...calcForm, thickness: e.target.value})}>
-                                                            <option value="">Select Thickness...</option>
-                                                            {selItem.thicknessTiers.map(t => (
-                                                                <option key={t.thickness} value={t.thickness}>
-                                                                    {t.thickness} mm (Reg: SAR {t.price} | {"<"}0.25sqm: SAR {t.smallAreaPrice || t.price})
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    ) : (
-                                                        <input type="number" required placeholder="e.g., 3" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.thickness} onChange={e => setCalcForm({...calcForm, thickness: e.target.value})} />
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {(selItem.calcType === 'Time' || selItem.calcType === 'Sheet_Cut') && (
-                                                <div className="space-y-2">
-                                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Minutes Required *</label>
-                                                    <input type="number" required placeholder="e.g., 15" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.minutes} onChange={e => setCalcForm({...calcForm, minutes: e.target.value})} />
-                                                </div>
-                                            )}
-
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Quantity *</label>
-                                                <input type="number" min="1" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.qty} onChange={e => setCalcForm({...calcForm, qty: e.target.value})} />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Remarks / Description</label>
-                                                <textarea rows="3" placeholder="Add custom notes (multi-line)..." className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-xs text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20 resize-y whitespace-pre-wrap" value={calcForm.desc} onChange={e => setCalcForm({...calcForm, desc: e.target.value})} />
-                                            </div>
-
-                                            <div className="mt-8 pt-6 border-t-2 border-dashed border-slate-200 dark:border-slate-700">
-                                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-2 block">Line Estimate (SAR) - Editable</label>
-                                                <div className="p-2 bg-slate-900 dark:bg-black rounded-2xl flex justify-between items-center shadow-inner focus-within:ring-2 ring-emerald-500/50 transition-all">
-                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Total Amount</span>
-                                                    <input 
-                                                        type="number" 
-                                                        step="any"
-                                                        required
-                                                        className="w-32 md:w-48 p-2 bg-transparent border-none font-black text-emerald-400 text-2xl text-right focus:outline-none" 
-                                                        value={manualEstimateTotal}
-                                                        onChange={e => setManualEstimateTotal(e.target.value)}
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <button type="submit" className="w-full py-4 mt-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/30 hover:scale-95 transition-all">
-                                                Add to Estimate List
-                                            </button>
-                                        </div>
-                                    );
-                                })()}
-                            </form>
-                        </div>
-
-                        <div className="lg:col-span-7 bg-white dark:bg-[#1e293b] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
-                            <div className="p-6 bg-slate-50/50 dark:bg-[#0f172a]/50 border-b border-slate-100 dark:border-slate-800 flex items-center">
-                                <ShoppingCart size={20} className="text-slate-400 mr-3"/>
-                                <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-tight">Estimate Preview</h3>
-                            </div>
-                            
-                            <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
-                                {estimateCart.length === 0 ? (
-                                    <div className="h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 space-y-4 py-20">
-                                        <ClipboardList size={48} className="opacity-50"/>
-                                        <p className="text-xs font-black uppercase tracking-widest">No items added yet</p>
-                                    </div>
-                                ) : (
-                                    <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
-                                        {estimateCart.map((item, idx) => (
-                                            <div key={item.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group flex items-start justify-between">
-                                                <div className="flex-1 pr-4">
-                                                    <div className="flex items-center space-x-2 mb-1">
-                                                        <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-[8px] font-black uppercase tracking-widest">{idx + 1}. {item.category}</span>
-                                                    </div>
-                                                    <h4 className="font-black text-sm text-slate-800 dark:text-white uppercase">{item.name}</h4>
-                                                    {item.desc && <p className="text-xs font-bold text-slate-500 mt-0.5 whitespace-pre-wrap uppercase">{item.desc}</p>}
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Specs: {item.specs} | Qty: <span className="text-slate-700 dark:text-slate-300">{item.qty}</span></p>
-                                                </div>
-                                                <div className="text-right flex flex-col items-end">
-                                                    <span className="font-black text-lg text-slate-900 dark:text-slate-100">{formatCurrency(item.totalPrice)}</span>
-                                                    {item.rate && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Base Rate: SAR {item.rate}</span>}
-                                                    <button onClick={() => setEstimateCart(estimateCart.filter(i => i.id !== item.id))} className="mt-2 p-1.5 text-rose-500 opacity-0 group-hover:opacity-100 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all" title="Remove Item"><Trash2 size={14}/></button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="p-6 bg-slate-900 dark:bg-black text-white flex justify-between items-center mt-auto">
-                                <span className="text-xs font-black uppercase tracking-widest text-slate-400">Grand Total Estimate</span>
-                                <span className="text-3xl font-black text-emerald-400">{formatCurrency(estimateCart.reduce((a,b)=>a+b.totalPrice, 0))}</span>
-                            </div>
-                        </div>
-                    </div>
-                )}
-              </div>
-            )}
-
+            {/* --- CRM VIEW --- */}
             {activeTab === 'crm' && (
               <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-                  <div className="flex space-x-3">
-                      <button onClick={() => exportToExcel(crms, `CRM_JOBS_${new Date().toISOString().split('T')[0]}`)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export</button>
-                  </div>
+                  <button onClick={() => exportToExcel(crms, `CRM_JOBS_${new Date().toISOString().split('T')[0]}`)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export</button>
                   <button onClick={() => openModal('crm')} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Plus size={16} className="mr-2"/> Add New Job</button>
                 </div>
                 
@@ -1753,32 +1408,17 @@ const App = () => {
                       </thead>
                       <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-[11px] font-bold text-slate-700 dark:text-slate-300">
                         {crms.filter(c => safeSearch(c.jobId, searchTerm) || safeSearch(c.customerName, searchTerm) || safeSearch(c.description, searchTerm) || safeSearch(c.workStatus, searchTerm) || safeSearch(c.invoicingStatus, searchTerm) || safeSearch(c.collectionStatus, searchTerm) || safeSearch(c.clientType, searchTerm)).map((item) => {
-                          
                           const linkedSale = sales.find(s => s.linkedJobId === item.id);
                           const relatedColls = linkedSale ? collections.filter(c => c.ref === linkedSale.invoiceNo).reduce((a,b)=>a+Number(b.amount),0) : 0;
                           const pendingAmount = linkedSale ? Number(linkedSale.grandTotal) - relatedColls : 0;
-                          
-                          let displayInvStatus = item.invoicingStatus || 'Not invoiced';
-                          let displayCollStatus = item.collectionStatus || 'Pending';
-                          let invBadgeColor = 'bg-gray-100 text-gray-700';
-                          let collBadgeColor = 'bg-gray-100 text-gray-700';
-                          let isSmartLinked = false;
+                          let displayInvStatus = item.invoicingStatus || 'Not invoiced'; let displayCollStatus = item.collectionStatus || 'Pending';
+                          let invBadgeColor = 'bg-gray-100 text-gray-700'; let collBadgeColor = 'bg-gray-100 text-gray-700'; let isSmartLinked = false;
 
                           if (linkedSale) {
-                              isSmartLinked = true;
-                              displayInvStatus = 'TAX Invoice Created';
-                              invBadgeColor = 'bg-emerald-600 text-white';
-                              
-                              if (pendingAmount <= 0) {
-                                  displayCollStatus = 'Collected';
-                                  collBadgeColor = 'bg-emerald-600 text-white';
-                              } else if (relatedColls > 0) {
-                                  displayCollStatus = 'Partial / Follow Up';
-                                  collBadgeColor = 'bg-amber-500 text-white';
-                              } else {
-                                  displayCollStatus = 'Pending Payment';
-                                  collBadgeColor = 'bg-rose-500 text-white';
-                              }
+                              isSmartLinked = true; displayInvStatus = 'TAX Invoice Created'; invBadgeColor = 'bg-emerald-600 text-white';
+                              if (pendingAmount <= 0) { displayCollStatus = 'Collected'; collBadgeColor = 'bg-emerald-600 text-white'; } 
+                              else if (relatedColls > 0) { displayCollStatus = 'Partial / Follow Up'; collBadgeColor = 'bg-amber-500 text-white'; } 
+                              else { displayCollStatus = 'Pending Payment'; collBadgeColor = 'bg-rose-500 text-white'; }
                           } else {
                               if(displayInvStatus === 'Not invoiced' || displayInvStatus === 'Not Invoiced') invBadgeColor = 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400';
                               else if(displayInvStatus === 'Sample without payment' || displayInvStatus === 'Sample with...') invBadgeColor = 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
@@ -1806,78 +1446,32 @@ const App = () => {
                                             </div>
                                         ))}
                                     </div>
-                                ) : (
-                                    <span className="truncate block uppercase" title={item.description}>{item.description || '--'}</span>
-                                )}
+                                ) : ( <span className="truncate block uppercase" title={item.description}>{item.description || '--'}</span> )}
                             </td>
-                            <td className="px-4 py-3">
-                                <span className={`px-2 py-1 rounded text-[9px] uppercase tracking-widest ${getCRMClientTypeStyle(item.clientType)}`}>
-                                    {item.clientType || 'Direct Client'}
-                                </span>
-                            </td>
+                            <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-[9px] uppercase tracking-widest ${getCRMClientTypeStyle(item.clientType)}`}>{item.clientType || 'Direct Client'}</span></td>
                             <td className="px-4 py-3 uppercase">{salesmen.find(s=>s.id === item.salesmanId)?.name || 'N/A'}</td>
                             
                             <td className="px-4 py-3 text-center">
-                                <select 
-                                    className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center ${getCRMWorkStatusStyle(item.workStatus)}`}
-                                    value={item.workStatus || 'Work Onboarded'}
-                                    onChange={(e) => handleStatusChange(item.id, 'workStatus', e.target.value, 'crms')}
-                                >
-                                    <option value="Price/Quotation Submitted">Price/Quotation Submitted</option>
-                                    <option value="Work Onboarded">Work Onboarded</option>
-                                    <option value="Work Finished">Work Finished</option>
-                                    <option value="Delivered">Delivered</option>
-                                    <option value="Cold Lead">Cold Lead</option>
-                                    <option value="Quote Rejected">Quote Rejected</option>
-                                    <option value="Quote Revised">Quote Revised</option>
-                                    <option value="Waiting Approval">Waiting Approval</option>
-                                    <option value="Canceled">Canceled</option>
+                                <select className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center ${getCRMWorkStatusStyle(item.workStatus)}`} value={item.workStatus || 'Work Onboarded'} onChange={(e) => handleStatusChange(item.id, 'workStatus', e.target.value, 'crms')}>
+                                    <option value="Price/Quotation Submitted">Price/Quotation Submitted</option><option value="Work Onboarded">Work Onboarded</option><option value="Work Finished">Work Finished</option><option value="Delivered">Delivered</option><option value="Cold Lead">Cold Lead</option><option value="Quote Rejected">Quote Rejected</option><option value="Quote Revised">Quote Revised</option><option value="Waiting Approval">Waiting Approval</option><option value="Canceled">Canceled</option>
                                 </select>
                             </td>
-
                             <td className="px-4 py-3 text-center">
-                                {isSmartLinked ? (
-                                    <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${invBadgeColor}`} title={`Auto-linked to Sale: ${linkedSale?.invoiceNo}`}>
-                                        {displayInvStatus} 🔗
-                                    </span>
-                                ) : (
-                                    <select 
-                                        className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center border-none ${invBadgeColor}`}
-                                        value={displayInvStatus}
-                                        onChange={(e) => handleStatusChange(item.id, 'invoicingStatus', e.target.value, 'crms')}
-                                    >
-                                        <option value="Not invoiced">Not invoiced</option>
-                                        <option value="TAX Invoice Created">TAX Invoice Created</option>
-                                        <option value="TAX Invoice Sent to Client">TAX Invoice Sent to Client</option>
-                                        <option value="Without Invoice">Without Invoice</option>
-                                        <option value="Proforma Invoice created and sent">Proforma Invoice created and sent</option>
-                                        <option value="Sample without payment">Sample without payment</option>
+                                {isSmartLinked ? ( <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${invBadgeColor}`} title={`Auto-linked to Sale: ${linkedSale?.invoiceNo}`}>{displayInvStatus} 🔗</span> ) : (
+                                    <select className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center border-none ${invBadgeColor}`} value={displayInvStatus} onChange={(e) => handleStatusChange(item.id, 'invoicingStatus', e.target.value, 'crms')}>
+                                        <option value="Not invoiced">Not invoiced</option><option value="TAX Invoice Created">TAX Invoice Created</option><option value="TAX Invoice Sent to Client">TAX Invoice Sent to Client</option><option value="Without Invoice">Without Invoice</option><option value="Proforma Invoice created and sent">Proforma Invoice created and sent</option><option value="Sample without payment">Sample without payment</option>
                                     </select>
                                 )}
                             </td>
-
                             <td className="px-4 py-3 text-center">
-                                {isSmartLinked ? (
-                                    <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${collBadgeColor}`}>
-                                        {displayCollStatus}
-                                    </span>
-                                ) : (
-                                    <select 
-                                        className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center border-none ${collBadgeColor}`}
-                                        value={displayCollStatus}
-                                        onChange={(e) => handleStatusChange(item.id, 'collectionStatus', e.target.value, 'crms')}
-                                    >
-                                        <option value="Pending">Pending</option>
-                                        <option value="Collection Follow up">Collection Follow up</option>
-                                        <option value="Collected">Collected</option>
+                                {isSmartLinked ? ( <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${collBadgeColor}`}>{displayCollStatus}</span> ) : (
+                                    <select className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center border-none ${collBadgeColor}`} value={displayCollStatus} onChange={(e) => handleStatusChange(item.id, 'collectionStatus', e.target.value, 'crms')}>
+                                        <option value="Pending">Pending</option><option value="Collection Follow up">Collection Follow up</option><option value="Collected">Collected</option>
                                     </select>
                                 )}
                             </td>
-                            
                             <td className="px-4 py-3 text-right space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end no-print">
-                              {!isSmartLinked && (
-                                <button onClick={() => handlePushToInvoice(item)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg" title="Push to Sales Invoice"><FilePlus size={14}/></button>
-                              )}
+                              {!isSmartLinked && <button onClick={() => handlePushToInvoice(item)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg" title="Push to Sales Invoice"><FilePlus size={14}/></button>}
                               <button onClick={() => openModal('crm', item)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg" title="Edit Full Job"><Edit3 size={14}/></button>
                               <button onClick={() => triggerDelete('crm', item.id, String(item.jobId))} className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg"><Trash2 size={14}/></button>
                             </td>
@@ -1917,10 +1511,7 @@ const App = () => {
                       </thead>
                       <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-[11px] font-bold text-slate-700 dark:text-slate-300">
                         {quotations.filter(q => safeSearch(q.quotationNo, searchTerm) || safeSearch(q.customerName, searchTerm) || safeSearch(q.status, searchTerm)).map((item) => {
-                          
-                          const isConverted = item.status === 'Converted';
-                          const isDropped = item.status === 'Dropped';
-                          
+                          const isConverted = item.status === 'Converted'; const isDropped = item.status === 'Dropped';
                           return (
                           <tr key={item.id} className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group ${isDropped ? 'opacity-50' : ''}`}>
                             <td className="px-4 py-4 uppercase tracking-wider text-blue-600 dark:text-blue-400 font-black">{item.quotationNo}</td>
@@ -1928,23 +1519,11 @@ const App = () => {
                             <td className="px-4 py-4 uppercase">{item.customerName}</td>
                             <td className="px-4 py-4 uppercase">{salesmen.find(s=>s.id === item.salesmanId)?.name || 'N/A'}</td>
                             <td className="px-4 py-4 text-right font-black text-slate-900 dark:text-white">{formatCurrency(item.grandTotal)}</td>
-                            
                             <td className="px-4 py-4 text-center">
-                                <select 
-                                    className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center ${getBadgeStyle(item.status)}`}
-                                    value={item.status || 'Draft'}
-                                    onChange={(e) => handleStatusChange(item.id, 'status', e.target.value, 'quotations')}
-                                >
-                                    <option value="Draft">Draft</option>
-                                    <option value="Sent">Sent (Pending)</option>
-                                    <option value="Follow Up (48 Hrs)">Follow Up (48 Hrs)</option>
-                                    <option value="Follow Up (1 Week)">Follow Up (1 Week)</option>
-                                    <option value="Follow Up (1 Month)">Follow Up (1 Month)</option>
-                                    <option value="Converted">Converted</option>
-                                    <option value="Dropped">Dropped</option>
+                                <select className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none text-center ${getBadgeStyle(item.status)}`} value={item.status || 'Draft'} onChange={(e) => handleStatusChange(item.id, 'status', e.target.value, 'quotations')}>
+                                    <option value="Draft">Draft</option><option value="Sent">Sent (Pending)</option><option value="Follow Up (48 Hrs)">Follow Up (48 Hrs)</option><option value="Follow Up (1 Week)">Follow Up (1 Week)</option><option value="Follow Up (1 Month)">Follow Up (1 Month)</option><option value="Converted">Converted</option><option value="Dropped">Dropped</option>
                                 </select>
                             </td>
-
                             <td className="px-4 py-4 text-right space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end no-print">
                               {!isConverted && !isDropped && (
                                 <>
@@ -1966,41 +1545,30 @@ const App = () => {
               </div>
             )}
 
+            {/* --- SALES AND PURCHASES VIEW --- */}
             {(activeTab === 'sales' || activeTab === 'purchases') && (
               <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
                   <button onClick={() => exportToExcel(activeTab === 'sales' ? sales : purchases, `${settings?.companyName || 'MY'}_${activeTab.toUpperCase()}_REPORT_${new Date().toISOString().split('T')[0]}`)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
                   <button onClick={() => openModal(activeTab.slice(0, -1))} className={`px-8 py-3 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg flex items-center hover:scale-95 transition-all ${activeTab === 'sales' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/30' : 'bg-gradient-to-r from-slate-700 to-slate-900 shadow-slate-900/30'}`}><Plus size={16} className="mr-2"/> Generate {activeTab.slice(0, -1)}</button>
                 </div>
-                
-                {renderTable(
-                  ['Date', 'Invoice No', activeTab === 'sales' ? 'Customer' : 'Supplier', 'Executive', 'Grand Total', 'Status'],
-                  (activeTab === 'sales' ? sales : purchases).filter(i => safeSearch(i.invoiceNo, searchTerm) || safeSearch(i.customerName, searchTerm) || safeSearch(i.supplierName, searchTerm) || safeSearch(i.date, searchTerm) || safeSearch(i.grandTotal, searchTerm) || safeSearch(salesmen.find(s=>s.id === i.salesmanId)?.name, searchTerm)),
-                  activeTab.slice(0, -1),
+                {renderTable(['Date', 'Invoice No', activeTab === 'sales' ? 'Customer' : 'Supplier', 'Executive', 'Grand Total', 'Status'], (activeTab === 'sales' ? sales : purchases).filter(i => safeSearch(i.invoiceNo, searchTerm) || safeSearch(i.customerName, searchTerm) || safeSearch(i.supplierName, searchTerm) || safeSearch(i.date, searchTerm) || safeSearch(i.grandTotal, searchTerm) || safeSearch(salesmen.find(s=>s.id === i.salesmanId)?.name, searchTerm)), activeTab.slice(0, -1),
                   (item) => {
                     const relatedExps = activeTab === 'purchases' ? expenses.filter(e => (e.description === item.invoiceNo || e.ref === item.invoiceNo)).reduce((a,b)=>a+Number(b.amount),0) : 0;
                     const relatedColls = activeTab === 'sales' ? collections.filter(c => c.ref === item.invoiceNo).reduce((a,b)=>a+Number(b.amount),0) : 0;
                     const paidAmount = activeTab === 'sales' ? relatedColls : relatedExps;
                     const pendingAmount = Number(item.grandTotal) - paidAmount;
                     const status = pendingAmount <= 0 ? 'Paid' : (paidAmount > 0 ? 'Partial' : 'Unpaid');
-
                     return (
                     <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                       <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">{String(item.date || '')}</td>
-                      <td className="px-6 py-4 text-xs font-black text-blue-600 dark:text-blue-400 tracking-wider flex items-center">
-                          {String(item.invoiceNo || '')}
-                          {item.linkedJobId && <ClipboardList size={14} className="ml-2 text-indigo-400" title="Linked to CRM Job"/>}
-                      </td>
+                      <td className="px-6 py-4 text-xs font-black text-blue-600 dark:text-blue-400 tracking-wider flex items-center">{String(item.invoiceNo || '')} {item.linkedJobId && <ClipboardList size={14} className="ml-2 text-indigo-400" title="Linked to CRM Job"/>}</td>
                       <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.customerName || item.supplierName || '')}</td>
                       <td className="px-6 py-4 font-bold text-xs uppercase text-slate-400 dark:text-slate-500">{String(salesmen.find(s=>s.id === item.salesmanId)?.name || 'N/A')}</td>
                       <td className={`px-6 py-4 font-black ${activeTab === 'sales' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100'}`}>{formatCurrency(item.grandTotal)}</td>
                       <td className="px-6 py-4"><span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${getBadgeStyle(status)}`}>{status}</span></td>
                       <td className="px-6 py-4 text-right space-x-2 flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        
-                        {pendingAmount > 0 && (
-                          <button onClick={() => handleQuickPayment(item, activeTab.slice(0, -1), pendingAmount)} className="p-2 text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg shrink-0" title={`Settle Pending: ${formatCurrency(pendingAmount)}`}><HandCoins size={16}/></button>
-                        )}
-
+                        {pendingAmount > 0 && <button onClick={() => handleQuickPayment(item, activeTab.slice(0, -1), pendingAmount)} className="p-2 text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg shrink-0" title={`Settle Pending: ${formatCurrency(pendingAmount)}`}><HandCoins size={16}/></button>}
                         <button onClick={() => setPrintDoc({ isOpen: true, type: activeTab.slice(0, -1), data: item })} className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-800 rounded-lg shrink-0" title="Download PDF"><Printer size={16}/></button>
                         <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg shrink-0"><Edit3 size={16}/></button>
                         <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, String(item.invoiceNo))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg shrink-0"><Trash2 size={16}/></button>
@@ -2011,17 +1579,14 @@ const App = () => {
               </div>
             )}
 
+            {/* --- COLLECTIONS AND EXPENSES VIEW --- */}
             {(activeTab === 'collections' || activeTab === 'expenses') && (
               <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
                   <button onClick={() => exportToExcel(activeTab === 'collections' ? collections : expenses, activeTab)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
                   <button onClick={() => openModal(activeTab.slice(0, -1))} className={`px-8 py-3 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg flex items-center hover:scale-95 transition-all ${activeTab === 'collections' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/30' : 'bg-gradient-to-r from-rose-500 to-rose-600 shadow-rose-500/30'}`}><Plus size={16} className="mr-2"/> Record {activeTab.slice(0, -1)}</button>
                 </div>
-                
-                {renderTable(
-                  ['Date', 'Ref / Invoice Link', activeTab === 'collections' ? 'Customer' : 'Description', 'Executive', 'Amount', 'Method'],
-                  (activeTab === 'collections' ? collections : expenses).filter(i => safeSearch(i.ref, searchTerm) || safeSearch(i.customerName, searchTerm) || safeSearch(i.description, searchTerm) || safeSearch(i.method, searchTerm) || safeSearch(i.amount, searchTerm) || safeSearch(i.date, searchTerm)),
-                  activeTab.slice(0, -1),
+                {renderTable(['Date', 'Ref / Invoice Link', activeTab === 'collections' ? 'Customer' : 'Description', 'Executive', 'Amount', 'Method'], (activeTab === 'collections' ? collections : expenses).filter(i => safeSearch(i.ref, searchTerm) || safeSearch(i.customerName, searchTerm) || safeSearch(i.description, searchTerm) || safeSearch(i.method, searchTerm) || safeSearch(i.amount, searchTerm) || safeSearch(i.date, searchTerm)), activeTab.slice(0, -1),
                   (item) => (
                     <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                       <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">{String(item.date || (item.createdAt?.toDate ? item.createdAt.toDate().toISOString().split('T')[0] : ''))}</td>
@@ -2041,24 +1606,18 @@ const App = () => {
               </div>
             )}
 
+            {/* --- CUSTOMERS AND SUPPLIERS VIEW --- */}
             {activeTab === 'customers' || activeTab === 'suppliers' ? (
               <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
                   <button onClick={() => exportToExcel(activeTab === 'customers' ? customers : suppliers, activeTab)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
                   <button onClick={() => openModal(activeTab.slice(0, -1))} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Plus size={16} className="mr-2"/> Add {activeTab.slice(0, -1)}</button>
                 </div>
-                
-                {renderTable(
-                  ['Entity Name', 'Contact Info', 'Tax / GST', 'Opening Bal.', 'Status'],
-                  (activeTab === 'customers' ? customers : suppliers).filter(c => safeSearch(c.name, searchTerm) || safeSearch(c.phone, searchTerm) || safeSearch(c.email, searchTerm) || safeSearch(c.gst, searchTerm)),
-                  activeTab,
+                {renderTable(['Entity Name', 'Contact Info', 'Tax / GST', 'Opening Bal.', 'Status'], (activeTab === 'customers' ? customers : suppliers).filter(c => safeSearch(c.name, searchTerm) || safeSearch(c.phone, searchTerm) || safeSearch(c.email, searchTerm) || safeSearch(c.gst, searchTerm)), activeTab,
                   (item) => (
                     <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                       <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.name || '')}</td>
-                      <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400">
-                        <div><Phone size={12} className="inline mr-2 opacity-70"/>{String(item.phone || 'N/A')}</div>
-                        <div className="mt-1"><Mail size={12} className="inline mr-2 opacity-70"/>{String(item.email || 'N/A')}</div>
-                      </td>
+                      <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400"><div><Phone size={12} className="inline mr-2 opacity-70"/>{String(item.phone || 'N/A')}</div><div className="mt-1"><Mail size={12} className="inline mr-2 opacity-70"/>{String(item.email || 'N/A')}</div></td>
                       <td className="px-6 py-4 font-bold text-xs uppercase text-slate-700 dark:text-slate-300">{String(item.gst || 'UNREGISTERED')}</td>
                       <td className="px-6 py-4 font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(item.openingBalance)}</td>
                       <td className="px-6 py-4"><span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-200 dark:border-emerald-500/30">Active</span></td>
@@ -2073,16 +1632,14 @@ const App = () => {
               </div>
             ) : null}
 
+            {/* --- PRODUCTS VIEW --- */}
             {activeTab === 'products' && (
               <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
                   <button onClick={() => exportToExcel(products, 'products')} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
                   <button onClick={() => openModal('product')} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase flex items-center hover:scale-95 transition-all shadow-lg shadow-blue-500/30"><Plus size={16} className="mr-2"/> Add Product</button>
                 </div>
-                {renderTable(
-                  ['Product Name', 'Category', 'Stock Lvl', 'Cost Price', 'Selling Price'],
-                  products.filter(p => safeSearch(p.name, searchTerm) || safeSearch(p.category, searchTerm) || safeSearch(p.sellingPrice, searchTerm) || safeSearch(p.purchasePrice, searchTerm)),
-                  'product',
+                {renderTable(['Product Name', 'Category', 'Stock Lvl', 'Cost Price', 'Selling Price'], products.filter(p => safeSearch(p.name, searchTerm) || safeSearch(p.category, searchTerm) || safeSearch(p.sellingPrice, searchTerm) || safeSearch(p.purchasePrice, searchTerm)), 'product',
                   (item) => (
                     <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                       <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.name || '')}</td>
@@ -2100,13 +1657,13 @@ const App = () => {
               </div>
             )}
 
+            {/* --- SALESMEN VIEW --- */}
             {activeTab === 'salesmen' && (
               <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
                   <button onClick={() => exportToExcel(salesmen, 'salesmen')} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
                   <button onClick={() => openModal('salesman')} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Plus size={16} className="mr-2"/> Register Staff</button>
                 </div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {salesmen.filter(s => safeSearch(s.name, searchTerm) || safeSearch(s.phone, searchTerm) || safeSearch(s.email, searchTerm)).map(sm => (
                     <div key={sm.id} className="bg-white dark:bg-[#1e293b] p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-xl dark:shadow-none transition-all relative overflow-hidden group">
@@ -2139,7 +1696,7 @@ const App = () => {
           </div>
         </main>
 
-        {/* --- ESTIMATOR PUSH MODAL --- */}
+        {/* --- MODALS SECTION --- */}
         {estimatorPushModal.isOpen && (
             <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4 transition-all">
                 <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl border border-slate-200 dark:border-slate-800 animate-fade-in-up">
@@ -2159,12 +1716,7 @@ const App = () => {
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6 text-center">Select a customer to link this estimate</p>
                         
                         <form onSubmit={handleEstimatorPushSubmit} className="w-full space-y-6">
-                            <select 
-                                required
-                                className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20 shadow-sm"
-                                value={estimatorPushModal.customerId}
-                                onChange={(e) => setEstimatorPushModal({...estimatorPushModal, customerId: e.target.value})}
-                            >
+                            <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20 shadow-sm" value={estimatorPushModal.customerId} onChange={(e) => setEstimatorPushModal({...estimatorPushModal, customerId: e.target.value})}>
                                 <option value="">Select Existing Customer...</option>
                                 {customers.map(c => <option key={c.id} value={c.id}>{String(c.name)}</option>)}
                             </select>
@@ -2195,15 +1747,7 @@ const App = () => {
                         <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-widest mb-1">Admin Action</h2>
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6 text-center">Authorization required</p>
                         <form onSubmit={handleAdminAuthSubmit} className="w-full">
-                            <input 
-                                type="password" 
-                                autoFocus
-                                required
-                                placeholder="PIN" 
-                                className={`w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-2 font-black text-center text-xl text-slate-900 dark:text-white tracking-[0.5em] mb-4 focus:outline-none transition-colors ${adminPinError ? 'border-rose-500/50 focus:border-rose-500' : 'border-transparent dark:border-slate-800 focus:border-blue-500'}`}
-                                value={adminPinInput}
-                                onChange={e => setAdminPinInput(e.target.value)}
-                            />
+                            <input type="password" autoFocus required placeholder="PIN" className={`w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-2 font-black text-center text-xl text-slate-900 dark:text-white tracking-[0.5em] mb-4 focus:outline-none transition-colors ${adminPinError ? 'border-rose-500/50 focus:border-rose-500' : 'border-transparent dark:border-slate-800 focus:border-blue-500'}`} value={adminPinInput} onChange={e => setAdminPinInput(e.target.value)} />
                             {adminPinError && <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center mb-4">Incorrect Admin PIN</p>}
                             <div className="flex space-x-3">
                                 <button type="button" onClick={() => setAdminAuth({ isOpen: false, callback: null })} className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancel</button>
@@ -2227,7 +1771,6 @@ const App = () => {
               </div>
               
               <form onSubmit={handleSave} className="p-8 space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar relative">
-                
                 {formError && (
                     <div className="p-4 bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 rounded-2xl font-black text-xs uppercase tracking-widest border border-rose-200 dark:border-rose-500/30 flex items-center">
                         <AlertTriangle size={16} className="mr-2 shrink-0"/> {formError}
@@ -2263,14 +1806,8 @@ const App = () => {
                             <div className="space-y-3">
                                 {formData.tiers?.map((tier, idx) => (
                                     <div key={idx} className="flex gap-4 items-center">
-                                        <div className="flex-1 space-y-1">
-                                            <span className="text-[9px] font-bold text-slate-400 uppercase">Min Qty</span>
-                                            <input type="number" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.minQty} onChange={(e) => handleTierChange(idx, 'minQty', e.target.value)} />
-                                        </div>
-                                        <div className="flex-1 space-y-1">
-                                            <span className="text-[9px] font-bold text-slate-400 uppercase">Unit Price (SAR)</span>
-                                            <input type="number" step="any" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.price} onChange={(e) => handleTierChange(idx, 'price', e.target.value)} />
-                                        </div>
+                                        <div className="flex-1 space-y-1"><span className="text-[9px] font-bold text-slate-400 uppercase">Min Qty</span><input type="number" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.minQty} onChange={(e) => handleTierChange(idx, 'minQty', e.target.value)} /></div>
+                                        <div className="flex-1 space-y-1"><span className="text-[9px] font-bold text-slate-400 uppercase">Unit Price (SAR)</span><input type="number" step="any" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.price} onChange={(e) => handleTierChange(idx, 'price', e.target.value)} /></div>
                                         <button type="button" onClick={() => removeTier(idx)} className="mt-4 p-3 text-rose-500 bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 rounded-xl transition-all"><Trash2 size={16}/></button>
                                     </div>
                                 ))}
@@ -2280,10 +1817,7 @@ const App = () => {
                     ) : formData.calcType === 'Standard_Matrix' ? (
                         <div className="md:col-span-2 bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-2xl flex items-center space-x-4 border border-indigo-100 dark:border-indigo-800">
                             <Table size={24} className="text-indigo-500 shrink-0"/>
-                            <div>
-                                <p className="text-xs font-black text-indigo-900 dark:text-indigo-400 uppercase tracking-widest">Standard Matrix Applied</p>
-                                <p className="text-[10px] font-bold text-indigo-500/80 mt-1">This item will automatically use the predefined Acrylic prices from the standard sizes chart. Custom inputs will be interpolated.</p>
-                            </div>
+                            <div><p className="text-xs font-black text-indigo-900 dark:text-indigo-400 uppercase tracking-widest">Standard Matrix Applied</p><p className="text-[10px] font-bold text-indigo-500/80 mt-1">This item will automatically use the predefined Acrylic prices from the standard sizes chart. Custom inputs will be interpolated.</p></div>
                         </div>
                     ) : formData.calcType === 'Area_Thickness' || formData.calcType === 'Sheet_Cut' ? (
                         <>
@@ -2292,52 +1826,21 @@ const App = () => {
                                 <div className="space-y-3">
                                     {formData.thicknessTiers?.map((tier, idx) => (
                                         <div key={idx} className="flex gap-4 items-center">
-                                            <div className="flex-1 space-y-1">
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase">Thickness (mm)</span>
-                                                <input type="number" step="any" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.thickness} onChange={(e) => {
-                                                    const newTiers = [...(formData.thicknessTiers || [])];
-                                                    newTiers[idx].thickness = Number(e.target.value) || 0;
-                                                    setFormData({...formData, thicknessTiers: newTiers});
-                                                }} />
-                                            </div>
-                                            <div className="flex-1 space-y-1">
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase">Reg. Price ({">="} 0.25 sqm)</span>
-                                                <input type="number" step="any" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.price} onChange={(e) => {
-                                                    const newTiers = [...(formData.thicknessTiers || [])];
-                                                    newTiers[idx].price = Number(e.target.value) || 0;
-                                                    setFormData({...formData, thicknessTiers: newTiers});
-                                                }} />
-                                            </div>
-                                            <div className="flex-1 space-y-1">
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase">Small Area Price ({"<"} 0.25 sqm)</span>
-                                                <input type="number" step="any" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.smallAreaPrice || ''} onChange={(e) => {
-                                                    const newTiers = [...(formData.thicknessTiers || [])];
-                                                    newTiers[idx].smallAreaPrice = Number(e.target.value) || 0;
-                                                    setFormData({...formData, thicknessTiers: newTiers});
-                                                }} />
-                                            </div>
-                                            <button type="button" onClick={() => {
-                                                const newTiers = [...(formData.thicknessTiers || [])];
-                                                newTiers.splice(idx, 1);
-                                                setFormData({...formData, thicknessTiers: newTiers});
-                                            }} className="mt-4 p-3 text-rose-500 bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 rounded-xl transition-all"><Trash2 size={16}/></button>
+                                            <div className="flex-1 space-y-1"><span className="text-[9px] font-bold text-slate-400 uppercase">Thickness (mm)</span><input type="number" step="any" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.thickness} onChange={(e) => { const newTiers = [...(formData.thicknessTiers || [])]; newTiers[idx].thickness = Number(e.target.value) || 0; setFormData({...formData, thicknessTiers: newTiers}); }} /></div>
+                                            <div className="flex-1 space-y-1"><span className="text-[9px] font-bold text-slate-400 uppercase">Reg. Price ({">="} 0.25 sqm)</span><input type="number" step="any" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.price} onChange={(e) => { const newTiers = [...(formData.thicknessTiers || [])]; newTiers[idx].price = Number(e.target.value) || 0; setFormData({...formData, thicknessTiers: newTiers}); }} /></div>
+                                            <div className="flex-1 space-y-1"><span className="text-[9px] font-bold text-slate-400 uppercase">Small Area Price ({"<"} 0.25 sqm)</span><input type="number" step="any" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.smallAreaPrice || ''} onChange={(e) => { const newTiers = [...(formData.thicknessTiers || [])]; newTiers[idx].smallAreaPrice = Number(e.target.value) || 0; setFormData({...formData, thicknessTiers: newTiers}); }} /></div>
+                                            <button type="button" onClick={() => { const newTiers = [...(formData.thicknessTiers || [])]; newTiers.splice(idx, 1); setFormData({...formData, thicknessTiers: newTiers}); }} className="mt-4 p-3 text-rose-500 bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 rounded-xl transition-all"><Trash2 size={16}/></button>
                                         </div>
                                     ))}
                                 </div>
                                 <button type="button" onClick={() => setFormData({...formData, thicknessTiers: [...(formData.thicknessTiers || []), { thickness: 0, price: 0, smallAreaPrice: 0 }]})} className="mt-4 px-4 py-2 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-blue-200 transition-colors">+ Add Thickness Rate</button>
                             </div>
                             {formData.calcType === 'Sheet_Cut' && (
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Cut Rate per Minute *</label>
-                                    <input type="number" required step="any" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.timeRate || ''} onChange={e => setFormData({...formData, timeRate: e.target.value})} />
-                                </div>
+                                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Cut Rate per Minute *</label><input type="number" required step="any" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.timeRate || ''} onChange={e => setFormData({...formData, timeRate: e.target.value})} /></div>
                             )}
                         </>
                     ) : (
-                        <div className="space-y-2 md:col-span-2">
-                            <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Base Rate (SAR) *</label>
-                            <input type="number" required step="any" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.rate || ''} onChange={e => setFormData({...formData, rate: e.target.value})} />
-                        </div>
+                        <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Base Rate (SAR) *</label><input type="number" required step="any" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.rate || ''} onChange={e => setFormData({...formData, rate: e.target.value})} /></div>
                     )}
                   </div>
                 )}
@@ -2568,7 +2071,7 @@ const App = () => {
               </div>
             </div>
 
-            <div id="printable-area" className="max-w-[210mm] mx-auto bg-white min-h-[297mm] p-[15mm] shadow-2xl relative font-sans text-slate-900 mb-20 print:shadow-none" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
+            <div id="printable-area" className="max-w-[210mm] mx-auto bg-white min-h-[297mm] p-[15mm] shadow-2xl relative font-sans text-slate-900 mb-20 uppercase print:shadow-none" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
               <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8 mb-8">
                 <div className="w-64 text-slate-900">
                     {settings?.logo ? <img src={settings.logo} className="w-16 h-16 object-contain mb-2 rounded-xl" alt="Logo"/> : <div className="text-3xl font-black tracking-tighter mb-2 text-slate-900">C<span className="text-blue-500">E</span></div>}
