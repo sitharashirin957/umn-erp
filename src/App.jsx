@@ -1,11 +1,6 @@
 price estimator il ninnum invoice lekkum CRM lekkum push cheyyunna pole puthya oru Sales Quotation option koode add akkanm, ithil qouation to invoice , CRM koodi push akkan inter links venam, pinne Sales Quotation adichaal 48 hours kazhinjaal sales person te name unallo ayaalkk reminder varanam follow up cheyyan 48 hours, 2 days , 1 week, 1 month ingane reminders varunna etup aanu vendath. follow ups varumbol follow cheytho ennum illel aa quote drop ayo ennum mark cheyyanulla profession system venam.
 
-
-mothathil speed erp speed akkittu professionally perfect ayirikkanam. ulla features onnum nashtapedaruth.
-
 ippo ulla code njan tharam, athilkku update aakki 1 code aytt tharanam, git hubilekk idaaanulla set akki tharanam.
-
-
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
