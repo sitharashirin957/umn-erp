@@ -1425,7 +1425,6 @@ const App = () => {
               </div>
             )}
 
-            {/* --- PRICE ESTIMATOR VIEW --- */}
             {activeTab === 'estimator' && (
               <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 
@@ -1701,7 +1700,7 @@ const App = () => {
                                                         <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-[8px] font-black uppercase tracking-widest">{idx + 1}. {item.category}</span>
                                                     </div>
                                                     <h4 className="font-black text-sm text-slate-800 dark:text-white uppercase">{item.name}</h4>
-                                                    {item.desc && <p className="text-xs font-bold text-slate-500 mt-0.5 whitespace-pre-wrap">{item.desc}</p>}
+                                                    {item.desc && <p className="text-xs font-bold text-slate-500 mt-0.5 whitespace-pre-wrap uppercase">{item.desc}</p>}
                                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Specs: {item.specs} | Qty: <span className="text-slate-700 dark:text-slate-300">{item.qty}</span></p>
                                                 </div>
                                                 <div className="text-right flex flex-col items-end">
@@ -1802,12 +1801,12 @@ const App = () => {
                                         {item.items.map((i, idx) => (
                                             <div key={idx} className="flex flex-col">
                                                 <span className="font-bold text-[10px] text-blue-600 dark:text-blue-400">• {i.name} (Qty: {i.qty})</span>
-                                                {i.description && <span className="text-[9px] opacity-70 ml-2 whitespace-pre-wrap">{i.description}</span>}
+                                                {i.description && <span className="text-[9px] opacity-70 ml-2 whitespace-pre-wrap uppercase">{i.description}</span>}
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
-                                    <span className="truncate block" title={item.description}>{item.description || '--'}</span>
+                                    <span className="truncate block uppercase" title={item.description}>{item.description || '--'}</span>
                                 )}
                             </td>
                             <td className="px-4 py-3">
@@ -2433,7 +2432,7 @@ const App = () => {
 
                             <textarea 
                                 placeholder="Detailed Description / Specifications (Multi-line)..." 
-                                className="w-full md:flex-1 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-xs placeholder:text-slate-400 custom-scrollbar resize-y whitespace-pre-wrap min-h-[70px]" 
+                                className="w-full md:flex-1 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-xs placeholder:text-slate-400 custom-scrollbar resize-y whitespace-pre-wrap uppercase min-h-[70px]" 
                                 rows="3"
                                 value={item.description || ''} 
                                 onChange={(e) => handleItemChange(idx, 'description', e.target.value)} 
@@ -2540,7 +2539,7 @@ const App = () => {
                      printDoc.type === 'ledger' ? 'STATEMENT OF ACCOUNT' : 'EXPENSE VOUCHER'}
                   </h1>
                   {printDoc.type !== 'estimate' && (
-                      <p className="text-lg font-black text-blue-600">
+                      <p className="text-lg font-black text-blue-600 uppercase">
                         {String(printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
                       </p>
                   )}
@@ -2556,8 +2555,8 @@ const App = () => {
                       <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Issued By</h2>
                       <p className="font-black text-sm uppercase text-slate-900">{settings?.companyName || 'My Custom ERP'}</p>
                       <p className="text-xs font-bold text-slate-500 uppercase mt-1">Tax ID: {settings?.taxId || '310294817200003'}</p>
-                      <p className="text-xs font-bold text-slate-500 mt-1">{settings?.email || 'info@erp.com'} | {settings?.phone || '+966 50 000 0000'}</p>
-                      {settings?.address && <p className="text-xs font-bold text-slate-500 mt-1">{settings.address}</p>}
+                      <p className="text-xs font-bold text-slate-500 uppercase mt-1">{settings?.email || 'info@erp.com'} | {settings?.phone || '+966 50 000 0000'}</p>
+                      {settings?.address && <p className="text-xs font-bold text-slate-500 uppercase mt-1">{settings.address}</p>}
                     </div>
                     <div className="border-l-4 border-slate-900 pl-4">
                       <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
@@ -2607,8 +2606,8 @@ const App = () => {
                           <td className="py-5 px-2 text-slate-400">{idx + 1}</td>
                           <td className="py-5 px-2 text-slate-900">
                             <div><span className="text-blue-600">[{item.category}]</span> {item.name}</div>
-                            <div className="text-xs text-slate-500 mt-1 font-bold whitespace-pre-wrap">{item.specs}</div>
-                            {item.desc && <div className="text-[10px] text-slate-400 mt-1 font-normal normal-case whitespace-pre-wrap">{item.desc}</div>}
+                            <div className="text-xs text-slate-500 mt-1 font-bold whitespace-pre-wrap uppercase">{item.specs}</div>
+                            {item.desc && <div className="text-[10px] text-slate-400 mt-1 font-normal whitespace-pre-wrap uppercase">{item.desc}</div>}
                           </td>
                           <td className="py-5 px-2 text-center text-slate-700">{item.qty}</td>
                           <td className="py-5 px-2 text-right text-slate-700">{formatCurrency(item.totalPrice / item.qty)}</td>
@@ -2644,8 +2643,8 @@ const App = () => {
                         <tr key={idx}>
                           <td className="py-5 px-2 text-slate-400">{idx + 1}</td>
                           <td className="py-5 px-2 text-slate-900">
-                            <div>{String(item.name || '')}</div>
-                            {item.description && <div className="text-xs text-slate-500 mt-1 font-normal normal-case whitespace-pre-wrap">{item.description}</div>}
+                            <div className="uppercase">{String(item.name || '')}</div>
+                            {item.description && <div className="text-xs text-slate-500 mt-1 font-normal whitespace-pre-wrap uppercase">{item.description}</div>}
                           </td>
                           <td className="py-5 px-2 text-center text-slate-700">{String(item.qty || 0)}</td>
                           <td className="py-5 px-2 text-right text-slate-700">{formatCurrency(item.rate)}</td>
