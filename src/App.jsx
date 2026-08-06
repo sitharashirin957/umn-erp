@@ -967,14 +967,21 @@ const App = () => {
     const h = Number(form.height) || 0;
     const sqm = (w * h) / 10000;
     
-    if(itemDb.calcType === 'Area_Thickness' || itemDb.calcType === 'Sheet_Cut') {
-        const selectedThick = Number(form.thickness);
-        let materialRate = Number(itemDb.rate) || 0;
-        
-        if (itemDb.thicknessTiers && itemDb.thicknessTiers.length > 0) {
-             const matchedTier = itemDb.thicknessTiers.find(t => Number(t.thickness) === selectedThick);
-             if (matchedTier) materialRate = Number(matchedTier.price);
-        }
+        if(itemDb.calcType === 'Area_Thickness' || itemDb.calcType === 'Sheet_Cut') {
+        const selectedThick = Number(form.thickness);
+        let materialRate = Number(itemDb.rate) || 0;
+        
+        if (itemDb.thicknessTiers && itemDb.thicknessTiers.length > 0) {
+             const matchedTier = itemDb.thicknessTiers.find(t => Number(t.thickness) === selectedThick);
+             if (matchedTier) {
+                 // 0.25 SqMtr ൽ താഴെയാണെങ്കിൽ ചെറിയ ഏരിയയുടെ വില എടുക്കുന്നു, അല്ലെങ്കിൽ സാധാരണ വില.
+                 if (sqm < 0.25 && matchedTier.smallAreaPrice) {
+                     materialRate = Number(matchedTier.smallAreaPrice);
+                 } else {
+                     materialRate = Number(matchedTier.price);
+                 }
+             }
+        }
 
         const matCost = sqm * materialRate;
         
@@ -1622,7 +1629,10 @@ const App = () => {
                                                         <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.thickness} onChange={e => setCalcForm({...calcForm, thickness: e.target.value})}>
                                                             <option value="">Select Thickness...</option>
                                                             {selItem.thicknessTiers.map(t => (
-                                                                <option key={t.thickness} value={t.thickness}>{t.thickness} mm (SAR {t.price}/sqm)</option>
+                                                             <option key={t.thickness} value={t.thickness}>
+                                            {t.thickness} mm (Reg: SAR {t.price} | <0.25sqm: SAR {t.smallAreaPrice || t.price})
+                                           </option>
+                                                               
                                                             ))}
                                                         </select>
                                                     ) : (
@@ -2337,47 +2347,54 @@ const App = () => {
                                 <p className="text-[10px] font-bold text-indigo-500/80 mt-1">This item will automatically use the predefined Acrylic prices from the standard sizes chart. Custom inputs will be interpolated.</p>
                             </div>
                         </div>
-                    ) : formData.calcType === 'Area_Thickness' || formData.calcType === 'Sheet_Cut' ? (
-                        <>
-                            <div className="md:col-span-2 bg-slate-50 dark:bg-[#0f172a] p-6 rounded-2xl">
-                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-4 block">Thickness Pricing Tiers (Per Sq.Mtr)</label>
-                                <div className="space-y-3">
-                                    {formData.thicknessTiers?.map((tier, idx) => (
-                                        <div key={idx} className="flex gap-4 items-center">
-                                            <div className="flex-1 space-y-1">
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase">Thickness (mm)</span>
-                                                <input type="number" step="any" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.thickness} onChange={(e) => {
-                                                    const newTiers = [...(formData.thicknessTiers || [])];
-                                                    newTiers[idx].thickness = Number(e.target.value) || 0;
-                                                    setFormData({...formData, thicknessTiers: newTiers});
-                                                }} />
-                                            </div>
-                                            <div className="flex-1 space-y-1">
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase">Price per Sq.Mtr (SAR)</span>
-                                                <input type="number" step="any" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.price} onChange={(e) => {
-                                                    const newTiers = [...(formData.thicknessTiers || [])];
-                                                    newTiers[idx].price = Number(e.target.value) || 0;
-                                                    setFormData({...formData, thicknessTiers: newTiers});
-                                                }} />
-                                            </div>
-                                            <button type="button" onClick={() => {
-                                                const newTiers = [...(formData.thicknessTiers || [])];
-                                                newTiers.splice(idx, 1);
-                                                setFormData({...formData, thicknessTiers: newTiers});
-                                            }} className="mt-4 p-3 text-rose-500 bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 rounded-xl transition-all"><Trash2 size={16}/></button>
-                                        </div>
-                                    ))}
-                                </div>
-                                <button type="button" onClick={() => setFormData({...formData, thicknessTiers: [...(formData.thicknessTiers || []), { thickness: 0, price: 0 }]})} className="mt-4 px-4 py-2 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-blue-200 transition-colors">+ Add Thickness Rate</button>
-                            </div>
-                            {formData.calcType === 'Sheet_Cut' && (
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Cut Rate per Minute *</label>
-                                    <input type="number" required step="any" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.timeRate || ''} onChange={e => setFormData({...formData, timeRate: e.target.value})} />
-                                </div>
-                            )}
-                        </>
-                    ) : (
+) : formData.calcType === 'Area_Thickness' || formData.calcType === 'Sheet_Cut' ? (
+    <>
+        <div className="md:col-span-2 bg-slate-50 dark:bg-[#0f172a] p-6 rounded-2xl">
+            <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-4 block">Thickness Pricing Tiers (Per Sq.Mtr)</label>
+            <div className="space-y-3">
+                {formData.thicknessTiers?.map((tier, idx) => (
+                    <div key={idx} className="flex gap-4 items-center">
+                        <div className="flex-1 space-y-1">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase">Thickness (mm)</span>
+                            <input type="number" step="any" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.thickness} onChange={(e) => {
+                                const newTiers = [...(formData.thicknessTiers || [])];
+                                newTiers[idx].thickness = Number(e.target.value) || 0;
+                                setFormData({...formData, thicknessTiers: newTiers});
+                            }} />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase">Reg. Price ({">="} 0.25 sqm)</span>
+                            <input type="number" step="any" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.price} onChange={(e) => {
+                                const newTiers = [...(formData.thicknessTiers || [])];
+                                newTiers[idx].price = Number(e.target.value) || 0;
+                                setFormData({...formData, thicknessTiers: newTiers});
+                            }} />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase">Small Area Price ({"<"} 0.25 sqm)</span>
+                            <input type="number" step="any" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 focus:ring-2 ring-blue-500" value={tier.smallAreaPrice || ''} onChange={(e) => {
+                                const newTiers = [...(formData.thicknessTiers || [])];
+                                newTiers[idx].smallAreaPrice = Number(e.target.value) || 0;
+                                setFormData({...formData, thicknessTiers: newTiers});
+                            }} />
+                        </div>
+                        <button type="button" onClick={() => {
+                            const newTiers = [...(formData.thicknessTiers || [])];
+                            newTiers.splice(idx, 1);
+                            setFormData({...formData, thicknessTiers: newTiers});
+                        }} className="mt-4 p-3 text-rose-500 bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 rounded-xl transition-all"><Trash2 size={16}/></button>
+                    </div>
+                ))}
+            </div>
+            <button type="button" onClick={() => setFormData({...formData, thicknessTiers: [...(formData.thicknessTiers || []), { thickness: 0, price: 0, smallAreaPrice: 0 }]})} className="mt-4 px-4 py-2 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-blue-200 transition-colors">+ Add Thickness Rate</button>
+        </div>
+        {formData.calcType === 'Sheet_Cut' && (
+            <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Cut Rate per Minute *</label>
+                <input type="number" required step="any" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.timeRate || ''} onChange={e => setFormData({...formData, timeRate: e.target.value})} />
+            </div>
+        )}
+    </>                    ) : (
                         <div className="space-y-2 md:col-span-2">
                             <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Base Rate (SAR) *</label>
                             <input type="number" required step="any" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.rate || ''} onChange={e => setFormData({...formData, rate: e.target.value})} />
