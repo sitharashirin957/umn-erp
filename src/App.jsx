@@ -1949,6 +1949,7 @@ const App = () => {
       </div>
 
       {/* Aging Table */}
+      {/* Aging Table */}
       <div className="overflow-x-auto custom-scrollbar">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -1961,6 +1962,53 @@ const App = () => {
               <th className="py-4 px-4 text-xs font-black text-blue-500 uppercase tracking-widest text-right">Total Due</th>
             </tr>
           </thead>
+          <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-[11px] font-bold text-slate-700 dark:text-slate-300">
+            {(() => {
+              // 1. ടാബ് അനുസരിച്ച് കസ്റ്റമർ അല്ലെങ്കിൽ സപ്ലയർ ഡാറ്റ എടുക്കുന്നു
+              let reportData = buildAgingReport(activeTab === 'customer_aging' ? 'customer' : 'supplier');
+              
+              // 2. 'Show Only Due' ബട്ടൺ ഓൺ ആണെങ്കിൽ കുടിശ്ശിക ഉള്ളത് മാത്രം ഫിൽറ്റർ ചെയ്യുന്നു
+              const isOnlyDue = activeTab === 'customer_aging' ? showOnlyDueSales : showOnlyDuePurchases;
+              if (isOnlyDue) {
+                reportData = reportData.filter(item => item.totalDue > 0);
+              }
+
+              // 3. ഡാറ്റ ഒന്നും ഇല്ലെങ്കിൽ കാണിക്കാനുള്ള ഭാഗം
+              if (reportData.length === 0) {
+                return (
+                  <tr>
+                    <td colSpan="6" className="py-12 text-center text-slate-300 dark:text-slate-600 uppercase tracking-widest">
+                      No aging records found.
+                    </td>
+                  </tr>
+                );
+              }
+
+              // 4. ഡാറ്റ ഉണ്ടെങ്കിൽ ടേബിളിൽ കാണിക്കുന്നു
+              return reportData.map((item, index) => (
+                <tr key={index} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
+                  <td className="py-4 px-4 font-black uppercase text-slate-800 dark:text-white">
+                    {item.name || item.entityName || 'UNKNOWN'}
+                  </td>
+                  <td className="py-4 px-4 text-right">
+                    {formatCurrency(item.current || 0)}
+                  </td>
+                  <td className="py-4 px-4 text-right">
+                    {formatCurrency(item.days31to60 || 0)}
+                  </td>
+                  <td className="py-4 px-4 text-right">
+                    {formatCurrency(item.days61to90 || 0)}
+                  </td>
+                  <td className="py-4 px-4 text-right text-rose-500 dark:text-rose-400">
+                    {formatCurrency((item.days91to120 || 0) + (item.days120Plus || 0))}
+                  </td>
+                  <td className="py-4 px-4 text-right font-black text-blue-600 dark:text-blue-400">
+                    {formatCurrency(item.totalDue || 0)}
+                  </td>
+                </tr>
+              ));
+            })()}
+          </tbody>
         </table>
       </div>
     </div>
