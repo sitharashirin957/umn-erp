@@ -10,7 +10,7 @@ import { 
   ShieldCheck, HandCoins, ShoppingBag, CreditCard, Menu, 
   Edit3, Receipt, Package, Truck, FileText, PieChart as PieChartIcon, 
   Bell, DownloadCloud, AlertTriangle, UsersRound, Activity, BookOpen, Image as ImageIcon,
-  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator, Database, ShoppingCart, Info, Table, Wallet, SendToBack, ArrowRightCircle
+Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator, Database, ShoppingCart, Info, Table, Wallet, SendToBack, ArrowRightCircle, BarChartHorizontal, Filter
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
@@ -269,6 +269,9 @@ const App = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+  const [showOnlyDueSales, setShowOnlyDueSales] = useState(false);
+  const [showOnlyDuePurchases, setShowOnlyDuePurchases] = useState(false);
+  const [hideZeroAging, setHideZeroAging] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef(null);
@@ -283,6 +286,43 @@ const App = () => {
   const [expenses, setExpenses] = useState([]);
   const [salesmen, setSalesmen] = useState([]);
   const [crms, setCrms] = useState([]);
+  // --- Aging Report Logic ---
+  const buildAgingReport = (type = 'customer') => {
+    const dataList = type === 'customer' ? customers : suppliers;
+    const txList = type === 'customer' ? sales : purchases;
+
+    return dataList.map(entity => {
+      let totalDue = 0;
+      let current = 0;
+      let days31to60 = 0;
+      let days61to90 = 0;
+      let days91to120 = 0;
+      let days120Plus = 0;
+
+      const entityTxs = txList.filter(t =>
+        type === 'customer' ? t.customerId === entity.id : t.supplierId === entity.id
+      );
+
+      entityTxs.forEach(t => {
+        const due = (t.grandTotal || 0) - (t.paidAmount || 0);
+        if (due > 0) {
+          totalDue += due;
+          const txDate = new Date(t.date || t.createdAt);
+          const today = new Date();
+          const diffTime = Math.abs(today - txDate);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+          if (diffDays <= 30) current += due;
+          else if (diffDays <= 60) days31to60 += due;
+          else if (diffDays <= 90) days61to90 += due;
+          else if (diffDays <= 120) days91to120 += due;
+          else days120Plus += due;
+        }
+      });
+
+      return { ...entity, totalDue, current, days31to60, days61to90, days91to120, days120Plus };
+    }).filter(item => hideZeroAging ? item.totalDue > 0 : true);
+  };
   
   // --- FORM ERROR & SUBMISSION STATES ---
   const [formError, setFormError] = useState('');
@@ -993,6 +1033,8 @@ const App = () => {
       case 'expenses': return { title: 'Business Expenses', desc: 'Track Outward Cashflow' };
       case 'customers': return { title: 'Customer Directory', desc: 'Manage Client Profiles & Balances' };
       case 'suppliers': return { title: 'Supplier Network', desc: 'Manage Vendor Profiles' };
+        case 'customer_aging': return { title: 'Customer Aging', desc: 'Track Customer Dues by Days' };
+    case 'supplier_aging': return { title: 'Supplier Aging', desc: 'Track Supplier Payables by Days' };
       case 'products': return { title: 'Inventory Management', desc: 'Manage Products & Stock Levels' };
       case 'salesmen': return { title: 'Sales Executives', desc: 'Manage Staff & Commissions' };
       case 'estimator': return { title: 'Price Estimator', desc: 'Custom Dimension Pricing Calculator' };
@@ -1096,6 +1138,8 @@ const App = () => {
             <p className={`text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 mt-8 ${collapsed ? 'text-center' : 'px-4'}`}>Finance Flow</p>
             <NavItem id="collections" icon={HandCoins} label="Collections" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="expenses" icon={CreditCard} label="Expenses" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
+            <NavItem id="customer_aging" icon={BarChartHorizontal} label="Customer Aging" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
+            <NavItem id="supplier_aging" icon={BarChartHorizontal} label="Supplier Aging" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             
             <p className={`text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 mt-8 ${collapsed ? 'text-center' : 'px-4'}`}>Entities</p>
             <NavItem id="customers" icon={Users} label="Customers" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
