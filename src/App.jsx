@@ -331,15 +331,17 @@ const App = () => {
   };
 
   const handleStatusChange = (id, field, value, collectionName = 'crms') => { requestAdminAuth(async () => { if(!user) return; try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionName, id), { [field]: value }); } catch(e) { console.error("Error updating status", e); } }); };
-const [aiReportText, setAiReportText] = useState('');
+const [aiReport, setAiReport] = useState('');
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [aiError, setAiError] = useState('');
 
-  const generateAIAnalysis = async () => {
+  const generateAIReport = async () => {
     setIsGeneratingAI(true);
+    setAiError('');
     try {
       const apiKey = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) {
-        setAiReportText("API Key not found in environment variables.");s
+        setAiError("API Key not found in environment variables.");
         setIsGeneratingAI(false);
         return;
       }
@@ -372,13 +374,14 @@ const [aiReportText, setAiReportText] = useState('');
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
-      setAiReportText(response.text());
+      setAiReport(response.text());
     } catch (error) {
       console.error("AI Generation Error:", error);
-      setAiReportText("Failed to generate AI insights. Please check your API key or network connection.");
+      setAiError("Failed to generate AI insights. Please check your API key or network connection.");
     } finally {
       setIsGeneratingAI(false);
     }
+  };
   };
   const handleSave = async (e) => {
     e.preventDefault(); if (!user || isSubmitting) return; const { type, data } = modalState; const isEdit = !!data?.id;
