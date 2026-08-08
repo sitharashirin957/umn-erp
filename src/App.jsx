@@ -1312,6 +1312,190 @@ const handleSave = async (e) => {
               </div>
             )}
 
+
+{activeTab === 'ai_reports' && (
+              <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1 pb-10">
+                
+                {/* Main Header */}
+                <div className="bg-white dark:bg-[#1e293b] p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="flex items-center space-x-4">
+                        <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl shadow-lg shadow-blue-500/30">
+                        <Activity size={24}/>
+                        </div>
+                        <div>
+                        <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">AI Executive Advisor</h2>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Smart Analytics & Interactive Chat</p>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={generateAIReport} 
+                        disabled={isGeneratingAI}
+                        className="w-full sm:w-auto px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-95 transition-all disabled:opacity-50 flex items-center justify-center"
+                    >
+                        {isGeneratingAI ? 'Generating...' : 'Generate Full PDF Report'}
+                    </button>
+                </div>
+
+                {aiError && (
+                    <div className="p-4 bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 rounded-2xl font-black text-xs uppercase tracking-widest border border-rose-200 dark:border-rose-500/30 flex items-center">
+                        <AlertTriangle size={16} className="mr-2 shrink-0"/> {aiError}
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    
+                    {/* LEFT COLUMN: INTERACTIVE CHAT (Always Visible) */}
+                    <div className="lg:col-span-5 bg-white dark:bg-[#1e293b] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col h-[700px] overflow-hidden relative">
+                        <div className="p-6 bg-slate-50/50 dark:bg-[#0f172a]/50 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <MessageSquare size={18} className="text-blue-500"/>
+                                <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-tight text-sm">Ask ERP Assistant</h3>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => setIsVoiceEnabled(!isVoiceEnabled)} className={`p-2 rounded-full transition-colors shadow-sm ${isVoiceEnabled ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400' : 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`} title={isVoiceEnabled ? "Mute AI Voice" : "Enable AI Voice"}>
+                                    {isVoiceEnabled ? <Volume2 size={16}/> : <VolumeX size={16}/>}
+                                </button>
+                                <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 rounded-full text-[8px] font-black uppercase tracking-widest"><div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div> Online</span>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-4 bg-slate-50 dark:bg-[#0f172a]">
+                            {chatMessages.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
+                                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-500 rounded-full flex items-center justify-center">
+                                        <Sparkles size={28} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">How can I help you today?</p>
+                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-2 max-w-[250px] leading-relaxed">I have full access to your sales, purchases, and outstanding balances. Chat in Manglish or click the mic to speak!</p>
+                                    </div>
+                                    <div className="w-full space-y-2 mt-4">
+                                        {suggestedQuestions.map((sq, i) => (
+                                            <button key={i} onClick={() => handleSendChat(sq)} className="w-full p-3 text-left bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shadow-sm truncate">
+                                                👉 {sq}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                chatMessages.map((msg, idx) => (
+                                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`max-w-[85%] p-4 rounded-2xl text-xs font-bold leading-relaxed shadow-sm ${
+                                        msg.role === 'user' 
+                                            ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-tr-sm' 
+                                            : 'bg-white dark:bg-[#1e293b] text-slate-700 dark:text-slate-300 rounded-tl-sm border border-slate-200 dark:border-slate-700'
+                                        }`}>
+                                        {msg.role === 'ai' ? formatAITextToHTML(msg.content) : msg.content}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                            {isSendingChat && (
+                                <div className="flex justify-start">
+                                    <div className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl rounded-tl-sm border border-slate-200 dark:border-slate-700 flex items-center gap-2 shadow-sm">
+                                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></div>
+                                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce delay-75"></div>
+                                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce delay-150"></div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-4 bg-white dark:bg-[#1e293b] border-t border-slate-100 dark:border-slate-800">
+                            <div className="flex gap-2 relative items-center">
+                                <button 
+                                    onClick={toggleListening}
+                                    className={`p-3 rounded-xl transition-all ${isListening ? 'bg-rose-500 text-white animate-pulse shadow-lg shadow-rose-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400'}`}
+                                    title="Speak your question"
+                                >
+                                    <Mic size={18} />
+                                </button>
+                                <input
+                                    type="text"
+                                    placeholder={isListening ? "Listening... Speak now" : "Type or speak your question..."}
+                                    className="flex-1 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-xs font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 ring-blue-500/20 transition-all"
+                                    value={chatInput}
+                                    onChange={(e) => setChatInput(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') handleSendChat(); }}
+                                    disabled={isSendingChat}
+                                />
+                                <button 
+                                    onClick={() => handleSendChat()}
+                                    disabled={isSendingChat || !chatInput.trim()}
+                                    className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black transition-all shadow-md disabled:opacity-50 flex items-center justify-center shrink-0"
+                                >
+                                    <ArrowRightCircle size={18}/>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* RIGHT COLUMN: FULL REPORT */}
+                    <div className="lg:col-span-7 bg-white dark:bg-[#1e293b] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col h-[700px] overflow-hidden relative">
+                        <div className="p-6 bg-slate-50/50 dark:bg-[#0f172a]/50 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <FileText size={18} className="text-indigo-500"/>
+                                <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-tight text-sm">Executive Summary Report</h3>
+                            </div>
+                            {aiReport && (
+                                <div className="flex gap-2">
+                                    <button onClick={handleCopyReport} className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 rounded-lg transition-colors" title="Copy Text"><Copy size={16}/></button>
+                                    <button onClick={handlePrintAIReport} className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 rounded-lg transition-colors" title="Download PDF"><Printer size={16}/></button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-white dark:bg-[#0f172a] relative">
+                            {isGeneratingAI ? (
+                                <div className="h-full flex flex-col items-center justify-center space-y-4">
+                                    <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto"></div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Generating formal report...</p>
+                                </div>
+                            ) : aiReport ? (
+                                <div id="ai-report-content" className="relative">
+                                    <div className="absolute top-0 right-0 opacity-5 pointer-events-none"><Activity size={200} /></div>
+                                    {formatAITextToHTML(aiReport)}
+                                </div>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-50">
+                                    <ClipboardList size={48} className="text-slate-400"/>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">No report generated yet.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                </div>
+              </div>
+            )}
+
+            {/* --- COLLECTIONS AND EXPENSES VIEW --- */}
+            {(activeTab === 'collections' || activeTab === 'expenses') && (
+              <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
+                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+                  <button onClick={() => exportToExcel(activeTab === 'collections' ? collections : expenses, activeTab)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
+                  <button onClick={() => openModal(activeTab.slice(0, -1))} className={`px-8 py-3 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg flex items-center hover:scale-95 transition-all ${activeTab === 'collections' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/30' : 'bg-gradient-to-r from-rose-500 to-rose-600 shadow-rose-500/30'}`}><Plus size={16} className="mr-2"/> Record {activeTab.slice(0, -1)}</button>
+                </div>
+                {renderTable(['Date', 'Ref / Invoice Link', activeTab === 'collections' ? 'Customer' : 'Description', 'Executive', 'Amount', 'Method'], (activeTab === 'collections' ? collections : expenses).filter(i => safeSearch(i.ref, searchTerm) || safeSearch(i.customerName, searchTerm) || safeSearch(i.description, searchTerm) || safeSearch(i.method, searchTerm) || safeSearch(i.amount, searchTerm) || safeSearch(i.date, searchTerm)), activeTab.slice(0, -1),
+                  (item) => (
+                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                      <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">{String(item.date || (item.createdAt?.toDate ? item.createdAt.toDate().toISOString().split('T')[0] : ''))}</td>
+                      <td className="px-6 py-4 text-xs font-black text-blue-600 dark:text-blue-400 tracking-wider uppercase">{String(item.ref || item.category || 'N/A')}</td>
+                      <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.customerName || item.description || '--')}</td>
+                      <td className="px-6 py-4 font-bold text-xs uppercase text-slate-400 dark:text-slate-500">{String(salesmen.find(s=>s.id === item.salesmanId)?.name || 'N/A')}</td>
+                      <td className={`px-6 py-4 font-black ${activeTab === 'collections' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{formatCurrency(item.amount)}</td>
+                      <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">{String(item.method || 'Cash')}</td>
+                      <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity no-print flex justify-end items-center">
+                        <button onClick={() => setPrintDoc({ isOpen: true, type: activeTab.slice(0, -1), data: item })} className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-800 rounded-lg" title="Print"><Printer size={16}/></button>
+                        <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg" title={`Edit ${activeTab.slice(0, -1)}`}><Edit3 size={16}/></button>
+                        <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, formatCurrency(item.amount))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
+                      </td>
+                    </tr>
+                  )
+                )}
+              </div>
+            )}
+
             {/* --- SALES AND PURCHASES VIEW --- */}
             {(activeTab === 'sales' || activeTab === 'purchases') && (
               <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
@@ -1356,7 +1540,6 @@ const handleSave = async (e) => {
                 )}
               </div>
             )}
-
 
             {/* --- AGING REPORTS VIEW --- */}
             {(activeTab === 'customer_aging' || activeTab === 'supplier_aging') && (
