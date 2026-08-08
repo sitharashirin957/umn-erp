@@ -332,7 +332,200 @@ const App = () => {
 
   const handleStatusChange = (id, field, value, collectionName = 'crms') => { requestAdminAuth(async () => { if(!user) return; try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionName, id), { [field]: value }); } catch(e) { console.error("Error updating status", e); } }); };
 // --- AI REPORT & CHAT LOGIC ---
-  const handleSave = async (e) => {
+
+// --- AI REPORT & CHAT LOGIC ---
+  const [aiReport, setAiReport] = useState('');
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [aiError, setAiError] = useState('');
+  
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isSendingChat, setIsSendingChat] = useState(false);
+
+  // Voice Features State
+  const [isListening, setIsListening] = useState(false);
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
+  const recognitionRef = useRef(null);
+
+  // Initialize Speech Recognition for Voice Input
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = false;
+        recognitionRef.current.lang = 'ml-IN';
+
+        recognitionRef.current.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          setChatInput((prev) => prev + (prev ? ' ' : '') + transcript);
+          setIsListening(false);
+        };
+
+        recognitionRef.current.onerror = (event) => {
+          console.error("Speech recognition error", event.error);
+          setIsListening(false);
+        };
+        
+        recognitionRef.current.onend = () => {
+          setIsListening(false);
+        };
+      }
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else {
+      recognitionRef.current?.start();
+      setIsListening(true);
+    }
+  };
+
+  // Text to Speech for AI Response
+  const speakText = (text) => {
+    if (!isVoiceEnabled || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel(); 
+    const cleanText = text.replace(/[*#]/g, '').replace(/SAR/g, 'Riyals');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    const voices = window.speechSynthesis.getVoices();
+    const optimalVoice = voices.find(v => v.lang.includes('ml') || v.lang.includes('IN'));
+    if (optimalVoice) utterance.voice = optimalVoice;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Chat Suggestions in Manglish
+  const suggestedQuestions = [
+    "What is our total net profit?",
+    "Top 3 customers aaranu?",
+    "Cash flow engane improve cheyyam?",
+    "Nammude outstanding receivables onnu parayamo?"
+  ];
+
+  const handleCopyReport = () => {
+    if(aiReport) { navigator.clipboard.writeText(aiReport); alert("Report copied to clipboard!"); }
+  };
+
+  const handlePrintAIReport = async () => {
+    const element = document.getElementById('ai-report-content');
+    if (!element) return;
+    if (!window.html2pdf) {
+        await new Promise((resolve) => { const script = document.createElement('script'); script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'; script.onload = resolve; document.head.appendChild(script); });
+    }
+    const opt = { margin: 15, filename: `Executive_Report_${new Date().getTime()}.pdf`, image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+    window.html2pdf().set(opt).from(element).save();
+  };
+
+  const getFullERPContext = () => ({
+    totalSales: analytics.totalSales, totalPurchases: analytics.totalPurchases,
+    totalCollections: analytics.totalCollections, totalExpenses: analytics.totalExpenses,
+    netProfit: analytics.netProfit, customersCount: customers.length,
+    suppliersCount: suppliers.length, salesCount: sales.length,
+    purchasesCount: purchases.length, topCustomers: topCustomersData,
+    topProducts: topProductsData, agingReceivables: agingReceivables, agingPayables: agingPayables
+  });
+
+  const generateAIReport = async () => {
+    setIsGeneratingAI(true);
+    setAiError('');
+    try {
+      const apiKey = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) { setAiError("API Key not found."); setIsGeneratingAI(false); return; }
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+      const businessData = getFullERPContext();
+
+      const prompt = `
+        You are an expert Chief Financial Officer (CFO) and Business Analyst for a company in Saudi Arabia. 
+        Analyze the following ERP system data and provide a comprehensive, professional, and actionable business performance report.
+        
+        CRITICAL RULES:
+        1. You MUST use 'SAR' (Saudi Riyal) for all currency values. NEVER USE the dollar sign ($).
+        2. Format clearly with Markdown (use # for main titles, ## for subheadings, and * or - for bullet points).
+
+        ERP Data Summary:
+        ${JSON.stringify(businessData, null, 2)}
+      `;
+
+      const result = await model.generateContent(prompt);
+      setAiReport(result.response.text());
+    } catch (error) {
+      console.error("AI Error:", error);
+      setAiError("Failed to generate AI insights. Please check connection.");
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
+  const handleSendChat = async (overrideMsg = null) => {
+    const messageToSend = overrideMsg || chatInput;
+    if (!messageToSend.trim()) return;
+    
+    const userMsg = { role: 'user', content: messageToSend };
+    const newChatHistory = [...chatMessages, userMsg];
+    setChatMessages(newChatHistory);
+    setChatInput('');
+    setIsSendingChat(true);
+
+    try {
+      const apiKey = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY;
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+
+      const businessData = getFullERPContext();
+      const historyContext = newChatHistory.map(m => `${m.role === 'user' ? 'User Question' : 'AI CFO Response'}: ${m.content}`).join('\n');
+
+      const prompt = `
+        You are an expert CFO and Business Advisor for a Saudi Arabian ERP system.
+        
+        CRITICAL RULES:
+        1. Always use 'SAR' (Saudi Riyal) for currency. NEVER use the dollar sign '$'.
+        2. LANGUAGE SUPPORT: The user will ask questions in English, Malayalam, or Manglish. 
+        You MUST understand the context and reply conversationally and naturally in the exact SAME language/style the user uses.
+        
+        Current Complete Business Data: ${JSON.stringify(businessData)}
+        Conversation History: ${historyContext}
+        User's Latest Question: "${messageToSend}"
+        
+        Provide a direct, insightful answer based strictly on the provided business data. Keep it concise.
+      `;
+
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text();
+      setChatMessages(prev => [...prev, { role: 'ai', content: responseText }]);
+      speakText(responseText);
+      
+    } catch (error) {
+      setChatMessages(prev => [...prev, { role: 'ai', content: "Sorry, I encountered an error. Please try again." }]);
+    } finally {
+      setIsSendingChat(false);
+    }
+  };
+
+  const formatAITextToHTML = (text) => {
+    if (!text) return null;
+    return text.split('\n').map((line, idx) => {
+        if (line.startsWith('### ')) return <h4 key={idx} className="text-sm font-black text-slate-800 dark:text-white mt-4 mb-2">{line.replace('### ', '').replace(/\*\*/g, '')}</h4>;
+        if (line.startsWith('## ')) return <h3 key={idx} className="text-base font-black text-blue-600 dark:text-blue-400 mt-6 mb-3 border-b border-slate-200 dark:border-slate-700/50 pb-2">{line.replace('## ', '').replace(/\*\*/g, '')}</h3>;
+        if (line.startsWith('# ')) return <h2 key={idx} className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-2 mb-4 uppercase tracking-tight">{line.replace('# ', '').replace(/\*\*/g, '')}</h2>;
+        if (line.trim() === '---') return <hr key={idx} className="my-4 border-slate-200 dark:border-slate-700" />;
+        if (line.startsWith('* ') || line.startsWith('- ')) {
+            const content = line.substring(2).replace(/\*\*(.*?)\*\*/g, '<span class="font-black text-slate-900 dark:text-white">$1</span>');
+            return <li key={idx} className="ml-4 mb-2 text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0 shadow-sm"></div><span dangerouslySetInnerHTML={{__html: content}} /></li>;
+        }
+        if (line.trim() !== '') {
+            const content = line.replace(/\*\*(.*?)\*\*/g, '<span class="font-black text-slate-900 dark:text-white">$1</span>');
+            return <p key={idx} className="mb-2 text-xs text-slate-600 dark:text-slate-300 leading-relaxed" dangerouslySetInnerHTML={{__html: content}} />;
+        }
+        return <div key={idx} className="h-1"></div>;
+    });
+  };
+
+const handleSave = async (e) => {
     e.preventDefault(); if (!user || isSubmitting) return; const { type, data } = modalState; const isEdit = !!data?.id;
     if (type === 'customer' || type === 'supplier') {
         const listToCheck = type === 'customer' ? customers : suppliers; const inputName = String(formData.name || '').trim().toLowerCase();
@@ -1163,34 +1356,7 @@ const App = () => {
                 )}
               </div>
             )}
-{activeTab === 'ai_reports' && (
-  
-  {/* --- COLLECTIONS AND EXPENSES VIEW --- */}
-            {(activeTab === 'collections' || activeTab === 'expenses') && (
-              <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
-                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-                  <button onClick={() => exportToExcel(activeTab === 'collections' ? collections : expenses, activeTab)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
-                  <button onClick={() => openModal(activeTab.slice(0, -1))} className={`px-8 py-3 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg flex items-center hover:scale-95 transition-all ${activeTab === 'collections' ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-emerald-500/30' : 'bg-gradient-to-r from-rose-500 to-rose-600 shadow-rose-500/30'}`}><Plus size={16} className="mr-2"/> Record {activeTab.slice(0, -1)}</button>
-                </div>
-                {renderTable(['Date', 'Ref / Invoice Link', activeTab === 'collections' ? 'Customer' : 'Description', 'Executive', 'Amount', 'Method'], (activeTab === 'collections' ? collections : expenses).filter(i => safeSearch(i.ref, searchTerm) || safeSearch(i.customerName, searchTerm) || safeSearch(i.description, searchTerm) || safeSearch(i.method, searchTerm) || safeSearch(i.amount, searchTerm) || safeSearch(i.date, searchTerm)), activeTab.slice(0, -1),
-                  (item) => (
-                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                      <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">{String(item.date || (item.createdAt?.toDate ? item.createdAt.toDate().toISOString().split('T')[0] : ''))}</td>
-                      <td className="px-6 py-4 text-xs font-black text-blue-600 dark:text-blue-400 tracking-wider uppercase">{String(item.ref || item.category || 'N/A')}</td>
-                      <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.customerName || item.description || '--')}</td>
-                      <td className="px-6 py-4 font-bold text-xs uppercase text-slate-400 dark:text-slate-500">{String(salesmen.find(s=>s.id === item.salesmanId)?.name || 'N/A')}</td>
-                      <td className={`px-6 py-4 font-black ${activeTab === 'collections' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{formatCurrency(item.amount)}</td>
-                      <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">{String(item.method || 'Cash')}</td>
-                      <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity no-print flex justify-end items-center">
-                        <button onClick={() => setPrintDoc({ isOpen: true, type: activeTab.slice(0, -1), data: item })} className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-800 rounded-lg" title="Print"><Printer size={16}/></button>
-                        <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg" title={`Edit ${activeTab.slice(0, -1)}`}><Edit3 size={16}/></button>
-                        <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, formatCurrency(item.amount))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
-                      </td>
-                    </tr>
-                  )
-                )}
-              </div>
-            )}
+
 
             {/* --- AGING REPORTS VIEW --- */}
             {(activeTab === 'customer_aging' || activeTab === 'supplier_aging') && (
