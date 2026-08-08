@@ -1215,40 +1215,114 @@ const [aiReport, setAiReport] = useState('');
               </div>
             )}
 {activeTab === 'ai_reports' && (
-              <div className="max-w-5xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
-                <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
-                  <div className="flex justify-between items-center mb-8 border-b border-slate-100 dark:border-slate-700/50 pb-6">
+              <div className="max-w-5xl mx-auto w-full space-y-6 animate-fade-in-up flex-1 pb-10">
+                <div className="bg-white dark:bg-[#1e293b] p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 border-b border-slate-100 dark:border-slate-700/50 pb-6">
                     <div className="flex items-center space-x-4">
-                      <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl shadow-lg">
+                      <div className="p-3.5 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl shadow-lg shadow-blue-500/30">
                         <Activity size={24}/>
                       </div>
                       <div>
-                        <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">AI Executive Business Advisor</h2>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Smart Analytics powered by Gemini AI</p>
+                        <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">AI Executive Advisor</h2>
+                        <p className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Smart Analytics & Interactive Chat</p>
                       </div>
                     </div>
                     <button 
-                      onClick={generateAIAnalysis} 
+                      onClick={generateAIReport} 
                       disabled={isGeneratingAI}
-                      className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 transition-all disabled:opacity-50 flex items-center"
+                      className="w-full sm:w-auto px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg hover:scale-95 transition-all disabled:opacity-50 flex items-center justify-center"
                     >
-                      {isGeneratingAI ? 'Analyzing Data...' : 'Generate AI Report'}
+                      {isGeneratingAI ? 'Analyzing...' : 'Generate New Report'}
                     </button>
                   </div>
 
-                  {isGeneratingAI ? (
-                    <div className="py-20 text-center space-y-4">
-                      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest">AI is reviewing your sales, expenses, and ledgers...</p>
+                  {aiError && (
+                    <div className="mb-6 p-4 bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 rounded-2xl font-black text-xs uppercase tracking-widest border border-rose-200 dark:border-rose-500/30 flex items-center">
+                      <AlertTriangle size={16} className="mr-2 shrink-0"/> {aiError}
                     </div>
-                  ) : aiReportText ? (
-                    <div className="prose dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 font-bold text-sm leading-relaxed whitespace-pre-wrap bg-slate-50 dark:bg-[#0f172a] p-8 rounded-3xl border border-slate-200 dark:border-slate-800">
-                      {aiReportText}
+                  )}
+
+                  {isGeneratingAI ? (
+                    <div className="py-24 text-center space-y-6">
+                      <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
+                      <div>
+                        <p className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Processing Data</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">AI is reviewing your sales, expenses, and ledgers...</p>
+                      </div>
+                    </div>
+                  ) : aiReport ? (
+                    <div className="space-y-8">
+                      {/* Main Report Card */}
+                      <div className="prose dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 font-bold text-sm leading-relaxed whitespace-pre-wrap bg-slate-50 dark:bg-[#0f172a] p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-inner">
+                        {aiReport}
+                      </div>
+
+                      {/* Interactive Chat Section */}
+                      <div className="pt-6 border-t border-slate-200 dark:border-slate-700/50 flex flex-col gap-4">
+                        <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2 mb-2">
+                          <BookOpen size={16} className="text-blue-500" />
+                          Ask Follow-up Questions based on this report
+                        </h3>
+
+                        {/* Chat History Display */}
+                        {chatMessages.length > 0 && (
+                          <div className="space-y-4 mb-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                            {chatMessages.map((msg, idx) => (
+                              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[85%] sm:max-w-[75%] p-4 rounded-2xl text-sm font-bold whitespace-pre-wrap ${
+                                  msg.role === 'user' 
+                                    ? 'bg-blue-600 text-white rounded-tr-sm shadow-md shadow-blue-500/20' 
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-sm border border-slate-200 dark:border-slate-700'
+                                }`}>
+                                  {msg.content}
+                                </div>
+                              </div>
+                            ))}
+                            {isSendingChat && (
+                              <div className="flex justify-start">
+                                <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl rounded-tl-sm border border-slate-200 dark:border-slate-700 flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-75"></div>
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-150"></div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Chat Input Area */}
+                        <div className="flex gap-3 relative">
+                          <input
+                            type="text"
+                            placeholder="Ask about sales, profits, or tips to improve..."
+                            className="flex-1 bg-white dark:bg-[#1e293b] border-2 border-slate-200 dark:border-slate-700 rounded-2xl px-6 py-4 text-sm font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-all shadow-sm"
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSendChat();
+                            }}
+                            disabled={isSendingChat}
+                          />
+                          <button 
+                            onClick={handleSendChat}
+                            disabled={isSendingChat || !chatInput.trim()}
+                            className="px-6 sm:px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-600/30 hover:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
+                          >
+                            <span className="hidden sm:block">Send</span>
+                            <span className="sm:hidden"><ArrowRightCircle size={20}/></span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   ) : (
-                    <div className="py-20 text-center text-slate-400 space-y-3">
-                      <ClipboardList size={48} className="mx-auto opacity-40"/>
-                      <p className="text-xs font-black uppercase tracking-widest">Click the button above to generate your smart AI business analysis report.</p>
+                    <div className="py-24 text-center space-y-4">
+                      <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <ClipboardList size={32} className="text-slate-400 dark:text-slate-500"/>
+                      </div>
+                      <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">No Report Generated</h3>
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest max-w-md mx-auto leading-relaxed">
+                        Click the button above to securely analyze your ERP data and generate a smart business summary.
+                      </p>
                     </div>
                   )}
                 </div>
