@@ -1213,7 +1213,46 @@ const [aiReportText, setAiReportText] = useState('');
                 )}
               </div>
             )}
+{activeTab === 'ai_reports' && (
+              <div className="max-w-5xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
+                <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
+                  <div className="flex justify-between items-center mb-8 border-b border-slate-100 dark:border-slate-700/50 pb-6">
+                    <div className="flex items-center space-x-4">
+                      <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl shadow-lg">
+                        <Activity size={24}/>
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">AI Executive Business Advisor</h2>
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Smart Analytics powered by Gemini AI</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={generateAIAnalysis} 
+                      disabled={isGeneratingAI}
+                      className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 transition-all disabled:opacity-50 flex items-center"
+                    >
+                      {isGeneratingAI ? 'Analyzing Data...' : 'Generate AI Report'}
+                    </button>
+                  </div>
 
+                  {isGeneratingAI ? (
+                    <div className="py-20 text-center space-y-4">
+                      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest">AI is reviewing your sales, expenses, and ledgers...</p>
+                    </div>
+                  ) : aiReportText ? (
+                    <div className="prose dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 font-bold text-sm leading-relaxed whitespace-pre-wrap bg-slate-50 dark:bg-[#0f172a] p-8 rounded-3xl border border-slate-200 dark:border-slate-800">
+                      {aiReportText}
+                    </div>
+                  ) : (
+                    <div className="py-20 text-center text-slate-400 space-y-3">
+                      <ClipboardList size={48} className="mx-auto opacity-40"/>
+                      <p className="text-xs font-black uppercase tracking-widest">Click the button above to generate your smart AI business analysis report.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             {/* --- COLLECTIONS AND EXPENSES VIEW --- */}
             {(activeTab === 'collections' || activeTab === 'expenses') && (
               <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
@@ -2016,44 +2055,5 @@ const [aiReportText, setAiReportText] = useState('');
     </div>
   );
 };
-{activeTab === 'ai_reports' && (
-              <div className="max-w-5xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
-                <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
-                  <div className="flex justify-between items-center mb-8 border-b border-slate-100 dark:border-slate-700/50 pb-6">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl shadow-lg">
-                        <Activity size={24}/>
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">AI Executive Business Advisor</h2>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Smart Analytics powered by Gemini AI</p>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={generateAIAnalysis} 
-                      disabled={isGeneratingAI}
-                      className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 transition-all disabled:opacity-50 flex items-center"
-                    >
-                      {isGeneratingAI ? 'Analyzing Data...' : 'Generate AI Report'}
-                    </button>
-                  </div>
 
-                  {isGeneratingAI ? (
-                    <div className="py-20 text-center space-y-4">
-                      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest">AI is reviewing your sales, expenses, and ledgers...</p>
-                    </div>
-                  ) : aiReportText ? (
-                    <div className="prose dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 font-bold text-sm leading-relaxed whitespace-pre-wrap bg-slate-50 dark:bg-[#0f172a] p-8 rounded-3xl border border-slate-200 dark:border-slate-800">
-                      {aiReportText}
-                    </div>
-                  ) : (
-                    <div className="py-20 text-center text-slate-400 space-y-3">
-                      <ClipboardList size={48} className="mx-auto opacity-40"/>
-                      <p className="text-xs font-black uppercase tracking-widest">Click the button above to generate your smart AI business analysis report.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
 export default App;
