@@ -495,6 +495,12 @@ const prompt = `
         - Complete Business Performance: ${JSON.stringify(businessData)}
         - CRM Jobs List: ${JSON.stringify(crms)}
         
+        LANGUAGE STYLE:
+        1. YOU MUST SPEAK MANGLISH (Malayalam written in English script) for all interactions. 
+        2. Even if the user asks in English, reply back in fluent and conversational Manglish.
+        3. Keep the tone friendly, helpful, and professional like a colleague.
+
+
         CRITICAL RULES:
         1. Always use 'SAR' (Saudi Riyal) for currency. NEVER use the dollar sign '$'.
         2. LANGUAGE SUPPORT: Reply conversationally and naturally in the exact SAME language/style the user asks (English, Malayalam, or Manglish).
