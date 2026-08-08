@@ -499,7 +499,7 @@ const prompt = `
         1. YOU MUST SPEAK MANGLISH (Malayalam written in English script) for all interactions. 
         2. Even if the user asks in English, reply back in fluent and conversational Manglish.
         3. Keep the tone friendly, helpful, and professional like a colleague.
-        4. Reply back in fluent Malayalam and conversational Manglish.
+        4. Speak in purely Malayalam Language script (മലയാളം).
         5. Sound natural as if a Keralite is Malayalam explaining.
 
 
