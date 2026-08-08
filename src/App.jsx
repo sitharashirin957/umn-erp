@@ -339,13 +339,13 @@ const [aiReportText, setAiReportText] = useState('');
     try {
       const apiKey = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) {
-        setAiReportText("API Key not found in environment variables.");
+        setAiReportText("API Key not found in environment variables.");s
         setIsGeneratingAI(false);
         return;
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
       const businessData = {
         totalSales: analytics.totalSales,
