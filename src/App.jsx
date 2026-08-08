@@ -386,14 +386,22 @@ const App = () => {
   };
 
   // Text to Speech for AI Response
-  const speakText = (text) => {
+const speakText = (text) => {
     if (!isVoiceEnabled || !('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel(); 
-    const cleanText = text.replace(/[*#]/g, '').replace(/SAR/g, 'Riyals');
+    const cleanText = text.replace(/[*#]/g, ''); 
     const utterance = new SpeechSynthesisUtterance(cleanText);
+    
     const voices = window.speechSynthesis.getVoices();
-    const optimalVoice = voices.find(v => v.lang.includes('ml') || v.lang.includes('IN'));
-    if (optimalVoice) utterance.voice = optimalVoice;
+    const mlVoice = voices.find(v => v.lang === 'ml-IN' || v.name.includes('Google Malayalam') || v.lang.includes('ml'));
+    
+    if (mlVoice) {
+      utterance.voice = mlVoice;
+    } else {
+      utterance.lang = 'ml-IN';
+    }
+    
+    utterance.rate = 0.9;
     window.speechSynthesis.speak(utterance);
   };
 
@@ -479,21 +487,24 @@ const App = () => {
       const businessData = getFullERPContext();
       const historyContext = newChatHistory.map(m => `${m.role === 'user' ? 'User Question' : 'AI CFO Response'}: ${m.content}`).join('\n');
 
-      const prompt = `
-        You are an expert CFO and Business Advisor for a Saudi Arabian ERP system.
+const prompt = `
+        You are an expert CFO and Business Advisor for "Oxad BS Co." based in Saudi Arabia.
+        
+        CURRENT SYSTEM DATA:
+        - Sales Team Members (Salesmen): ${JSON.stringify(salesmen)}
+        - Complete Business Performance: ${JSON.stringify(businessData)}
+        - CRM Jobs List: ${JSON.stringify(crms)}
         
         CRITICAL RULES:
         1. Always use 'SAR' (Saudi Riyal) for currency. NEVER use the dollar sign '$'.
-        2. LANGUAGE SUPPORT: The user will ask questions in English, Malayalam, or Manglish. 
-        You MUST understand the context and reply conversationally and naturally in the exact SAME language/style the user uses.
+        2. LANGUAGE SUPPORT: Reply conversationally and naturally in the exact SAME language/style the user asks (English, Malayalam, or Manglish).
+        3. SALES TEAM INFO: If the user asks about specific members of the sales team, analyze the "Sales Team Members" data and provide accurate information about their activities, performance, or details.
         
-        Current Complete Business Data: ${JSON.stringify(businessData)}
         Conversation History: ${historyContext}
         User's Latest Question: "${messageToSend}"
         
         Provide a direct, insightful answer based strictly on the provided business data. Keep it concise.
       `;
-
       const result = await model.generateContent(prompt);
       const responseText = result.response.text();
       setChatMessages(prev => [...prev, { role: 'ai', content: responseText }]);
