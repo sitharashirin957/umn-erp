@@ -3,7 +3,6 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend 
 } from 'recharts';
-
 import { 
   LayoutDashboard, Users, Settings, Plus, Search, Briefcase, X, Printer, TrendingUp, Trash2, Phone, Mail, 
   ShieldCheck, HandCoins, ShoppingBag, CreditCard, Menu, Edit3, Receipt, Package, Truck, FileText, 
@@ -464,46 +463,7 @@ const App = () => {
         return <div key={idx} className="h-1"></div>;
     });
   };
-  const handleSendChat = async () => {
-    if (!chatInput.trim()) return;
-    
-    const userMsg = { role: 'user', content: chatInput };
-    setChatMessages(prev => [...prev, userMsg]);
-    setChatInput('');
-    setIsSendingChat(true);
-
-    try {
-      const apiKey = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY;
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-
-      const businessData = {
-        totalSales: analytics.totalSales,
-        totalPurchases: analytics.totalPurchases,
-        totalCollections: analytics.totalCollections,
-        totalExpenses: analytics.totalExpenses,
-        netProfit: analytics.netProfit,
-      };
-
-      const prompt = `
-        You are an expert CFO and Business Advisor for an ERP system.
-        Here is the current business data: ${JSON.stringify(businessData)}
-        
-        The user is asking a follow-up question: "${userMsg.content}"
-        
-        Provide a direct, professional, and insightful answer based on the business data. Keep it concise and use bullet points if necessary.
-      `;
-
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      setChatMessages(prev => [...prev, { role: 'ai', content: response.text() }]);
-    } catch (error) {
-      console.error("Chat Error:", error);
-      setChatMessages(prev => [...prev, { role: 'ai', content: "Sorry, I encountered an error processing your question. Please try again." }]);
-    } finally {
-      setIsSendingChat(false);
-    }
-  };
+ 
   const handleSave = async (e) => {
     e.preventDefault(); if (!user || isSubmitting) return; const { type, data } = modalState; const isEdit = !!data?.id;
     if (type === 'customer' || type === 'supplier') {
