@@ -1,71 +1,41 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area,
-  BarChart, Bar, PieChart, Pie, Cell, Legend
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { 
-  LayoutDashboard, ReceiptText, Users, Settings, Plus, Search, 
-  Briefcase, X, Printer, TrendingUp, Trash2, Phone, Mail, 
-  ShieldCheck, HandCoins, ShoppingBag, CreditCard, Menu, 
-  Edit3, Receipt, Package, Truck, FileText, PieChart as PieChartIcon, 
-  Bell, DownloadCloud, AlertTriangle, UsersRound, Activity, BookOpen, Image as ImageIcon,
-  Sun, Moon, ClipboardList, TrendingDown, FilePlus, Lock, Unlock, Calculator, Database, ShoppingCart, Info, Table, Wallet, SendToBack, ArrowRightCircle, BarChartHorizontal, Filter, FileSignature
+  LayoutDashboard, Users, Settings, Plus, Search, Briefcase, X, Printer, TrendingUp, Trash2, Phone, Mail, 
+  ShieldCheck, HandCoins, ShoppingBag, CreditCard, Menu, Edit3, Receipt, Package, Truck, FileText, 
+  Bell, DownloadCloud, AlertTriangle, Activity, BookOpen, Image as ImageIcon,
+  Sun, Moon, ClipboardList, FilePlus, Lock, Calculator, Database, ShoppingCart, Info, Table, Wallet, SendToBack, ArrowRightCircle, BarChartHorizontal, Filter, FileSignature
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, writeBatch, increment, setDoc } from 'firebase/firestore';
 
 let firebaseConfig = {};
-try {
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_FIREBASE_CONFIG) {
-    firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG);
-  }
-} catch (error) {
-  console.error("Firebase config parsing error.", error);
-}
-
+try { if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_FIREBASE_CONFIG) { firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG); } } catch (error) { console.error("Firebase config parsing error.", error); }
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'custom-erp-v1';
 
-// --- SECURITY PINS ---
 const APP_PIN = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APP_PIN) || '1234';
 const ADMIN_PIN = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ADMIN_PIN) || '9999';
 
-// --- HARDCODED ACRYLIC MATRIX CHART ---
 const STANDARD_MATRIX = {
-    "30 x 15": { "3": 20, "4": 25, "5": 35, "6": 40, "8": 45, "10": 50 },
-    "30 x 20 / A4": { "3": 30, "4": 35, "5": 40, "6": 50, "8": 60, "10": 75 },
-    "A3": { "3": 40, "4": 45, "5": 55, "6": 60, "8": 70, "10": 100 },
-    "30 x 50": { "3": 45, "4": 50, "5": 65, "6": 75, "8": 90, "10": 125 },
-    "35 x 50": { "3": 50, "4": 55, "5": 70, "6": 80, "8": 105, "10": 135 },
-    "40 x 50": { "3": 50, "4": 60, "5": 70, "6": 85, "8": 120, "10": 150 },
-    "50 x 50": { "3": 65, "4": 75, "5": 85, "6": 100, "8": 140, "10": 175 },
-    "60 x 40": { "3": 65, "4": 75, "5": 85, "6": 100, "8": 140, "10": 175 },
-    "50 x 70": { "3": 85, "4": 95, "5": 105, "6": 125, "8": 155, "10": 210 },
-    "70 x 100": { "3": 140, "4": 170, "5": 220, "6": 260, "8": 330, "10": 420 },
-    "100 x 100": { "3": 200, "4": 240, "5": 300, "6": 350, "8": 450, "10": 600 },
-    "120 x 100": { "3": 230, "4": 280, "5": 380, "6": 450, "8": 550, "10": 700 },
-    "100 x 200": { "3": 365, "4": 430, "5": 550, "6": 650, "8": 800, "10": 1100 },
-    "122 x 244": { "3": 520, "4": 620, "5": 800, "6": 950, "8": 1100, "10": 1300 }
+    "30 x 15": { "3": 20, "4": 25, "5": 35, "6": 40, "8": 45, "10": 50 }, "30 x 20 / A4": { "3": 30, "4": 35, "5": 40, "6": 50, "8": 60, "10": 75 },
+    "A3": { "3": 40, "4": 45, "5": 55, "6": 60, "8": 70, "10": 100 }, "30 x 50": { "3": 45, "4": 50, "5": 65, "6": 75, "8": 90, "10": 125 },
+    "35 x 50": { "3": 50, "4": 55, "5": 70, "6": 80, "8": 105, "10": 135 }, "40 x 50": { "3": 50, "4": 60, "5": 70, "6": 85, "8": 120, "10": 150 },
+    "50 x 50": { "3": 65, "4": 75, "5": 85, "6": 100, "8": 140, "10": 175 }, "60 x 40": { "3": 65, "4": 75, "5": 85, "6": 100, "8": 140, "10": 175 },
+    "50 x 70": { "3": 85, "4": 95, "5": 105, "6": 125, "8": 155, "10": 210 }, "70 x 100": { "3": 140, "4": 170, "5": 220, "6": 260, "8": 330, "10": 420 },
+    "100 x 100": { "3": 200, "4": 240, "5": 300, "6": 350, "8": 450, "10": 600 }, "120 x 100": { "3": 230, "4": 280, "5": 380, "6": 450, "8": 550, "10": 700 },
+    "100 x 200": { "3": 365, "4": 430, "5": 550, "6": 650, "8": 800, "10": 1100 }, "122 x 244": { "3": 520, "4": 620, "5": 800, "6": 950, "8": 1100, "10": 1300 }
 };
-
 const MATRIX_AREAS = [
-    { label: "30 x 15", area: 450 },
-    { label: "30 x 20 / A4", area: 600 },
-    { label: "A3", area: 1260 },
-    { label: "30 x 50", area: 1500 },
-    { label: "35 x 50", area: 1750 },
-    { label: "40 x 50", area: 2000 },
-    { label: "60 x 40", area: 2400 },
-    { label: "50 x 50", area: 2500 },
-    { label: "50 x 70", area: 3500 },
-    { label: "70 x 100", area: 7000 },
-    { label: "100 x 100", area: 10000 },
-    { label: "120 x 100", area: 12000 },
-    { label: "100 x 200", area: 20000 },
-    { label: "122 x 244", area: 29768 }
+    { label: "30 x 15", area: 450 }, { label: "30 x 20 / A4", area: 600 }, { label: "A3", area: 1260 }, { label: "30 x 50", area: 1500 },
+    { label: "35 x 50", area: 1750 }, { label: "40 x 50", area: 2000 }, { label: "60 x 40", area: 2400 }, { label: "50 x 50", area: 2500 },
+    { label: "50 x 70", area: 3500 }, { label: "70 x 100", area: 7000 }, { label: "100 x 100", area: 10000 }, { label: "120 x 100", area: 12000 },
+    { label: "100 x 200", area: 20000 }, { label: "122 x 244", area: 29768 }
 ].sort((a, b) => a.area - b.area);
 
 const safeSearch = (val, term) => String(val || '').toLowerCase().includes(String(term || '').toLowerCase());
@@ -83,11 +53,8 @@ const cleanObject = (obj) => {
   const cleaned = Array.isArray(obj) ? [] : {};
   for (const key in obj) {
     if (obj[key] !== undefined) {
-      if (typeof obj[key] === 'object' && obj[key] !== null && !obj[key].toDate && !Array.isArray(obj[key])) {
-        cleaned[key] = cleanObject(obj[key]);
-      } else {
-        cleaned[key] = obj[key]; 
-      }
+      if (typeof obj[key] === 'object' && obj[key] !== null && !obj[key].toDate && !Array.isArray(obj[key])) cleaned[key] = cleanObject(obj[key]);
+      else cleaned[key] = obj[key]; 
     }
   }
   return cleaned;
@@ -99,24 +66,10 @@ const AGING_COLORS = ['#38bdf8', '#fbbf24', '#34d399', '#a78bfa', '#fb923c', '#f
 const triggerSystemPrint = async (customFilename) => {
   const element = document.getElementById('printable-area');
   if (!element) return;
-  
   if (!window.html2pdf) {
-    await new Promise((resolve) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-      script.onload = resolve;
-      document.head.appendChild(script);
-    });
+    await new Promise((resolve) => { const script = document.createElement('script'); script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'; script.onload = resolve; document.head.appendChild(script); });
   }
-
-  const opt = {
-    margin:       0,
-    filename:     customFilename ? `${customFilename}.pdf` : `Document_${new Date().getTime()}.pdf`,
-    image:        { type: 'jpeg', quality: 1 },
-    html2canvas:  { scale: 2, useCORS: true, logging: false },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  };
-
+  const opt = { margin: 0, filename: customFilename ? `${customFilename}.pdf` : `Document_${new Date().getTime()}.pdf`, image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2, useCORS: true, logging: false }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
   const noPrintElements = element.querySelectorAll('.no-print');
   noPrintElements.forEach(el => el.style.display = 'none');
   await window.html2pdf().set(opt).from(element).save();
@@ -125,71 +78,40 @@ const triggerSystemPrint = async (customFilename) => {
 
 const exportToExcel = async (data, filename) => {
   if (!data || !data.length) return;
-  if (!window.XLSX) {
-    await new Promise((resolve) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-      script.onload = resolve;
-      document.head.appendChild(script);
-    });
-  }
+  if (!window.XLSX) { await new Promise((resolve) => { const script = document.createElement('script'); script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; script.onload = resolve; document.head.appendChild(script); }); }
   const cleanData = data.map(row => {
     const cleanRow = {};
     for (const [key, value] of Object.entries(row)) {
       if (key === 'id' || key === 'items' || key === 'createdAt' || key === 'updatedAt' || key === 'rawDate') continue;
       const cleanKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-      if (Array.isArray(value)) {
-         cleanRow[cleanKey] = `${value.length} items`;
-      } else if (value && typeof value === 'object' && value.seconds) {
-         cleanRow[cleanKey] = new Date(value.seconds * 1000).toLocaleDateString();
-      } else if (typeof value === 'number' || (typeof value === 'string' && !isNaN(Number(value)) && key.toLowerCase().match(/amount|total|price|balance|rate|qty|debit|credit/))) {
-         cleanRow[cleanKey] = Number(value) || 0;
-      } else {
-         cleanRow[cleanKey] = String(value || '');
-      }
+      if (Array.isArray(value)) cleanRow[cleanKey] = `${value.length} items`;
+      else if (value && typeof value === 'object' && value.seconds) cleanRow[cleanKey] = new Date(value.seconds * 1000).toLocaleDateString();
+      else if (typeof value === 'number' || (typeof value === 'string' && !isNaN(Number(value)) && key.toLowerCase().match(/amount|total|price|balance|rate|qty|debit|credit/))) cleanRow[cleanKey] = Number(value) || 0;
+      else cleanRow[cleanKey] = String(value || '');
     }
     return cleanRow;
   });
-  const ws = window.XLSX.utils.json_to_sheet(cleanData);
-  const wb = window.XLSX.utils.book_new();
+  const ws = window.XLSX.utils.json_to_sheet(cleanData); const wb = window.XLSX.utils.book_new();
   window.XLSX.utils.book_append_sheet(wb, ws, String(filename).toUpperCase().slice(0, 31));
   window.XLSX.writeFile(wb, `${String(filename).toUpperCase()}_REPORT_${new Date().toISOString().split('T')[0]}.xlsx`);
 };
 
 const CompanyLogo = ({ collapsed, settings }) => (
   <div className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} transition-all duration-300`}>
-    {settings?.logo ? (
-      <img src={settings.logo} alt="Logo" className="w-10 h-10 rounded-2xl object-contain bg-white shadow-xl shadow-blue-900/10 dark:shadow-none border border-slate-200 dark:border-slate-700 shrink-0" />
-    ) : (
-      <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-[#2563eb] to-[#4f46e5] shadow-lg shadow-indigo-500/30 border border-indigo-400/20 shrink-0">
-        <span className="relative text-white font-black text-xl tracking-tighter">C<span className="text-cyan-300">E</span></span>
-      </div>
-    )}
-    {!collapsed && (
-      <div className="flex flex-col whitespace-nowrap overflow-hidden">
-        <span className="text-xl font-black text-slate-900 dark:text-white tracking-widest leading-none truncate w-40">{settings?.companyName || 'MY ERP'}</span>
-      </div>
-    )}
+    {settings?.logo ? <img src={settings.logo} alt="Logo" className="w-10 h-10 rounded-2xl object-contain bg-white shadow-xl border border-slate-200 dark:border-slate-700 shrink-0" /> : <div className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-[#2563eb] to-[#4f46e5] shadow-lg shadow-indigo-500/30 border border-indigo-400/20 shrink-0"><span className="relative text-white font-black text-xl tracking-tighter">C<span className="text-cyan-300">E</span></span></div>}
+    {!collapsed && <div className="flex flex-col whitespace-nowrap overflow-hidden"><span className="text-xl font-black text-slate-900 dark:text-white tracking-widest leading-none truncate w-40">{settings?.companyName || 'MY ERP'}</span></div>}
   </div>
 );
 
 const NavItem = ({ id, icon: Icon, label, activeTab, setActiveTab, collapsed, setMobileMenu }) => (
-  <button 
-    onClick={() => { setActiveTab(id); setMobileMenu(false); }} 
-    className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'space-x-4 px-4'} py-3.5 rounded-2xl transition-all duration-300 ${activeTab === id ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 dark:shadow-indigo-900/20 scale-[1.02]' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'}`}
-    title={collapsed ? String(label) : ""}
-  >
-    <Icon size={20} className={`shrink-0 ${activeTab === id ? 'text-white' : ''}`} />
-    {!collapsed && <span className="font-bold text-xs uppercase tracking-wider">{String(label)}</span>}
+  <button onClick={() => { setActiveTab(id); setMobileMenu(false); }} className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'space-x-4 px-4'} py-3.5 rounded-2xl transition-all duration-300 ${activeTab === id ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 dark:shadow-indigo-900/20 scale-[1.02]' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'}`} title={collapsed ? String(label) : ""}>
+    <Icon size={20} className={`shrink-0 ${activeTab === id ? 'text-white' : ''}`} />{!collapsed && <span className="font-bold text-xs uppercase tracking-wider">{String(label)}</span>}
   </button>
 );
 
 const KPICard = ({ title, value, icon: Icon, colorClass, bgClass }) => (
   <div className={`p-6 rounded-[1.5rem] border ${bgClass} shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between`}>
-    <div>
-      <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-70">{String(title)}</p>
-      <h3 className={`text-2xl font-black ${colorClass} tracking-tight`}>{String(value)}</h3>
-    </div>
+    <div><p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-70">{String(title)}</p><h3 className={`text-2xl font-black ${colorClass} tracking-tight`}>{String(value)}</h3></div>
     <div className={`p-4 rounded-full bg-white/50 dark:bg-black/20 ${colorClass}`}><Icon size={28} /></div>
   </div>
 );
@@ -207,24 +129,17 @@ const getCRMWorkStatusStyle = (status) => {
     default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700 border';
   }
 };
-
 const getCRMClientTypeStyle = (type) => {
   if (type === 'Agency') return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400';
-  if (type === 'Direct Client') return 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400';
-  if (type === 'Brand/Company') return 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400';
+  if (type === 'Direct Client' || type === 'Brand/Company') return 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400';
   return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
 };
-
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700">
         <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">{label}</p>
-        {payload.map((entry, index) => (
-          <p key={index} className="text-sm font-black" style={{ color: entry.color }}>
-            {entry.name}: {formatCurrency(entry.value)}
-          </p>
-        ))}
+        {payload.map((entry, index) => (<p key={index} className="text-sm font-black" style={{ color: entry.color }}>{entry.name}: {formatCurrency(entry.value)}</p>))}
       </div>
     );
   }
@@ -233,372 +148,122 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 const App = () => {
   const [user, setUser] = useState(null);
-  
-  const [isAppUnlocked, setIsAppUnlocked] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('erp_unlocked') === 'true';
-    }
-    return false;
-  });
-  const [appPinInput, setAppPinInput] = useState('');
-  const [appPinError, setAppPinError] = useState(false);
+  const [isAppUnlocked, setIsAppUnlocked] = useState(() => { if (typeof window !== 'undefined') return sessionStorage.getItem('erp_unlocked') === 'true'; return false; });
+  const [appPinInput, setAppPinInput] = useState(''); const [appPinError, setAppPinError] = useState(false);
+  const [adminAuth, setAdminAuth] = useState({ isOpen: false, callback: null }); const [adminPinInput, setAdminPinInput] = useState(''); const [adminPinError, setAdminPinError] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => { if (typeof window !== 'undefined') { const storedTheme = localStorage.getItem('erp_theme'); if (storedTheme) return storedTheme === 'dark'; if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return true; } return false; });
+  const [activeTab, setActiveTab] = useState('dashboard'); const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024); const [showOnlyDueSales, setShowOnlyDueSales] = useState(false); const [showOnlyDuePurchases, setShowOnlyDuePurchases] = useState(false);
+  const [hideZeroAging, setHideZeroAging] = useState(true); const [searchTerm, setSearchTerm] = useState(''); const [isNotifOpen, setIsNotifOpen] = useState(false); const notifRef = useRef(null);
 
-  const [adminAuth, setAdminAuth] = useState({ isOpen: false, callback: null });
-  const [adminPinInput, setAdminPinInput] = useState('');
-  const [adminPinError, setAdminPinError] = useState(false);
+  const [customers, setCustomers] = useState([]); const [suppliers, setSuppliers] = useState([]); const [products, setProducts] = useState([]);
+  const [sales, setSales] = useState([]); const [purchases, setPurchases] = useState([]); const [quotations, setQuotations] = useState([]);
+  const [collections, setCollections] = useState([]); const [expenses, setExpenses] = useState([]); const [salesmen, setSalesmen] = useState([]); const [crms, setCrms] = useState([]);
 
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const storedTheme = localStorage.getItem('erp_theme');
-      if (storedTheme) return storedTheme === 'dark';
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return true;
-    }
-    return false; 
-  });
-
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
-  const [showOnlyDueSales, setShowOnlyDueSales] = useState(false);
-  const [showOnlyDuePurchases, setShowOnlyDuePurchases] = useState(false);
-  const [hideZeroAging, setHideZeroAging] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isNotifOpen, setIsNotifOpen] = useState(false);
-  const notifRef = useRef(null);
-
-  const [customers, setCustomers] = useState([]);
-  const [suppliers, setSuppliers] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [sales, setSales] = useState([]);
-  const [purchases, setPurchases] = useState([]);
-  const [quotations, setQuotations] = useState([]);
-  const [collections, setCollections] = useState([]);
-  const [expenses, setExpenses] = useState([]);
-  const [salesmen, setSalesmen] = useState([]);
-  const [crms, setCrms] = useState([]);
-
+  // FIXED AGING LOGIC
   const buildAgingReport = (type = 'customer') => {
-    const dataList = type === 'customer' ? customers : suppliers;
-    const txList = type === 'customer' ? sales : purchases;
-
+    const dataList = type === 'customer' ? customers : suppliers; const txList = type === 'customer' ? sales : purchases; const paymentList = type === 'customer' ? collections : expenses;
     return dataList.map(entity => {
-      let totalDue = 0;
-      let current = 0;
-      let days31to60 = 0;
-      let days61to90 = 0;
-      let days91to120 = 0;
-      let days120Plus = 0;
-
-      const entityTxs = txList.filter(t =>
-        type === 'customer' ? t.customerId === entity.id : t.supplierId === entity.id
-      );
-
+      let totalDue = 0; let current = 0; let days31to60 = 0; let days61to90 = 0; let days91to120 = 0; let days120Plus = 0;
+      const entityTxs = txList.filter(t => type === 'customer' ? t.customerId === entity.id : t.supplierId === entity.id);
       entityTxs.forEach(t => {
-        const due = (t.grandTotal || 0) - (t.paidAmount || 0);
-        if (due > 0) {
-          totalDue += due;
-          const txDate = new Date(t.date || t.createdAt);
-          const today = new Date();
-          const diffTime = Math.abs(today - txDate);
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-          if (diffDays <= 30) current += due;
-          else if (diffDays <= 60) days31to60 += due;
-          else if (diffDays <= 90) days61to90 += due;
-          else if (diffDays <= 120) days91to120 += due;
-          else days120Plus += due;
+        const paid = paymentList.filter(p => (p.ref && p.ref === t.invoiceNo) || (p.description && p.description === t.invoiceNo)).reduce((a,b) => a + Number(b.amount), 0);
+        const due = (Number(t.grandTotal) || 0) - paid;
+        if (due > 0 && t.date) {
+          totalDue += due; const txDate = new Date(t.date); const diffDays = Math.ceil(Math.abs(new Date() - txDate) / (1000 * 60 * 60 * 24));
+          if (diffDays <= 30) current += due; else if (diffDays <= 60) days31to60 += due; else if (diffDays <= 90) days61to90 += due; else if (diffDays <= 120) days91to120 += due; else days120Plus += due;
         }
       });
-
       return { ...entity, totalDue, current, days31to60, days61to90, days91to120, days120Plus };
     }).filter(item => hideZeroAging ? item.totalDue > 0 : true);
   };
   
-  const [formError, setFormError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [estimatorItems, setEstimatorItems] = useState([]); 
-  const [showEstimatorDB, setShowEstimatorDB] = useState(false);
-  const [estimateCart, setEstimateCart] = useState([]);
-  const [calcForm, setCalcForm] = useState({ 
-    category: '', itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1,
-    matrixSize: '', matrixThick: '', isCustomMatrix: false
-  });
-  
-  const [manualEstimateTotal, setManualEstimateTotal] = useState('');
-
-  const [estimatorPushModal, setEstimatorPushModal] = useState({ isOpen: false, type: '', customerId: '' });
-
-  const [settings, setSettings] = useState({ companyName: '', taxId: '', phone: '', email: '', address: '', logo: '' });
-  const [settingsSuccess, setSettingsSuccess] = useState(false);
-
-  const [modalState, setModalState] = useState({ isOpen: false, type: null, data: null });
-  const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, type: '', id: null, title: '' });
-  const [printDoc, setPrintDoc] = useState({ isOpen: false, type: '', data: null });
-  
-  const [formData, setFormData] = useState({});
-  const [invoiceItems, setInvoiceItems] = useState([]);
-  const [dbError, setDbError] = useState(false);
-  const collapsed = isDesktop && !isSidebarHovered;
+  const [formError, setFormError] = useState(''); const [isSubmitting, setIsSubmitting] = useState(false);
+  const [estimatorItems, setEstimatorItems] = useState([]); const [showEstimatorDB, setShowEstimatorDB] = useState(false); const [estimateCart, setEstimateCart] = useState([]);
+  const [calcForm, setCalcForm] = useState({ category: '', itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1, matrixSize: '', matrixThick: '', isCustomMatrix: false });
+  const [manualEstimateTotal, setManualEstimateTotal] = useState(''); const [estimatorPushModal, setEstimatorPushModal] = useState({ isOpen: false, type: '', customerId: '' });
+  const [settings, setSettings] = useState({ companyName: '', taxId: '', phone: '', email: '', address: '', logo: '' }); const [settingsSuccess, setSettingsSuccess] = useState(false);
+  const [modalState, setModalState] = useState({ isOpen: false, type: null, data: null }); const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, type: '', id: null, title: '' });
+  const [printDoc, setPrintDoc] = useState({ isOpen: false, type: '', data: null }); const [formData, setFormData] = useState({}); const [invoiceItems, setInvoiceItems] = useState([]);
+  const [dbError, setDbError] = useState(false); const collapsed = isDesktop && !isSidebarHovered;
 
   useEffect(() => {
-    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
-    window.addEventListener('resize', handleResize);
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { await signInWithCustomToken(auth, __initial_auth_token); } 
-        else { await signInAnonymously(auth); }
-      } catch (err) { console.error("Auth error:", err); }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1024); window.addEventListener('resize', handleResize);
+    const initAuth = async () => { try { if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { await signInWithCustomToken(auth, __initial_auth_token); } else { await signInAnonymously(auth); } } catch (err) { console.error("Auth error:", err); } };
+    initAuth(); const unsubscribe = onAuthStateChanged(auth, setUser);
     return () => { window.removeEventListener('resize', handleResize); unsubscribe(); };
   }, []);
 
-  useEffect(() => {
-    const root = window.document.documentElement;
-    if (isDarkMode) {
-      root.classList.add('dark');
-      localStorage.setItem('erp_theme', 'dark');
-    } else {
-      root.classList.remove('dark');
-      localStorage.setItem('erp_theme', 'light');
-    }
-  }, [isDarkMode]);
-
+  useEffect(() => { const root = window.document.documentElement; if (isDarkMode) { root.classList.add('dark'); localStorage.setItem('erp_theme', 'dark'); } else { root.classList.remove('dark'); localStorage.setItem('erp_theme', 'light'); } }, [isDarkMode]);
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
+  useEffect(() => { const handleClickOutside = (event) => { if (notifRef.current && !notifRef.current.contains(event.target)) { setIsNotifOpen(false); } }; document.addEventListener("mousedown", handleClickOutside); return () => document.removeEventListener("mousedown", handleClickOutside); }, []);
+  useEffect(() => { if (settings?.logo) { let link = document.querySelector("link[rel~='icon']"); if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.getElementsByTagName('head')[0].appendChild(link); } link.href = settings.logo; } }, [settings?.logo]);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-        if (notifRef.current && !notifRef.current.contains(event.target)) { setIsNotifOpen(false); }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    if (settings?.logo) {
-      let link = document.querySelector("link[rel~='icon']");
-      if (!link) {
-        link = document.createElement('link');
-        link.rel = 'icon';
-        document.getElementsByTagName('head')[0].appendChild(link);
-      }
-      link.href = settings.logo;
-    }
-  }, [settings?.logo]);
-
-  useEffect(() => {
-    if (!isAppUnlocked) return;
-    let timer;
-    const resetTimer = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        setIsAppUnlocked(false);
-        sessionStorage.removeItem('erp_unlocked');
-      }, 60 * 60 * 1000); 
-    };
-    window.addEventListener('mousemove', resetTimer);
-    window.addEventListener('keypress', resetTimer);
-    window.addEventListener('click', resetTimer);
-    resetTimer(); 
-    return () => {
-      window.removeEventListener('mousemove', resetTimer);
-      window.removeEventListener('keypress', resetTimer);
-      window.removeEventListener('click', resetTimer);
-      clearTimeout(timer);
-    };
+    if (!isAppUnlocked) return; let timer; const resetTimer = () => { clearTimeout(timer); timer = setTimeout(() => { setIsAppUnlocked(false); sessionStorage.removeItem('erp_unlocked'); }, 60 * 60 * 1000); };
+    window.addEventListener('mousemove', resetTimer); window.addEventListener('keypress', resetTimer); window.addEventListener('click', resetTimer); resetTimer(); 
+    return () => { window.removeEventListener('mousemove', resetTimer); window.removeEventListener('keypress', resetTimer); window.removeEventListener('click', resetTimer); clearTimeout(timer); };
   }, [isAppUnlocked]);
 
   useEffect(() => {
     if (!user || !isAppUnlocked) return; 
-    const collectionsMap = {
-      customers: setCustomers, suppliers: setSuppliers, products: setProducts,
-      sales: setSales, purchases: setPurchases, collections: setCollections, 
-      expenses: setExpenses, salesmen: setSalesmen, crms: setCrms,
-      estimator_items: setEstimatorItems, quotations: setQuotations
-    };
-
+    const collectionsMap = { customers: setCustomers, suppliers: setSuppliers, products: setProducts, sales: setSales, purchases: setPurchases, quotations: setQuotations, collections: setCollections, expenses: setExpenses, salesmen: setSalesmen, crms: setCrms, estimator_items: setEstimatorItems };
     const unsubscribers = Object.entries(collectionsMap).map(([colName, setter]) => 
-      onSnapshot(
-        collection(db, 'artifacts', appId, 'public', 'data', colName), 
-        (snap) => {
-          const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setter(data.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0)));
-        },
-        (error) => { console.error(`Error syncing ${colName}:`, error); if (error.code === 'permission-denied') setDbError(true); }
-      )
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', colName), (snap) => { const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })); setter(data.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0))); }, (error) => { console.error(`Error syncing ${colName}:`, error); if (error.code === 'permission-denied') setDbError(true); })
     );
-    const unsubSettings = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'profile'), (snap) => {
-        if (snap.exists()) setSettings(snap.data());
-    });
+    const unsubSettings = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'profile'), (snap) => { if (snap.exists()) setSettings(snap.data()); });
     return () => { unsubscribers.forEach(unsub => unsub()); unsubSettings(); };
   }, [user, isAppUnlocked]);
 
-  const handleAppUnlock = (e) => {
-    e.preventDefault();
-    if (appPinInput === APP_PIN) {
-      setIsAppUnlocked(true);
-      sessionStorage.setItem('erp_unlocked', 'true');
-      setAppPinError(false);
-    } else {
-      setAppPinError(true);
-      setAppPinInput('');
-    }
-  };
-
-  const handleManualLock = () => {
-    setIsAppUnlocked(false);
-    sessionStorage.removeItem('erp_unlocked');
-    setAppPinInput(''); 
-  };
-
-  const requestAdminAuth = (callback) => {
-    setAdminAuth({ isOpen: true, callback });
-    setAdminPinInput('');
-    setAdminPinError(false);
-  };
-
-  const handleAdminAuthSubmit = (e) => {
-    e.preventDefault();
-    if (adminPinInput === ADMIN_PIN) {
-      if (adminAuth.callback) adminAuth.callback();
-      setAdminAuth({ isOpen: false, callback: null });
-    } else {
-      setAdminPinError(true);
-      setAdminPinInput('');
-    }
-  };
-
-  const triggerDelete = (type, id, title) => {
-    requestAdminAuth(() => {
-      setConfirmDelete({ isOpen: true, type, id, title });
-    });
-  };
+  const handleAppUnlock = (e) => { e.preventDefault(); if (appPinInput === APP_PIN) { setIsAppUnlocked(true); sessionStorage.setItem('erp_unlocked', 'true'); setAppPinError(false); } else { setAppPinError(true); setAppPinInput(''); } };
+  const handleManualLock = () => { setIsAppUnlocked(false); sessionStorage.removeItem('erp_unlocked'); setAppPinInput(''); };
+  const requestAdminAuth = (callback) => { setAdminAuth({ isOpen: true, callback }); setAdminPinInput(''); setAdminPinError(false); };
+  const handleAdminAuthSubmit = (e) => { e.preventDefault(); if (adminPinInput === ADMIN_PIN) { if (adminAuth.callback) adminAuth.callback(); setAdminAuth({ isOpen: false, callback: null }); } else { setAdminPinError(true); setAdminPinInput(''); } };
+  const triggerDelete = (type, id, title) => { requestAdminAuth(() => { setConfirmDelete({ isOpen: true, type, id, title }); }); };
 
   const analytics = useMemo(() => {
-    const totalSales = sales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
-    const totalPurchases = purchases.reduce((acc, p) => acc + (Number(p.grandTotal) || 0), 0);
-    const totalCollections = collections.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
-    const totalExpenses = expenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
-    const outstandingReceivables = totalSales - totalCollections;
-    const netProfit = totalSales - totalPurchases - totalExpenses;
-    return { totalSales, totalPurchases, totalCollections, totalExpenses, outstandingReceivables, netProfit };
+    const totalSales = sales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0); const totalPurchases = purchases.reduce((acc, p) => acc + (Number(p.grandTotal) || 0), 0);
+    const totalCollections = collections.reduce((acc, c) => acc + (Number(c.amount) || 0), 0); const totalExpenses = expenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
+    return { totalSales, totalPurchases, totalCollections, totalExpenses, outstandingReceivables: totalSales - totalCollections, netProfit: totalSales - totalPurchases - totalExpenses };
   }, [sales, purchases, collections, expenses]);
 
   const monthlyTrends = useMemo(() => {
     const map = {};
-    const process = (arr, key) => {
-      arr.forEach(item => {
-        if(!item.date) return;
-        const d = new Date(item.date);
-        const monthName = d.toLocaleString('default', { month: 'long' });
-        const year = d.getFullYear();
-        const sortKey = `${year}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        
-        if(!map[sortKey]) map[sortKey] = { sortKey, name: monthName, sales: 0, purchases: 0 };
-        map[sortKey][key] += Number(item.grandTotal) || 0;
-      });
-    };
-    process(sales, 'sales');
-    process(purchases, 'purchases');
+    const process = (arr, key) => { arr.forEach(item => { if(!item.date) return; const d = new Date(item.date); const sortKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; if(!map[sortKey]) map[sortKey] = { sortKey, name: d.toLocaleString('default', { month: 'long' }), sales: 0, purchases: 0 }; map[sortKey][key] += Number(item.grandTotal) || 0; }); };
+    process(sales, 'sales'); process(purchases, 'purchases');
     return Object.values(map).sort((a,b) => a.sortKey.localeCompare(b.sortKey)).slice(-12);
   }, [sales, purchases]);
 
-  const calculateAging = (invoices, payments, type) => {
-    const bins = { 'No Due yet': 0, '0 - 30 Days': 0, '31 - 60 Days': 0, '61 - 90 Days': 0, '91 - 120 Days': 0, '120 +': 0 };
-    const today = new Date();
-    
+  const calculateAging = (invoices, payments) => {
+    const bins = { 'No Due yet': 0, '0 - 30 Days': 0, '31 - 60 Days': 0, '61 - 90 Days': 0, '91 - 120 Days': 0, '120 +': 0 }; const today = new Date();
     invoices.forEach(inv => {
-        const paid = payments.filter(p => p.ref === inv.invoiceNo || p.description === inv.invoiceNo).reduce((a,b)=>a+Number(b.amount), 0);
-        const pending = Number(inv.grandTotal) - paid;
-        
+        const paid = payments.filter(p => p.ref === inv.invoiceNo || p.description === inv.invoiceNo).reduce((a,b)=>a+Number(b.amount), 0); const pending = Number(inv.grandTotal) - paid;
         if (pending > 0 && inv.date) {
-            const invDate = new Date(inv.date);
-            const diffDays = Math.floor((today - invDate) / (1000 * 60 * 60 * 24));
-            
-            if (diffDays <= 0) bins['No Due yet'] += pending;
-            else if (diffDays <= 30) bins['0 - 30 Days'] += pending;
-            else if (diffDays <= 60) bins['31 - 60 Days'] += pending;
-            else if (diffDays <= 90) bins['61 - 90 Days'] += pending;
-            else if (diffDays <= 120) bins['91 - 120 Days'] += pending;
-            else bins['120 +'] += pending;
+            const diffDays = Math.floor((today - new Date(inv.date)) / (1000 * 60 * 60 * 24));
+            if (diffDays <= 0) bins['No Due yet'] += pending; else if (diffDays <= 30) bins['0 - 30 Days'] += pending; else if (diffDays <= 60) bins['31 - 60 Days'] += pending; else if (diffDays <= 90) bins['61 - 90 Days'] += pending; else if (diffDays <= 120) bins['91 - 120 Days'] += pending; else bins['120 +'] += pending;
         }
     });
     return Object.keys(bins).map((key, index) => ({ name: key, amount: bins[key], color: AGING_COLORS[index] }));
   };
 
-  const agingReceivables = useMemo(() => calculateAging(sales, collections, 'rec'), [sales, collections]);
-  const agingPayables = useMemo(() => calculateAging(purchases, expenses, 'pay'), [purchases, expenses]);
-
-  const topCustomersData = useMemo(() => {
-    const map = {};
-    sales.forEach(s => {
-      if(!map[s.customerName]) map[s.customerName] = 0;
-      map[s.customerName] += Number(s.grandTotal);
-    });
-    return Object.entries(map).map(([name, amount]) => ({ name: name || 'Unknown', amount })).sort((a,b) => b.amount - a.amount).slice(0, 5);
-  }, [sales]);
-
-  const topSuppliersData = useMemo(() => {
-    const map = {};
-    purchases.forEach(p => {
-      if(!map[p.supplierName]) map[p.supplierName] = 0;
-      map[p.supplierName] += Number(p.grandTotal);
-    });
-    return Object.entries(map).map(([name, amount]) => ({ name: name || 'Unknown', amount })).sort((a,b) => b.amount - a.amount).slice(0, 5);
-  }, [purchases]);
-
-  const vatData = useMemo(() => {
-    const outputVat = sales.reduce((acc, s) => acc + (Number(s.taxTotal) || 0), 0);
-    const inputVat = purchases.reduce((acc, p) => acc + (Number(p.taxTotal) || 0), 0);
-    const payable = outputVat - inputVat;
-    return [
-      { name: 'Input Vat', value: inputVat },
-      { name: 'Output Vat', value: outputVat },
-      { name: 'Vat Payable', value: payable > 0 ? payable : 0 }
-    ];
-  }, [sales, purchases]);
-
-  const topProductsData = useMemo(() => {
-    const map = {};
-    sales.forEach(s => {
-      if(s.items) {
-        s.items.forEach(item => {
-          if(!map[item.name]) map[item.name] = 0;
-          map[item.name] += Number(item.total);
-        });
-      }
-    });
-    return Object.entries(map).map(([name, value]) => ({ name: name || 'Unknown', value })).sort((a,b) => b.value - a.value).slice(0, 5);
-  }, [sales]);
+  const agingReceivables = useMemo(() => calculateAging(sales, collections), [sales, collections]);
+  const agingPayables = useMemo(() => calculateAging(purchases, expenses), [purchases, expenses]);
+  const topCustomersData = useMemo(() => { const map = {}; sales.forEach(s => { if(!map[s.customerName]) map[s.customerName] = 0; map[s.customerName] += Number(s.grandTotal); }); return Object.entries(map).map(([name, amount]) => ({ name: name || 'Unknown', amount })).sort((a,b) => b.amount - a.amount).slice(0, 5); }, [sales]);
+  const topSuppliersData = useMemo(() => { const map = {}; purchases.forEach(p => { if(!map[p.supplierName]) map[p.supplierName] = 0; map[p.supplierName] += Number(p.grandTotal); }); return Object.entries(map).map(([name, amount]) => ({ name: name || 'Unknown', amount })).sort((a,b) => b.amount - a.amount).slice(0, 5); }, [purchases]);
+  const vatData = useMemo(() => { const outputVat = sales.reduce((acc, s) => acc + (Number(s.taxTotal) || 0), 0); const inputVat = purchases.reduce((acc, p) => acc + (Number(p.taxTotal) || 0), 0); const payable = outputVat - inputVat; return [{ name: 'Input Vat', value: inputVat }, { name: 'Output Vat', value: outputVat }, { name: 'Vat Payable', value: payable > 0 ? payable : 0 }]; }, [sales, purchases]);
+  const topProductsData = useMemo(() => { const map = {}; sales.forEach(s => { if(s.items) { s.items.forEach(item => { if(!map[item.name]) map[item.name] = 0; map[item.name] += Number(item.total); }); }}); return Object.entries(map).map(([name, value]) => ({ name: name || 'Unknown', value })).sort((a,b) => b.value - a.value).slice(0, 5); }, [sales]);
 
   const notifications = useMemo(() => {
     const notifs = [];
-    products.forEach(p => {
-        if (Number(p.stock) <= Number(p.minStock || 0)) {
-            notifs.push({ id: `stk-${p.id}`, type: 'warning', icon: AlertTriangle, title: 'Low Stock Alert', desc: `${p.name} is running low (${p.stock} units left).` });
-        }
-    });
-    topCustomersData.forEach((c, idx) => {
-        if (idx === 0 && c.amount > 0) {
-             notifs.push({ id: `top-${idx}`, type: 'info', icon: TrendingUp, title: 'Top Performer', desc: `${c.name} is your top customer.` });
-        }
-    });
+    products.forEach(p => { if (Number(p.stock) <= Number(p.minStock || 0)) { notifs.push({ id: `stk-${p.id}`, type: 'warning', icon: AlertTriangle, title: 'Low Stock Alert', desc: `${p.name} is running low (${p.stock} units left).` }); }});
+    topCustomersData.forEach((c, idx) => { if (idx === 0 && c.amount > 0) { notifs.push({ id: `top-${idx}`, type: 'info', icon: TrendingUp, title: 'Top Performer', desc: `${c.name} is your top customer.` }); }});
     quotations.forEach(q => {
         if (q.status !== 'Converted' && q.status !== 'Dropped') {
-            const qDate = new Date(q.date || (q.createdAt?.seconds ? q.createdAt.seconds * 1000 : new Date()));
-            const diffDays = Math.floor((new Date() - qDate) / (1000 * 60 * 60 * 24));
+            const diffDays = Math.floor((new Date() - new Date(q.date || (q.createdAt?.seconds ? q.createdAt.seconds * 1000 : new Date()))) / (1000 * 60 * 60 * 24));
             const salesman = salesmen.find(s=>s.id === q.salesmanId)?.name || 'Unknown Exec';
-            
-            if (diffDays >= 30 && q.status !== 'Follow Up (1 Month)') {
-                notifs.push({ id: `q-30d-${q.id}`, type: 'warning', icon: AlertTriangle, title: 'Quote Follow-up: 1 Month', desc: `${q.quotationNo} for ${q.customerName}. Exec: ${salesman}` });
-            } else if (diffDays >= 7 && diffDays < 30 && q.status !== 'Follow Up (1 Week)' && q.status !== 'Follow Up (1 Month)') {
-                notifs.push({ id: `q-7d-${q.id}`, type: 'warning', icon: AlertTriangle, title: 'Quote Follow-up: 1 Week', desc: `${q.quotationNo} for ${q.customerName}. Exec: ${salesman}` });
-            } else if (diffDays >= 2 && diffDays < 7 && q.status !== 'Follow Up (48 Hrs)' && q.status !== 'Follow Up (1 Week)' && q.status !== 'Follow Up (1 Month)') {
-                notifs.push({ id: `q-2d-${q.id}`, type: 'warning', icon: AlertTriangle, title: 'Quote Follow-up: 48 Hours', desc: `${q.quotationNo} for ${q.customerName}. Exec: ${salesman}` });
-            }
+            if (diffDays >= 30 && q.status !== 'Follow Up (1 Month)') { notifs.push({ id: `q-30d-${q.id}`, type: 'warning', icon: AlertTriangle, title: 'Quote Follow-up: 1 Month', desc: `${q.quotationNo} for ${q.customerName}. Exec: ${salesman}` }); } 
+            else if (diffDays >= 7 && diffDays < 30 && q.status !== 'Follow Up (1 Week)' && q.status !== 'Follow Up (1 Month)') { notifs.push({ id: `q-7d-${q.id}`, type: 'warning', icon: AlertTriangle, title: 'Quote Follow-up: 1 Week', desc: `${q.quotationNo} for ${q.customerName}. Exec: ${salesman}` }); } 
+            else if (diffDays >= 2 && diffDays < 7 && q.status !== 'Follow Up (48 Hrs)' && q.status !== 'Follow Up (1 Week)' && q.status !== 'Follow Up (1 Month)') { notifs.push({ id: `q-2d-${q.id}`, type: 'warning', icon: AlertTriangle, title: 'Quote Follow-up: 48 Hours', desc: `${q.quotationNo} for ${q.customerName}. Exec: ${salesman}` }); }
         }
     });
     return notifs;
@@ -606,130 +271,38 @@ const App = () => {
 
   const openModal = (type, data = null) => {
     const executeOpen = () => {
-      setFormError('');
-      setFormData(data ? { ...data } : { 
-        name: '', phone: '', email: '', gst: '', openingBalance: '', category: '', stock: '', 
-        purchasePrice: '', sellingPrice: '', tax: '', minStock: '', amount: '', method: '', 
-        description: '', ref: '', rate: '', timeRate: '', calcType: 'Area', tiers: [], thicknessTiers: []
-      });
-      if (type === 'sale' || type === 'purchase' || type === 'crm' || type === 'quotation') {
-        setInvoiceItems(data?.items || [{ productId: '', name: '', description: '', qty: 1, rate: 0, tax: 0, total: 0 }]);
-      }
+      setFormError(''); setFormData(data ? { ...data } : { name: '', phone: '', email: '', gst: '', openingBalance: '', category: '', stock: '', purchasePrice: '', sellingPrice: '', tax: '', minStock: '', amount: '', method: '', description: '', ref: '', rate: '', timeRate: '', calcType: 'Area', tiers: [], thicknessTiers: [] });
+      if (['sale', 'purchase', 'crm', 'quotation'].includes(type)) { setInvoiceItems(data?.items || [{ productId: '', name: '', description: '', qty: 1, rate: 0, tax: 0, total: 0 }]); }
       setModalState({ isOpen: true, type, data });
     };
-
-    if (data && type !== 'estimatorItem') {
-      requestAdminAuth(executeOpen);
-    } else {
-      executeOpen();
-    }
+    if (data && type !== 'estimatorItem') { requestAdminAuth(executeOpen); } else { executeOpen(); }
   };
 
-  const closeModal = () => {
-    setModalState({ isOpen: false, type: null, data: null });
-    setFormData({});
-    setInvoiceItems([]);
-    setFormError('');
-    setIsSubmitting(false);
-  };
+  const closeModal = () => { setModalState({ isOpen: false, type: null, data: null }); setFormData({}); setInvoiceItems([]); setFormError(''); setIsSubmitting(false); };
 
   const handlePushToInvoice = (crmItem) => {
-    setActiveTab('sales');
-    const preFilledData = {
-      customerId: crmItem.customerId || '',
-      customerName: crmItem.customerName || '',
-      partyName: crmItem.customerName || '',
-      salesmanId: crmItem.salesmanId || '',
-      linkedJobId: crmItem.id, 
-      date: new Date().toISOString().split('T')[0],
-      items: crmItem.items && crmItem.items.length > 0 
-        ? crmItem.items.map(i => ({...i, tax: 0})) 
-        : [{ productId: '', name: 'CUSTOM JOB', description: crmItem.description || '', qty: 1, rate: 0, tax: 0, total: 0 }]
-    };
-    openModal('sale', preFilledData); 
+    setActiveTab('sales'); openModal('sale', { customerId: crmItem.customerId || '', customerName: crmItem.customerName || '', partyName: crmItem.customerName || '', salesmanId: crmItem.salesmanId || '', linkedJobId: crmItem.id, date: new Date().toISOString().split('T')[0], items: crmItem.items && crmItem.items.length > 0 ? crmItem.items.map(i => ({...i, tax: 0})) : [{ productId: '', name: 'CUSTOM JOB', description: crmItem.description || '', qty: 1, rate: 0, tax: 0, total: 0 }] }); 
   };
 
   const handlePushQuoteTo = (quote, target) => {
-    setActiveTab(target === 'sale' ? 'sales' : 'crm');
-    const itemsWithoutTax = quote.items ? quote.items.map(i => ({...i, tax: target === 'crm' ? 0 : i.tax})) : [];
-    openModal(target, {
-        customerId: quote.customerId,
-        customerName: quote.customerName,
-        partyName: quote.partyName,
-        salesmanId: quote.salesmanId,
-        items: itemsWithoutTax,
-        linkedQuoteId: quote.id,
-        date: new Date().toISOString().split('T')[0]
-    });
+    setActiveTab(target === 'sale' ? 'sales' : 'crm'); openModal(target, { customerId: quote.customerId, customerName: quote.customerName, partyName: quote.partyName, salesmanId: quote.salesmanId, items: quote.items ? quote.items.map(i => ({...i, tax: target === 'crm' ? 0 : i.tax})) : [], linkedQuoteId: quote.id, date: new Date().toISOString().split('T')[0] });
   };
 
   const handleEstimatorPushSubmit = (e) => {
-      e.preventDefault();
-      const customer = customers.find(c => c.id === estimatorPushModal.customerId);
-      if(!customer) return;
-
-      const formattedItems = estimateCart.map((item, index) => ({
-          productId: '', 
-          name: `${item.name}`, 
-          description: `[${item.category}] ${item.specs}${item.desc ? `\nNote: ${item.desc}` : ''}`,
-          qty: item.qty,
-          rate: Number((item.totalPrice / item.qty).toFixed(2)), 
-          tax: 0, 
-          total: item.totalPrice
-      }));
-      
-      if (estimatorPushModal.type === 'crm') {
-          setActiveTab('crm');
-          openModal('crm', {
-              customerId: customer.id,
-              customerName: customer.name,
-              partyName: customer.name,
-              date: new Date().toISOString().split('T')[0],
-              items: formattedItems
-          });
-      } else if (estimatorPushModal.type === 'invoice') {
-          setActiveTab('sales');
-          openModal('sale', {
-              customerId: customer.id,
-              customerName: customer.name,
-              partyName: customer.name,
-              date: new Date().toISOString().split('T')[0],
-              items: formattedItems
-          });
-      } else if (estimatorPushModal.type === 'quotation') {
-          setActiveTab('quotations');
-          openModal('quotation', {
-              customerId: customer.id,
-              customerName: customer.name,
-              partyName: customer.name,
-              date: new Date().toISOString().split('T')[0],
-              items: formattedItems
-          });
-      }
+      e.preventDefault(); const customer = customers.find(c => c.id === estimatorPushModal.customerId); if(!customer) return;
+      const formattedItems = estimateCart.map((item) => ({ productId: '', name: `${item.name}`, description: `[${item.category}] ${item.specs}${item.desc ? `\nNote: ${item.desc}` : ''}`, qty: item.qty, rate: Number((item.totalPrice / item.qty).toFixed(2)), tax: 0, total: item.totalPrice }));
+      setActiveTab(estimatorPushModal.type === 'crm' ? 'crm' : estimatorPushModal.type === 'invoice' ? 'sales' : 'quotations');
+      openModal(estimatorPushModal.type === 'invoice' ? 'sale' : estimatorPushModal.type, { customerId: customer.id, customerName: customer.name, partyName: customer.name, date: new Date().toISOString().split('T')[0], items: formattedItems });
       setEstimatorPushModal({isOpen: false, type: '', customerId: ''});
   };
 
   const handleQuickPayment = (item, type, pendingAmount) => {
-    if (type === 'sale') {
-      setFormData({
-        customerId: item.customerId || '', customerName: item.customerName || '', partyName: item.customerName || '',
-        ref: item.invoiceNo || '', amount: pendingAmount > 0 ? pendingAmount : 0, date: new Date().toISOString().split('T')[0]
-      });
-      setModalState({ isOpen: true, type: 'collection', data: null });
-    } else if (type === 'purchase') {
-      setFormData({
-        supplierId: item.supplierId || '', supplierName: item.supplierName || '', partyName: item.supplierName || '',
-        description: item.invoiceNo || '', amount: pendingAmount > 0 ? pendingAmount : 0, date: new Date().toISOString().split('T')[0]
-      });
-      setModalState({ isOpen: true, type: 'expense', data: null });
-    }
+    if (type === 'sale') { setFormData({ customerId: item.customerId || '', customerName: item.customerName || '', partyName: item.customerName || '', ref: item.invoiceNo || '', amount: pendingAmount > 0 ? pendingAmount : 0, date: new Date().toISOString().split('T')[0] }); setModalState({ isOpen: true, type: 'collection', data: null }); } 
+    else if (type === 'purchase') { setFormData({ supplierId: item.supplierId || '', supplierName: item.supplierName || '', partyName: item.supplierName || '', description: item.invoiceNo || '', amount: pendingAmount > 0 ? pendingAmount : 0, date: new Date().toISOString().split('T')[0] }); setModalState({ isOpen: true, type: 'expense', data: null }); }
   };
 
   const generateLedger = (type, entity, ledgerVariant = 'standard') => {
-    let rows = [];
-    let balance = Number(entity.openingBalance) || 0;
-    let entityTypeTitle = type;
-    
+    let rows = []; let balance = Number(entity.openingBalance) || 0; let entityTypeTitle = type;
     if (type === 'customer') {
         rows.push({ date: '-', ref: 'OP-BAL', desc: 'Opening Balance', debit: balance > 0 ? balance : 0, credit: balance < 0 ? Math.abs(balance) : 0, balance, rawDate: new Date(0) });
         const s = sales.filter(x => x.customerId === entity.id).map(x => ({ date: x.date, ref: x.invoiceNo, desc: 'Sales Invoice', debit: Number(x.grandTotal), credit: 0, rawDate: new Date(x.date) }));
@@ -742,311 +315,134 @@ const App = () => {
         [...p, ...e].sort((a,b) => a.rawDate - b.rawDate).forEach(r => { balance = balance - r.debit + r.credit; rows.push({ ...r, balance }); });
     } else if (type === 'salesman') {
         if (ledgerVariant === 'cash') {
-            entityTypeTitle = 'Cash In Hand';
-            balance = 0; 
+            entityTypeTitle = 'Cash In Hand'; balance = 0; 
             const c = collections.filter(x => x.salesmanId === entity.id).map(x => ({ date: x.date, ref: x.ref || 'PAYMENT', desc: `Collected from ${x.customerName || '--'}`, debit: Number(x.amount), credit: 0, rawDate: new Date(x.date) }));
             const e = expenses.filter(x => x.salesmanId === entity.id).map(x => ({ date: x.date, ref: x.description || 'EXPENSE', desc: `Paid for ${x.partyName || x.description || '--'}`, debit: 0, credit: Number(x.amount), rawDate: new Date(x.date) }));
             [...c, ...e].sort((a,b) => a.rawDate - b.rawDate).forEach(r => { balance = balance + r.debit - r.credit; rows.push({ ...r, balance }); });
         } else {
-            entityTypeTitle = 'Performance';
-            balance = 0;
+            entityTypeTitle = 'Performance'; balance = 0;
             const s = sales.filter(x => x.salesmanId === entity.id).map(x => ({ date: x.date, ref: x.invoiceNo, desc: `Sale (${x.customerName})`, debit: Number(x.grandTotal), credit: 0, rawDate: new Date(x.date) }));
             const c = collections.filter(x => x.salesmanId === entity.id).map(x => ({ date: x.date, ref: x.ref || 'PAYMENT', desc: `Collection (${x.customerName})`, debit: 0, credit: Number(x.amount), rawDate: new Date(x.date) }));
             [...s, ...c].sort((a,b) => a.rawDate - b.rawDate).forEach(r => { balance = balance + r.debit - r.credit; rows.push({ ...r, balance }); });
         }
     }
-
     setModalState({ isOpen: true, type: 'ledger', data: { entity, entityType: entityTypeTitle, rows } });
   };
 
-  const handleStatusChange = (id, field, value, collectionName = 'crms') => {
-    requestAdminAuth(async () => {
-        if(!user) return;
-        try {
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionName, id), { [field]: value });
-        } catch(e) { console.error("Error updating status", e); }
-    });
-  };
+  const handleStatusChange = (id, field, value, collectionName = 'crms') => { requestAdminAuth(async () => { if(!user) return; try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionName, id), { [field]: value }); } catch(e) { console.error("Error updating status", e); } }); };
 
   const handleSave = async (e) => {
-    e.preventDefault();
-    if (!user || isSubmitting) return;
-    const { type, data } = modalState;
-    const isEdit = !!data?.id;
-
+    e.preventDefault(); if (!user || isSubmitting) return; const { type, data } = modalState; const isEdit = !!data?.id;
     if (type === 'customer' || type === 'supplier') {
-        const listToCheck = type === 'customer' ? customers : suppliers;
-        const inputName = String(formData.name || '').trim().toLowerCase();
-        const duplicate = listToCheck.find(item => String(item.name || '').trim().toLowerCase() === inputName && item.id !== data?.id);
-        
-        if (duplicate) {
-            setFormError(`A ${type} with this name already exists. Please edit the existing one to avoid duplicates.`);
-            return;
-        }
+        const listToCheck = type === 'customer' ? customers : suppliers; const inputName = String(formData.name || '').trim().toLowerCase();
+        if (listToCheck.find(item => String(item.name || '').trim().toLowerCase() === inputName && item.id !== data?.id)) { setFormError(`A ${type} with this name already exists. Please edit the existing one to avoid duplicates.`); return; }
     }
-
-    setIsSubmitting(true);
-    setFormError('');
-
+    setIsSubmitting(true); setFormError('');
     const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms', 'estimatorItem': 'estimator_items', 'quotation': 'quotations' };
-    const colName = colMap[type];
-    const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
-    
-    let payload = cleanObject({ ...formData });
+    const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', colMap[type]); let payload = cleanObject({ ...formData });
 
     try {
       if (['sale', 'purchase', 'crm', 'quotation'].includes(type)) {
         const subTotal = invoiceItems.reduce((acc, item) => acc + (Number(item.qty) * Number(item.rate)), 0);
         const taxTotal = invoiceItems.reduce((acc, item) => acc + ((Number(item.qty) * Number(item.rate) * Number(item.tax)) / 100), 0);
         const discount = Number(payload.discount) || 0;
-        const grandTotal = subTotal + taxTotal - discount;
+        payload = cleanObject({ ...payload, items: invoiceItems, subTotal, taxTotal, grandTotal: subTotal + taxTotal - discount, date: payload.date || new Date().toISOString().split('T')[0] });
 
-        payload = cleanObject({
-          ...payload, items: invoiceItems, subTotal, taxTotal, grandTotal,
-          date: payload.date || new Date().toISOString().split('T')[0],
-        });
-
-        if (!isEdit && (type === 'sale' || type === 'purchase')) {
-          payload.invoiceNo = generateID(type === 'sale' ? 'INV' : 'PUR', type === 'sale' ? sales.length : purchases.length);
-        }
-        
-        if (!isEdit && type === 'crm') {
-            payload.jobId = generateID('JB', crms.length);
-            payload.workStatus = 'Work Onboarded';
-            payload.invoicingStatus = 'Not invoiced';
-            payload.collectionStatus = 'Pending';
-        }
-
-        if (!isEdit && type === 'quotation') {
-            payload.quotationNo = generateID('QTE', quotations.length);
-            payload.status = 'Draft';
-        }
+        if (!isEdit && (type === 'sale' || type === 'purchase')) payload.invoiceNo = generateID(type === 'sale' ? 'INV' : 'PUR', type === 'sale' ? sales.length : purchases.length);
+        if (!isEdit && type === 'crm') { payload.jobId = generateID('JB', crms.length); payload.workStatus = 'Work Onboarded'; payload.invoicingStatus = 'Not invoiced'; payload.collectionStatus = 'Pending'; }
+        if (!isEdit && type === 'quotation') { payload.quotationNo = generateID('QTE', quotations.length); payload.status = 'Draft'; }
 
         if (type === 'sale' || type === 'purchase') {
             const batch = writeBatch(db);
-            invoiceItems.forEach(item => {
-              if (item.productId) {
-                const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', item.productId);
-                const qtyChange = type === 'sale' ? -Number(item.qty) : Number(item.qty);
-                batch.update(prodRef, { stock: increment(qtyChange) });
-              }
-            });
-            const docRef = isEdit ? doc(collectionRef, data.id) : doc(collectionRef);
-            batch.set(docRef, { ...payload, createdAt: isEdit ? data.createdAt : serverTimestamp() }, { merge: true });
+            invoiceItems.forEach(item => { if (item.productId) { batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'products', item.productId), { stock: increment(type === 'sale' ? -Number(item.qty) : Number(item.qty)) }); } });
+            batch.set(isEdit ? doc(collectionRef, data.id) : doc(collectionRef), { ...payload, createdAt: isEdit ? data.createdAt : serverTimestamp() }, { merge: true });
             await batch.commit();
         } else {
-            if (isEdit) { await updateDoc(doc(collectionRef, data.id), payload); } 
-            else { await addDoc(collectionRef, { ...payload, createdAt: serverTimestamp() }); }
+            if (isEdit) { await updateDoc(doc(collectionRef, data.id), payload); } else { await addDoc(collectionRef, { ...payload, createdAt: serverTimestamp() }); }
         }
-
       } else {
-        if (isEdit) { await updateDoc(doc(collectionRef, data.id), payload); } 
-        else { await addDoc(collectionRef, { ...payload, createdAt: serverTimestamp() }); }
+        if (isEdit) { await updateDoc(doc(collectionRef, data.id), payload); } else { await addDoc(collectionRef, { ...payload, createdAt: serverTimestamp() }); }
       }
       closeModal();
-    } catch (error) { 
-        console.error("Save error:", error); 
-        setFormError("Failed to save. Please try again.");
-    } finally {
-        setIsSubmitting(false);
-    }
+    } catch (error) { console.error("Save error:", error); setFormError("Failed to save. Please try again."); } finally { setIsSubmitting(false); }
   };
 
-  const handleSettingsSave = (e) => {
-    e.preventDefault();
-    requestAdminAuth(async () => {
-        if (!user) return;
-        try {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'profile'), cleanObject(settings), { merge: true });
-            setSettingsSuccess(true);
-            setTimeout(() => setSettingsSuccess(false), 3000);
-        } catch (err) { console.error(err); }
-    });
-  };
-
-  const handleLogoUpload = (e) => {
-      const file = e.target.files[0];
-      if (file) {
-          const reader = new FileReader();
-          reader.onloadend = () => setSettings({ ...settings, logo: reader.result });
-          reader.readAsDataURL(file);
-      }
-  };
+  const handleSettingsSave = (e) => { e.preventDefault(); requestAdminAuth(async () => { if (!user) return; try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'profile'), cleanObject(settings), { merge: true }); setSettingsSuccess(true); setTimeout(() => setSettingsSuccess(false), 3000); } catch (err) { console.error(err); } }); };
+  const handleLogoUpload = (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => setSettings({ ...settings, logo: reader.result }); reader.readAsDataURL(file); } };
 
   const executeDelete = async () => {
     if (!confirmDelete.id || !confirmDelete.type || !user) return;
     try {
       const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms', 'estimatorItem': 'estimator_items', 'quotation': 'quotations' };
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', colMap[confirmDelete.type], confirmDelete.id));
-      setConfirmDelete({ isOpen: false, type: '', id: null, title: '' });
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', colMap[confirmDelete.type], confirmDelete.id)); setConfirmDelete({ isOpen: false, type: '', id: null, title: '' });
     } catch (e) { console.error("Delete Error", e); }
   };
 
   const handleItemChange = (index, field, value) => {
-    const newItems = [...invoiceItems];
-    newItems[index][field] = value;
-    if (field === 'productId') {
-      const prod = products.find(p => p.id === value);
-      if (prod) {
-        newItems[index].name = prod.name;
-        newItems[index].rate = (modalState.type === 'sale' || modalState.type === 'quotation') ? prod.sellingPrice : prod.purchasePrice;
-        newItems[index].tax = prod.tax || 0;
-      }
-    }
-    const qty = Number(newItems[index].qty) || 0;
-    const rate = Number(newItems[index].rate) || 0;
-    const tax = Number(newItems[index].tax) || 0;
-    newItems[index].total = (qty * rate) + ((qty * rate * tax) / 100);
-    setInvoiceItems(newItems);
+    const newItems = [...invoiceItems]; newItems[index][field] = value;
+    if (field === 'productId') { const prod = products.find(p => p.id === value); if (prod) { newItems[index].name = prod.name; newItems[index].rate = (modalState.type === 'sale' || modalState.type === 'quotation') ? prod.sellingPrice : prod.purchasePrice; newItems[index].tax = prod.tax || 0; } }
+    const qty = Number(newItems[index].qty) || 0; const rate = Number(newItems[index].rate) || 0; const tax = Number(newItems[index].tax) || 0;
+    newItems[index].total = (qty * rate) + ((qty * rate * tax) / 100); setInvoiceItems(newItems);
   };
 
-  const removeRow = (indexToRemove) => {
-    setInvoiceItems(invoiceItems.filter((_, index) => index !== indexToRemove));
-  };
-
-  const handleTierChange = (index, field, value) => {
-      const newTiers = [...(formData.tiers || [])];
-      newTiers[index][field] = Number(value) || 0;
-      setFormData({...formData, tiers: newTiers});
-  };
-  const addTier = () => {
-      setFormData({...formData, tiers: [...(formData.tiers || []), { minQty: 1, price: 0 }]});
-  };
-  const removeTier = (index) => {
-      const newTiers = [...(formData.tiers || [])];
-      newTiers.splice(index, 1);
-      setFormData({...formData, tiers: newTiers});
-  };
+  const removeRow = (indexToRemove) => { setInvoiceItems(invoiceItems.filter((_, index) => index !== indexToRemove)); };
+  const handleTierChange = (index, field, value) => { const newTiers = [...(formData.tiers || [])]; newTiers[index][field] = Number(value) || 0; setFormData({...formData, tiers: newTiers}); };
+  const addTier = () => { setFormData({...formData, tiers: [...(formData.tiers || []), { minQty: 1, price: 0 }]}); };
+  const removeTier = (index) => { const newTiers = [...(formData.tiers || [])]; newTiers.splice(index, 1); setFormData({...formData, tiers: newTiers}); };
 
   const calculateEstimateItemTotal = (itemDb, form) => {
     if(!itemDb) return { total: 0, specs: '' };
     const q = Number(form.qty) || 1;
-    
     if(itemDb.calcType === 'Standard_Matrix') {
-        const mThick = form.matrixThick;
-        if (!mThick) return { total: 0, specs: 'Please Select Thickness' };
-
+        const mThick = form.matrixThick; if (!mThick) return { total: 0, specs: 'Please Select Thickness' };
         if (form.isCustomMatrix) {
-            const w = Number(form.width) || 0;
-            const h = Number(form.height) || 0;
+            const w = Number(form.width) || 0; const h = Number(form.height) || 0;
             if (w === 0 || h === 0) return { total: 0, specs: 'Enter Dimensions' };
-            const customArea = w * h; 
-            
-            let lower = MATRIX_AREAS[0];
-            let upper = MATRIX_AREAS[MATRIX_AREAS.length - 1];
-            let unitPrice = 0;
-
-            if (customArea <= lower.area) {
-                unitPrice = (customArea / lower.area) * STANDARD_MATRIX[lower.label][mThick];
-            } else if (customArea >= upper.area) {
-                unitPrice = (customArea / upper.area) * STANDARD_MATRIX[upper.label][mThick];
-            } else {
-                for (let i = 0; i < MATRIX_AREAS.length - 1; i++) {
-                    if (customArea >= MATRIX_AREAS[i].area && customArea <= MATRIX_AREAS[i+1].area) {
-                        lower = MATRIX_AREAS[i];
-                        upper = MATRIX_AREAS[i+1];
-                        break;
-                    }
-                }
-                const priceLow = STANDARD_MATRIX[lower.label][mThick];
-                const priceHigh = STANDARD_MATRIX[upper.label][mThick];
+            const customArea = w * h; let lower = MATRIX_AREAS[0]; let upper = MATRIX_AREAS[MATRIX_AREAS.length - 1]; let unitPrice = 0;
+            if (customArea <= lower.area) { unitPrice = (customArea / lower.area) * STANDARD_MATRIX[lower.label][mThick]; } 
+            else if (customArea >= upper.area) { unitPrice = (customArea / upper.area) * STANDARD_MATRIX[upper.label][mThick]; } 
+            else {
+                for (let i = 0; i < MATRIX_AREAS.length - 1; i++) { if (customArea >= MATRIX_AREAS[i].area && customArea <= MATRIX_AREAS[i+1].area) { lower = MATRIX_AREAS[i]; upper = MATRIX_AREAS[i+1]; break; } }
+                const priceLow = STANDARD_MATRIX[lower.label][mThick]; const priceHigh = STANDARD_MATRIX[upper.label][mThick];
                 unitPrice = priceLow + ((customArea - lower.area) / (upper.area - lower.area)) * (priceHigh - priceLow);
             }
-
             return { total: unitPrice * q, specs: `Custom Size ${w}x${h}cm (${mThick}mm)` };
-
         } else {
             const mSize = form.matrixSize;
-            if(STANDARD_MATRIX[mSize] && STANDARD_MATRIX[mSize][mThick]) {
-                 const price = STANDARD_MATRIX[mSize][mThick];
-                 return { total: price * q, specs: `Standard ${mSize} (${mThick}mm)` };
-            }
+            if(STANDARD_MATRIX[mSize] && STANDARD_MATRIX[mSize][mThick]) { return { total: STANDARD_MATRIX[mSize][mThick] * q, specs: `Standard ${mSize} (${mThick}mm)` }; }
             return { total: 0, specs: 'Select Standard Size' };
         }
     }
-
-    if(itemDb.calcType === 'Fixed') {
-        const rate = Number(itemDb.rate) || 0;
-        return { total: rate * q, specs: `Fixed Unit` };
-    }
-
-    if(itemDb.calcType === 'Time') {
-        const rate = Number(itemDb.rate) || 0;
-        const mins = Number(form.minutes) || 0;
-        return { total: mins * rate * q, specs: `${mins} Mins` };
-    }
-
+    if(itemDb.calcType === 'Fixed') return { total: (Number(itemDb.rate) || 0) * q, specs: `Fixed Unit` };
+    if(itemDb.calcType === 'Time') return { total: (Number(form.minutes) || 0) * (Number(itemDb.rate) || 0) * q, specs: `${Number(form.minutes) || 0} Mins` };
     if(itemDb.calcType === 'Tiered') {
         let unitPrice = Number(itemDb.rate) || 0; 
-        if (itemDb.tiers && itemDb.tiers.length > 0) {
-            const sortedTiers = [...itemDb.tiers].sort((a,b) => b.minQty - a.minQty);
-            const matchedTier = sortedTiers.find(t => q >= t.minQty);
-            if (matchedTier) unitPrice = matchedTier.price;
-        }
+        if (itemDb.tiers && itemDb.tiers.length > 0) { const matchedTier = [...itemDb.tiers].sort((a,b) => b.minQty - a.minQty).find(t => q >= t.minQty); if (matchedTier) unitPrice = matchedTier.price; }
         return { total: unitPrice * q, specs: `Tier Rate Applied: ${formatCurrency(unitPrice)}/ea` };
     }
-    
-    const w = Number(form.width) || 0;
-    const h = Number(form.height) || 0;
-    const sqm = (w * h) / 10000;
-    
+    const w = Number(form.width) || 0; const h = Number(form.height) || 0; const sqm = (w * h) / 10000;
     if(itemDb.calcType === 'Area_Thickness' || itemDb.calcType === 'Sheet_Cut') {
-        const selectedThick = Number(form.thickness);
-        let materialRate = Number(itemDb.rate) || 0;
-        
+        const selectedThick = Number(form.thickness); let materialRate = Number(itemDb.rate) || 0;
         if (itemDb.thicknessTiers && itemDb.thicknessTiers.length > 0) {
              const matchedTier = itemDb.thicknessTiers.find(t => Number(t.thickness) === selectedThick);
-             if (matchedTier) {
-                 if (sqm < 0.25 && matchedTier.smallAreaPrice) {
-                     materialRate = Number(matchedTier.smallAreaPrice);
-                 } else {
-                     materialRate = Number(matchedTier.price);
-                 }
-             }
+             if (matchedTier) { materialRate = sqm < 0.25 && matchedTier.smallAreaPrice ? Number(matchedTier.smallAreaPrice) : Number(matchedTier.price); }
         }
-
         const matCost = sqm * materialRate;
-        
-        if (itemDb.calcType === 'Sheet_Cut') {
-            const timeRate = Number(itemDb.timeRate) || 0;
-            const timeCost = (Number(form.minutes) || 0) * timeRate;
-            const unitTotal = matCost + timeCost;
-            return { total: unitTotal * q, specs: `${w}x${h}cm (${sqm.toFixed(2)}sqm), ${selectedThick}mm, ${form.minutes || 0}mins` };
-        } else {
-            return { total: matCost * q, specs: `${w}x${h}cm (${sqm.toFixed(2)}sqm) x ${selectedThick}mm` };
-        }
+        if (itemDb.calcType === 'Sheet_Cut') { const unitTotal = matCost + ((Number(form.minutes) || 0) * (Number(itemDb.timeRate) || 0)); return { total: unitTotal * q, specs: `${w}x${h}cm (${sqm.toFixed(2)}sqm), ${selectedThick}mm, ${form.minutes || 0}mins` }; } 
+        else { return { total: matCost * q, specs: `${w}x${h}cm (${sqm.toFixed(2)}sqm) x ${selectedThick}mm` }; }
     }
-    
-    const rate = Number(itemDb.rate) || 0;
-    return { total: sqm * rate * q, specs: `${w}x${h}cm (${sqm.toFixed(2)}sqm)` };
+    return { total: sqm * (Number(itemDb.rate) || 0) * q, specs: `${w}x${h}cm (${sqm.toFixed(2)}sqm)` };
   };
 
   const selItemForCalc = useMemo(() => estimatorItems.find(i => i.id === calcForm.itemId), [estimatorItems, calcForm.itemId]);
   const autoResult = useMemo(() => calculateEstimateItemTotal(selItemForCalc, calcForm), [selItemForCalc, calcForm]);
-
-  useEffect(() => {
-      setManualEstimateTotal(autoResult.total > 0 ? autoResult.total : '');
-  }, [autoResult.total]);
+  useEffect(() => { setManualEstimateTotal(autoResult.total > 0 ? autoResult.total : ''); }, [autoResult.total]);
 
   const handleAddEstimateToCart = (e) => {
-      e.preventDefault();
-      if(!selItemForCalc) return;
-      
+      e.preventDefault(); if(!selItemForCalc) return;
       const finalPrice = manualEstimateTotal !== '' ? Number(manualEstimateTotal) : autoResult.total;
       if (finalPrice <= 0) return; 
-      
-      const cartItem = {
-          id: Date.now(),
-          category: selItemForCalc.category,
-          name: selItemForCalc.name,
-          desc: calcForm.desc,
-          specs: autoResult.specs,
-          qty: calcForm.qty,
-          rate: selItemForCalc.rate,
-          totalPrice: finalPrice
-      };
-      
-      setEstimateCart([...estimateCart, cartItem]);
+      setEstimateCart([...estimateCart, { id: Date.now(), category: selItemForCalc.category, name: selItemForCalc.name, desc: calcForm.desc, specs: autoResult.specs, qty: calcForm.qty, rate: selItemForCalc.rate, totalPrice: finalPrice }]);
       setCalcForm({ category: calcForm.category, itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1, matrixSize: '', matrixThick: '', isCustomMatrix: false });
       setManualEstimateTotal('');
   };
@@ -1078,25 +474,13 @@ const App = () => {
     return (
       <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen font-sans selection:bg-blue-500/30 flex items-center justify-center`}>
          <div className="bg-white dark:bg-[#1e293b] p-10 rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center max-w-sm w-full mx-4 animate-fade-in-up">
-             <div className="w-20 h-20 bg-blue-100 dark:bg-blue-500/10 rounded-full flex items-center justify-center mb-6 text-blue-600 dark:text-blue-500">
-                 <Lock size={32} />
-             </div>
+             <div className="w-20 h-20 bg-blue-100 dark:bg-blue-500/10 rounded-full flex items-center justify-center mb-6 text-blue-600 dark:text-blue-500"><Lock size={32} /></div>
              <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-widest mb-2 text-center">App Locked</h2>
              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-8 text-center">Enter Global PIN to access</p>
              <form onSubmit={handleAppUnlock} className="w-full">
-                 <input 
-                     type="password" 
-                     autoFocus
-                     required
-                     placeholder="• • • •" 
-                     className={`w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-2 font-black text-center text-2xl text-slate-900 dark:text-white tracking-[1em] mb-4 focus:outline-none transition-colors ${appPinError ? 'border-rose-500/50 focus:border-rose-500' : 'border-transparent dark:border-slate-800 focus:border-blue-500'}`}
-                     value={appPinInput}
-                     onChange={e => setAppPinInput(e.target.value)}
-                 />
+                 <input type="password" autoFocus required placeholder="• • • •" className={`w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-2 font-black text-center text-2xl text-slate-900 dark:text-white tracking-[1em] mb-4 focus:outline-none transition-colors ${appPinError ? 'border-rose-500/50 focus:border-rose-500' : 'border-transparent dark:border-slate-800 focus:border-blue-500'}`} value={appPinInput} onChange={e => setAppPinInput(e.target.value)} />
                  {appPinError && <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center mb-4">Incorrect PIN</p>}
-                 <button type="submit" className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 transition-all">
-                     Unlock ERP
-                 </button>
+                 <button type="submit" className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 transition-all">Unlock ERP</button>
              </form>
          </div>
       </div>
@@ -1108,10 +492,7 @@ const App = () => {
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse min-w-[800px]">
           <thead className="bg-slate-50/50 dark:bg-[#0f172a]/50 text-[10px] uppercase tracking-widest font-black text-slate-400 dark:text-slate-500 backdrop-blur-md">
-            <tr>
-              {headers.map((h, i) => <th key={`head-${i}`} className="px-6 py-5 border-b border-slate-100 dark:border-slate-800">{String(h)}</th>)}
-              <th className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 text-right no-print">Actions</th>
-            </tr>
+            <tr>{headers.map((h, i) => <th key={`head-${i}`} className="px-6 py-5 border-b border-slate-100 dark:border-slate-800">{String(h)}</th>)}<th className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 text-right no-print">Actions</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-sm font-bold text-slate-700 dark:text-slate-300">
             {tableData.length > 0 ? tableData.map(renderRow) : <tr><td colSpan={headers.length + 1} className="py-12 text-center text-slate-300 dark:text-slate-600 uppercase tracking-widest">No Records Found</td></tr>}
@@ -1135,25 +516,10 @@ const App = () => {
           </div>
         )}
 
-        <style>{`
-          .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-          .custom-scrollbar::-webkit-scrollbar-thumb { background: ${isDarkMode ? '#334155' : '#cbd5e1'}; border-radius: 10px; }
-          .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-          .recharts-cartesian-axis-tick-value { font-weight: bold; font-size: 10px; fill: ${isDarkMode ? '#94a3b8' : '#64748b'}; }
-        `}</style>
+        <style>{`.custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: ${isDarkMode ? '#334155' : '#cbd5e1'}; border-radius: 10px; } .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } .recharts-cartesian-axis-tick-value { font-weight: bold; font-size: 10px; fill: ${isDarkMode ? '#94a3b8' : '#64748b'}; }`}</style>
 
-        <aside 
-          onMouseEnter={() => setIsSidebarHovered(true)} onMouseLeave={() => setIsSidebarHovered(false)}
-          className={`fixed inset-y-0 left-0 bg-white dark:bg-[#1e293b] flex flex-col z-[100] transition-all duration-300 ease-in-out border-r border-slate-200 dark:border-slate-800 shadow-sm
-            ${isMobileMenuOpen ? 'translate-x-0 w-72 p-6' : '-translate-x-full lg:translate-x-0'}
-            ${collapsed ? 'lg:w-24 lg:p-4' : 'lg:w-72 lg:p-6'}
-          `}
-        >
-          <div className="mb-10 mt-2 flex justify-between items-center">
-            <CompanyLogo collapsed={collapsed} settings={settings} />
-            <button className="lg:hidden text-slate-400" onClick={() => setIsMobileMenuOpen(false)}><X size={24}/></button>
-          </div>
-          
+        <aside onMouseEnter={() => setIsSidebarHovered(true)} onMouseLeave={() => setIsSidebarHovered(false)} className={`fixed inset-y-0 left-0 bg-white dark:bg-[#1e293b] flex flex-col z-[100] transition-all duration-300 ease-in-out border-r border-slate-200 dark:border-slate-800 shadow-sm ${isMobileMenuOpen ? 'translate-x-0 w-72 p-6' : '-translate-x-full lg:translate-x-0'} ${collapsed ? 'lg:w-24 lg:p-4' : 'lg:w-72 lg:p-6'}`}>
+          <div className="mb-10 mt-2 flex justify-between items-center"><CompanyLogo collapsed={collapsed} settings={settings} /><button className="lg:hidden text-slate-400" onClick={() => setIsMobileMenuOpen(false)}><X size={24}/></button></div>
           <nav className="flex-1 space-y-2 overflow-y-auto custom-scrollbar pr-2">
             <p className={`text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 mt-6 ${collapsed ? 'text-center' : 'px-4'}`}>Core Operations</p>
             <NavItem id="dashboard" icon={LayoutDashboard} label="Dashboard" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
@@ -1161,26 +527,18 @@ const App = () => {
             <NavItem id="quotations" icon={FileSignature} label="Sales Quotations" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="sales" icon={Receipt} label="Sales Invoices" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="purchases" icon={ShoppingBag} label="Purchases" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
-            
             <p className={`text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 mt-8 ${collapsed ? 'text-center' : 'px-4'}`}>Finance Flow</p>
             <NavItem id="collections" icon={HandCoins} label="Collections" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="expenses" icon={CreditCard} label="Expenses" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="customer_aging" icon={BarChartHorizontal} label="Customer Aging" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="supplier_aging" icon={BarChartHorizontal} label="Supplier Aging" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
-            
             <p className={`text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 mt-8 ${collapsed ? 'text-center' : 'px-4'}`}>Entities</p>
             <NavItem id="customers" icon={Users} label="Customers" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="suppliers" icon={Truck} label="Suppliers" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="products" icon={Package} label="Inventory" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
             <NavItem id="salesmen" icon={Briefcase} label="Sales Team" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
-            
-            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-               <NavItem id="estimator" icon={Calculator} label="Price Estimator" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
-            </div>
-
-            <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
-               <NavItem id="settings" icon={Settings} label="Company Profile" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} />
-            </div>
+            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800"><NavItem id="estimator" icon={Calculator} label="Price Estimator" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} /></div>
+            <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800"><NavItem id="settings" icon={Settings} label="Company Profile" activeTab={activeTab} setActiveTab={setActiveTab} collapsed={collapsed} setMobileMenu={setIsMobileMenuOpen} /></div>
           </nav>
         </aside>
 
@@ -1189,14 +547,9 @@ const App = () => {
           <header className="h-20 bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 shrink-0 z-20 no-print">
             <div className="flex items-center space-x-4">
               <button className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl" onClick={() => setIsMobileMenuOpen(true)}><Menu size={24}/></button>
-              
               <div className="hidden sm:flex flex-col ml-2 lg:ml-0">
-                 <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none">
-                    {currentTabDetails.title}
-                 </h1>
-                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
-                    {currentTabDetails.desc}
-                 </p>
+                 <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none">{currentTabDetails.title}</h1>
+                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{currentTabDetails.desc}</p>
               </div>
             </div>
 
@@ -1205,33 +558,21 @@ const App = () => {
                 <Search size={18} className="text-slate-400 mr-2" />
                 <input type="text" placeholder="Global Entity Search..." className="bg-transparent border-none text-sm font-bold w-full focus:outline-none uppercase dark:text-white dark:placeholder-slate-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
+              <button onClick={toggleDarkMode} className="p-2 text-slate-400 hover:text-blue-500 dark:hover:text-cyan-400 transition-colors bg-slate-50 dark:bg-[#0f172a] rounded-full border border-slate-100 dark:border-slate-800"><Sun size={20} className="hidden dark:block"/><Moon size={20} className="block dark:hidden"/></button>
               
-              <button onClick={toggleDarkMode} className="p-2 text-slate-400 hover:text-blue-500 dark:hover:text-cyan-400 transition-colors bg-slate-50 dark:bg-[#0f172a] rounded-full border border-slate-100 dark:border-slate-800">
-                {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-              </button>
-
               <div className="relative" ref={notifRef}>
                   <button onClick={() => setIsNotifOpen(!isNotifOpen)} className="relative p-2 text-slate-400 hover:text-blue-500 transition-colors">
-                    <Bell size={22}/>
-                    {notifications.length > 0 && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-[#1e293b] animate-pulse"></span>}
+                    <Bell size={22}/>{notifications.length > 0 && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-[#1e293b] animate-pulse"></span>}
                   </button>
                   {isNotifOpen && (
                       <div className="absolute right-0 mt-4 w-80 bg-white dark:bg-[#1e293b] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 overflow-hidden animate-fade-in-up">
-                          <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center">
-                              <span className="font-black text-xs uppercase text-slate-800 dark:text-white">Notifications</span>
-                              <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 py-1 px-2 rounded-full text-[9px] font-bold">{notifications.length} New</span>
-                          </div>
+                          <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center"><span className="font-black text-xs uppercase text-slate-800 dark:text-white">Notifications</span><span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 py-1 px-2 rounded-full text-[9px] font-bold">{notifications.length} New</span></div>
                           <div className="max-h-80 overflow-y-auto custom-scrollbar">
-                              {notifications.length === 0 ? (
-                                 <div className="p-8 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">All Caught Up!</div>
-                              ) : (
+                              {notifications.length === 0 ? (<div className="p-8 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">All Caught Up!</div>) : (
                                  notifications.map((n, i) => (
                                      <div key={i} className="p-4 border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors flex gap-4">
                                          <div className={`mt-1 p-2 rounded-full h-fit shrink-0 ${n.type === 'warning' ? 'bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' : 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400'}`}><n.icon size={14}/></div>
-                                         <div>
-                                             <p className="text-xs font-black text-slate-800 dark:text-white uppercase">{n.title}</p>
-                                             <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase leading-relaxed">{n.desc}</p>
-                                         </div>
+                                         <div><p className="text-xs font-black text-slate-800 dark:text-white uppercase">{n.title}</p><p className="text-[10px] font-bold text-slate-500 mt-1 uppercase leading-relaxed">{n.desc}</p></div>
                                      </div>
                                  ))
                               )}
@@ -1239,42 +580,63 @@ const App = () => {
                       </div>
                   )}
               </div>
-
-              <button 
-                onClick={handleManualLock}
-                className="group relative h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/30 overflow-hidden transition-all hover:scale-95"
-                title="Lock Application"
-              >
-                 <span className="absolute transition-all duration-300 group-hover:scale-0 group-hover:opacity-0">
-                    {settings?.companyName ? settings.companyName.charAt(0).toUpperCase() : 'C'}
-                 </span>
-                 <Lock size={18} className="absolute scale-0 opacity-0 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
+              <button onClick={handleManualLock} className="group relative h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/30 overflow-hidden transition-all hover:scale-95" title="Lock Application">
+                 <span className="absolute transition-all duration-300 group-hover:scale-0 group-hover:opacity-0">{settings?.companyName ? settings.companyName.charAt(0).toUpperCase() : 'C'}</span><Lock size={18} className="absolute scale-0 opacity-0 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100" />
               </button>
             </div>
           </header>
 
           <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar relative flex flex-col">
-            
             {activeTab === 'dashboard' && (
               <div className="max-w-[100rem] mx-auto w-full space-y-8 animate-fade-in-up flex-1">
-                
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   <KPICard title="Total Sales" value={formatCurrency(analytics.totalSales)} icon={Receipt} colorClass="text-[#10b981]" bgClass="bg-[#ecfdf5] dark:bg-[#10b981]/10 border-[#a7f3d0] dark:border-[#10b981]/20" />
                   <KPICard title="Total Purchase" value={formatCurrency(analytics.totalPurchases)} icon={ShoppingBag} colorClass="text-[#3b82f6]" bgClass="bg-[#eff6ff] dark:bg-[#3b82f6]/10 border-[#bfdbfe] dark:border-[#3b82f6]/20" />
                   <KPICard title="Total Receipt" value={formatCurrency(analytics.totalCollections)} icon={HandCoins} colorClass="text-[#f59e0b]" bgClass="bg-[#fffbeb] dark:bg-[#f59e0b]/10 border-[#fde68a] dark:border-[#f59e0b]/20" />
                   <KPICard title="Total Payment" value={formatCurrency(analytics.totalExpenses)} icon={CreditCard} colorClass="text-[#f43f5e]" bgClass="bg-[#fff1f2] dark:bg-[#f43f5e]/10 border-[#fecdd3] dark:border-[#f43f5e]/20" />
                 </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <button onClick={() => openModal('product')} className="py-4 border-2 border-[#10b981] text-[#10b981] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#10b981] hover:text-white transition-all flex items-center justify-center bg-white dark:bg-[#1e293b]"><Package size={16} className="mr-2"/> Create Product</button>
+                  <button onClick={() => setActiveTab('products')} className="py-4 border-2 border-[#10b981] text-[#10b981] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#10b981] hover:text-white transition-all flex items-center justify-center bg-white dark:bg-[#1e293b]"><Activity size={16} className="mr-2"/> Update Rates</button>
+                  <button onClick={() => openModal('customer')} className="py-4 border-2 border-[#10b981] text-[#10b981] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#10b981] hover:text-white transition-all flex items-center justify-center bg-white dark:bg-[#1e293b]"><Users size={16} className="mr-2"/> Create Customer</button>
+                  <button onClick={() => openModal('supplier')} className="py-4 border-2 border-[#10b981] text-[#10b981] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#10b981] hover:text-white transition-all flex items-center justify-center bg-white dark:bg-[#1e293b]"><Truck size={16} className="mr-2"/> Create Supplier</button>
+                </div>
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
+                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Outstanding Payable</h3>
+                    <div className="w-full h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={agingPayables} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} angle={-60} textAnchor="end" />
+                          <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
+                          <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}}/>
+                          <Bar dataKey="amount" radius={[4,4,0,0]}>{agingPayables.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}</Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
+                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Outstanding Receivables</h3>
+                    <div className="w-full h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={agingReceivables} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} angle={-60} textAnchor="end" />
+                          <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
+                          <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}}/>
+                          <Bar dataKey="amount" radius={[4,4,0,0]}>{agingReceivables.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}</Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
 
-// =========================================================================
-// PART 1 ENDS HERE. PLEASE REPLY "NEXT" OR ANY MESSAGE TO GET PART 2.
-// (I have carefully split the code here so nothing is cut off or lost.)
-// =========================================================================
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
                     <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Sales Analysis</h3>
-                    <div className="flex items-center space-x-2 mb-4">
-                      <div className="w-8 h-4 bg-[#10b981] rounded-sm"></div><span className="text-xs font-bold dark:text-slate-300">Sales Amount</span>
-                    </div>
+                    <div className="flex items-center space-x-2 mb-4"><div className="w-8 h-4 bg-[#10b981] rounded-sm"></div><span className="text-xs font-bold dark:text-slate-300">Sales Amount</span></div>
                     <div className="w-full h-72">
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={monthlyTrends} margin={{ top: 10, right: 10, left: -10, bottom: 40 }}>
@@ -1290,9 +652,7 @@ const App = () => {
 
                   <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
                     <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Purchase Analysis</h3>
-                    <div className="flex items-center space-x-2 mb-4">
-                      <div className="w-8 h-4 bg-[#991b1b] rounded-sm"></div><span className="text-xs font-bold dark:text-slate-300">Purchase Amount</span>
-                    </div>
+                    <div className="flex items-center space-x-2 mb-4"><div className="w-8 h-4 bg-[#991b1b] rounded-sm"></div><span className="text-xs font-bold dark:text-slate-300">Purchase Amount</span></div>
                     <div className="w-full h-72">
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={monthlyTrends} margin={{ top: 10, right: 10, left: -10, bottom: 40 }}>
@@ -1310,9 +670,7 @@ const App = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
                     <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Top Selling Customers</h3>
-                    <div className="flex items-center space-x-2 mb-4">
-                      <div className="w-8 h-4 bg-[#2dd4bf] rounded-sm"></div><span className="text-xs font-bold dark:text-slate-300">Top Selling Customers</span>
-                    </div>
+                    <div className="flex items-center space-x-2 mb-4"><div className="w-8 h-4 bg-[#2dd4bf] rounded-sm"></div><span className="text-xs font-bold dark:text-slate-300">Top Selling Customers</span></div>
                     <div className="w-full h-72">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart layout="vertical" data={topCustomersData} margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
@@ -1328,9 +686,7 @@ const App = () => {
 
                   <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
                     <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Top Suppliers</h3>
-                    <div className="flex items-center space-x-2 mb-4">
-                      <div className="w-8 h-4 bg-[#2dd4bf] rounded-sm"></div><span className="text-xs font-bold dark:text-slate-300">Amount</span>
-                    </div>
+                    <div className="flex items-center space-x-2 mb-4"><div className="w-8 h-4 bg-[#2dd4bf] rounded-sm"></div><span className="text-xs font-bold dark:text-slate-300">Amount</span></div>
                     <div className="w-full h-72">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart layout="vertical" data={topSuppliersData} margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
@@ -1378,6 +734,221 @@ const App = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* --- PRICE ESTIMATOR VIEW --- */}
+            {activeTab === 'estimator' && (
+              <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1">
+                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+                  <div className="flex space-x-3">
+                     <button onClick={() => requestAdminAuth(() => setShowEstimatorDB(!showEstimatorDB))} className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center transition-colors border ${showEstimatorDB ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800/50' : 'bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/80'}`}>
+                        <Database size={16} className="mr-2"/> {showEstimatorDB ? 'Close Database' : 'Manage Items Database'}
+                     </button>
+                  </div>
+                  <div className="flex space-x-3">
+                      {estimateCart.length > 0 && (
+                          <>
+                             <button onClick={() => setEstimatorPushModal({isOpen: true, type: 'quotation', customerId: ''})} className="px-6 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center"><FileSignature size={14} className="mr-2"/> Push to Quotation</button>
+                             <button onClick={() => setEstimatorPushModal({isOpen: true, type: 'crm', customerId: ''})} className="px-6 py-3 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors flex items-center"><SendToBack size={14} className="mr-2"/> Push to CRM</button>
+                             <button onClick={() => setEstimatorPushModal({isOpen: true, type: 'invoice', customerId: ''})} className="px-6 py-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors flex items-center"><ArrowRightCircle size={14} className="mr-2"/> Push to Invoice</button>
+                             <div className="w-px h-8 bg-slate-200 dark:bg-slate-700 mx-2"></div>
+                             <button onClick={() => setEstimateCart([])} className="px-6 py-3 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-colors">Clear All</button>
+                             <button onClick={() => setPrintDoc({ isOpen: true, type: 'estimate', data: { items: estimateCart, grandTotal: estimateCart.reduce((a,b)=>a+b.totalPrice, 0), date: new Date().toISOString().split('T')[0] } })} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Printer size={16} className="mr-2"/> Print Estimate</button>
+                          </>
+                      )}
+                  </div>
+                </div>
+
+                {showEstimatorDB ? (
+                    <div className="space-y-6 animate-fade-in-up">
+                        <div className="flex justify-between items-center bg-indigo-50 dark:bg-indigo-900/10 p-6 rounded-[2rem] border border-indigo-100 dark:border-indigo-800/30">
+                            <div>
+                                <h3 className="text-lg font-black text-indigo-900 dark:text-indigo-400 uppercase tracking-tight">Estimator Database</h3>
+                                <p className="text-xs font-bold text-indigo-500/70 uppercase tracking-widest mt-1">Add base rates and calculation formulas</p>
+                            </div>
+                            <button onClick={() => openModal('estimatorItem')} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-500/30 hover:scale-95 transition-all flex items-center"><Plus size={16} className="mr-2"/> Add New Item</button>
+                        </div>
+                        {renderTable(
+                            ['Category', 'Item Name', 'Calculation Method', 'Base Rate'],
+                            estimatorItems.filter(i => safeSearch(i.name, searchTerm) || safeSearch(i.category, searchTerm)),
+                            'estimatorItem',
+                            (item) => (
+                                <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                                    <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">{String(item.category || '')}</td>
+                                    <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.name || '')}</td>
+                                    <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">
+                                        <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
+                                            {item.calcType === 'Standard_Matrix' ? 'Standard Size Matrix' : String(item.calcType || 'Area')}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 font-black text-blue-600 dark:text-blue-400 tracking-wider">
+                                        {item.calcType === 'Standard_Matrix' ? <span className="text-indigo-500 text-[10px] uppercase">Auto Chart</span> :
+                                         item.calcType === 'Tiered' ? 'Tiered Pricing' : 
+                                         (item.calcType === 'Area_Thickness' || item.calcType === 'Sheet_Cut') && item.thicknessTiers?.length > 0 ? 'Thickness Based' : 
+                                         formatCurrency(item.rate)}
+                                    </td>
+                                    <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
+                                        <button onClick={() => openModal('estimatorItem', item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg"><Edit3 size={16}/></button>
+                                        <button onClick={() => triggerDelete('estimatorItem', item.id, String(item.name))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
+                                    </td>
+                                </tr>
+                            )
+                        )}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-fade-in-up">
+                        <div className="lg:col-span-5 bg-white dark:bg-[#1e293b] p-8 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-slate-800 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-8 opacity-5 dark:opacity-10 pointer-events-none"><Calculator size={120} /></div>
+                            <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight mb-6">Price Estimator</h3>
+                            
+                            <form onSubmit={handleAddEstimateToCart} className="space-y-5 relative z-10">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Select Category *</label>
+                                    <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={calcForm.category} onChange={(e) => setCalcForm({...calcForm, category: e.target.value, itemId: ''})}>
+                                        <option value="">Choose Category...</option>
+                                        {[...new Set(estimatorItems.map(i => i.category))].map(cat => ( <option key={cat} value={cat}>{String(cat)}</option> ))}
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Select Item Type *</label>
+                                    <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={calcForm.itemId} onChange={(e) => setCalcForm({...calcForm, itemId: e.target.value})} disabled={!calcForm.category}>
+                                        <option value="">Choose Item...</option>
+                                        {estimatorItems.filter(i => i.category === calcForm.category).map(item => ( <option key={item.id} value={item.id}>{String(item.name)} {item.calcType !== 'Tiered' && item.calcType !== 'Standard_Matrix' && (!item.thicknessTiers || item.thicknessTiers.length === 0) && `(SAR ${item.rate})`}</option> ))}
+                                    </select>
+                                </div>
+
+                                {(() => {
+                                    const selItem = estimatorItems.find(i => i.id === calcForm.itemId);
+                                    if(!selItem) return null;
+
+                                    return (
+                                        <div className="space-y-5 pt-2">
+                                            {selItem.calcType === 'Standard_Matrix' && (
+                                                <div className="bg-indigo-50 dark:bg-indigo-900/10 p-6 rounded-2xl border border-indigo-100 dark:border-indigo-800/30">
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <label className="text-[10px] font-black uppercase text-indigo-800 dark:text-indigo-400 tracking-widest flex items-center"><Table size={14} className="mr-2"/> Matrix Chart Sizing</label>
+                                                        <label className="flex items-center cursor-pointer space-x-2">
+                                                            <input type="checkbox" className="w-4 h-4 text-indigo-600 rounded bg-white dark:bg-slate-800 border-indigo-300 focus:ring-indigo-500" checked={calcForm.isCustomMatrix || false} onChange={(e) => setCalcForm({...calcForm, isCustomMatrix: e.target.checked, matrixSize: '', width: '', height: ''})} />
+                                                            <span className="text-[9px] font-bold uppercase text-slate-500">Use Custom Dimensions</span>
+                                                        </label>
+                                                    </div>
+
+                                                    <div className="space-y-4">
+                                                        {calcForm.isCustomMatrix ? (
+                                                            <div className="grid grid-cols-2 gap-4 animate-fade-in-up">
+                                                                <div className="space-y-1"><label className="text-[9px] font-bold uppercase text-slate-500">Width (CM) *</label><input type="number" required placeholder="0" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-indigo-100 dark:border-indigo-800/50 font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-indigo-500/20 shadow-sm" value={calcForm.width} onChange={e => setCalcForm({...calcForm, width: e.target.value})} /></div>
+                                                                <div className="space-y-1"><label className="text-[9px] font-bold uppercase text-slate-500">Height (CM) *</label><input type="number" required placeholder="0" className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-indigo-100 dark:border-indigo-800/50 font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-indigo-500/20 shadow-sm" value={calcForm.height} onChange={e => setCalcForm({...calcForm, height: e.target.value})} /></div>
+                                                                <p className="col-span-2 text-[9px] font-bold text-indigo-400 text-center leading-tight">Prices are proportionally calculated based on standard chart limits.</p>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="space-y-1">
+                                                                <label className="text-[9px] font-bold uppercase text-slate-500">Select Standard Size *</label>
+                                                                <select required className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-indigo-100 dark:border-indigo-800/50 font-black text-slate-900 dark:text-white uppercase focus:ring-2 ring-indigo-500/20 shadow-sm" value={calcForm.matrixSize} onChange={e => setCalcForm({...calcForm, matrixSize: e.target.value})}>
+                                                                    <option value="">Select Size...</option>
+                                                                    {Object.keys(STANDARD_MATRIX).map(s => <option key={s} value={s}>{s}</option>)}
+                                                                </select>
+                                                            </div>
+                                                        )}
+                                                        <div className="space-y-1 pt-2 border-t border-indigo-100 dark:border-indigo-800/30">
+                                                            <label className="text-[9px] font-bold uppercase text-slate-500">Select Thickness (mm) *</label>
+                                                            <div className="flex gap-2 flex-wrap">
+                                                                {[3, 4, 5, 6, 8, 10].map(t => (
+                                                                    <button type="button" key={t} onClick={() => setCalcForm({...calcForm, matrixThick: String(t)})} className={`flex-1 py-2 px-3 rounded-lg font-black text-xs transition-all border ${calcForm.matrixThick === String(t) ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/30 scale-105' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'}`}>{t}</button>
+                                                                ))}
+                                                            </div>
+                                                            <input type="text" className="h-0 w-0 opacity-0 p-0 m-0 absolute -z-10" required value={calcForm.matrixThick || ''} onChange={()=>{}} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {selItem.calcType === 'Tiered' && (
+                                                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl flex gap-3 text-indigo-800 dark:text-indigo-300 mb-4">
+                                                    <Info size={18} className="shrink-0"/><div className="text-xs"><p className="font-black uppercase tracking-widest mb-1">Tiered Pricing Active</p><p className="font-bold opacity-80">The unit price will automatically decrease based on the quantity you enter.</p></div>
+                                                </div>
+                                            )}
+
+                                            {(selItem.calcType === 'Area' || selItem.calcType === 'Area_Thickness' || selItem.calcType === 'Sheet_Cut') && (
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Width (CM) *</label><input type="number" required placeholder="0" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.width} onChange={e => setCalcForm({...calcForm, width: e.target.value})} /></div>
+                                                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Height (CM) *</label><input type="number" required placeholder="0" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.height} onChange={e => setCalcForm({...calcForm, height: e.target.value})} /></div>
+                                                </div>
+                                            )}
+
+                                            {(selItem.calcType === 'Area_Thickness' || selItem.calcType === 'Sheet_Cut') && (
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Thickness (MM) *</label>
+                                                    {selItem.thicknessTiers && selItem.thicknessTiers.length > 0 ? (
+                                                        <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.thickness} onChange={e => setCalcForm({...calcForm, thickness: e.target.value})}>
+                                                            <option value="">Select Thickness...</option>
+                                                            {selItem.thicknessTiers.map(t => ( <option key={t.thickness} value={t.thickness}>{t.thickness} mm (Reg: SAR {t.price} | {"<"}0.25sqm: SAR {t.smallAreaPrice || t.price})</option> ))}
+                                                        </select>
+                                                    ) : ( <input type="number" required placeholder="e.g., 3" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.thickness} onChange={e => setCalcForm({...calcForm, thickness: e.target.value})} /> )}
+                                                </div>
+                                            )}
+
+                                            {(selItem.calcType === 'Time' || selItem.calcType === 'Sheet_Cut') && (
+                                                <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Minutes Required *</label><input type="number" required placeholder="e.g., 15" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.minutes} onChange={e => setCalcForm({...calcForm, minutes: e.target.value})} /></div>
+                                            )}
+
+                                            <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Quantity *</label><input type="number" min="1" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-slate-900 dark:text-white text-center focus:ring-2 ring-blue-500/20" value={calcForm.qty} onChange={e => setCalcForm({...calcForm, qty: e.target.value})} /></div>
+                                            <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Remarks / Description</label><textarea rows="3" placeholder="Add custom notes (multi-line)..." className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-xs text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20 resize-y whitespace-pre-wrap" value={calcForm.desc} onChange={e => setCalcForm({...calcForm, desc: e.target.value})} /></div>
+
+                                            <div className="mt-8 pt-6 border-t-2 border-dashed border-slate-200 dark:border-slate-700">
+                                                <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-2 block">Line Estimate (SAR) - Editable</label>
+                                                <div className="p-2 bg-slate-900 dark:bg-black rounded-2xl flex justify-between items-center shadow-inner focus-within:ring-2 ring-emerald-500/50 transition-all">
+                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Total Amount</span>
+                                                    <input type="number" step="any" required className="w-32 md:w-48 p-2 bg-transparent border-none font-black text-emerald-400 text-2xl text-right focus:outline-none" value={manualEstimateTotal} onChange={e => setManualEstimateTotal(e.target.value)} />
+                                                </div>
+                                            </div>
+
+                                            <button type="submit" className="w-full py-4 mt-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/30 hover:scale-95 transition-all">Add to Estimate List</button>
+                                        </div>
+                                    );
+                                })()}
+                            </form>
+                        </div>
+
+                        <div className="lg:col-span-7 bg-white dark:bg-[#1e293b] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col min-h-[500px]">
+                            <div className="p-6 bg-slate-50/50 dark:bg-[#0f172a]/50 border-b border-slate-100 dark:border-slate-800 flex items-center">
+                                <ShoppingCart size={20} className="text-slate-400 mr-3"/><h3 className="font-black text-slate-800 dark:text-white uppercase tracking-tight">Estimate Preview</h3>
+                            </div>
+                            
+                            <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
+                                {estimateCart.length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 space-y-4 py-20">
+                                        <ClipboardList size={48} className="opacity-50"/><p className="text-xs font-black uppercase tracking-widest">No items added yet</p>
+                                    </div>
+                                ) : (
+                                    <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                                        {estimateCart.map((item, idx) => (
+                                            <div key={item.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group flex items-start justify-between">
+                                                <div className="flex-1 pr-4">
+                                                    <div className="flex items-center space-x-2 mb-1"><span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-[8px] font-black uppercase tracking-widest">{idx + 1}. {item.category}</span></div>
+                                                    <h4 className="font-black text-sm text-slate-800 dark:text-white uppercase">{item.name}</h4>
+                                                    {item.desc && <p className="text-xs font-bold text-slate-500 mt-0.5 whitespace-pre-wrap uppercase">{item.desc}</p>}
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Specs: {item.specs} | Qty: <span className="text-slate-700 dark:text-slate-300">{item.qty}</span></p>
+                                                </div>
+                                                <div className="text-right flex flex-col items-end">
+                                                    <span className="font-black text-lg text-slate-900 dark:text-slate-100">{formatCurrency(item.totalPrice)}</span>
+                                                    {item.rate && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Base Rate: SAR {item.rate}</span>}
+                                                    <button onClick={() => setEstimateCart(estimateCart.filter(i => i.id !== item.id))} className="mt-2 p-1.5 text-rose-500 opacity-0 group-hover:opacity-100 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all" title="Remove Item"><Trash2 size={14}/></button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="p-6 bg-slate-900 dark:bg-black text-white flex justify-between items-center mt-auto">
+                                <span className="text-xs font-black uppercase tracking-widest text-slate-400">Grand Total Estimate</span>
+                                <span className="text-3xl font-black text-emerald-400">{formatCurrency(estimateCart.reduce((a,b)=>a+b.totalPrice, 0))}</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
               </div>
             )}
 
@@ -1557,8 +1128,19 @@ const App = () => {
                     const relatedExps = activeTab === 'purchases' ? expenses.filter(e => (e.description === item.invoiceNo || e.ref === item.invoiceNo)).reduce((a,b)=>a+Number(b.amount),0) : 0;
                     const relatedColls = activeTab === 'sales' ? collections.filter(c => c.ref === item.invoiceNo).reduce((a,b)=>a+Number(b.amount),0) : 0;
                     const paidAmount = activeTab === 'sales' ? relatedColls : relatedExps;
-                    const pendingAmount = Number(item.grandTotal) - paidAmount;
-                    const status = pendingAmount <= 0 ? 'Paid' : (paidAmount > 0 ? 'Partial' : 'Unpaid');
+                    const grandTotalNum = Number(item.grandTotal) || 0;
+                    const pendingAmount = grandTotalNum - paidAmount;
+                    
+                    // ACCURATE PAYMENT STATUS CALCULATION
+                    let status = 'Unpaid';
+                    if (grandTotalNum > 0 && paidAmount >= grandTotalNum) {
+                      status = 'Paid';
+                    } else if (paidAmount > 0 && paidAmount < grandTotalNum) {
+                      status = 'Partial';
+                    } else {
+                      status = 'Unpaid';
+                    }
+
                     return (
                     <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                       <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">{String(item.date || '')}</td>
@@ -1606,8 +1188,70 @@ const App = () => {
               </div>
             )}
 
-            {/* --- CUSTOMERS AND SUPPLIERS VIEW --- */}
-            {activeTab === 'customers' || activeTab === 'suppliers' ? (
+            {/* --- AGING REPORTS VIEW --- */}
+            {(activeTab === 'customer_aging' || activeTab === 'supplier_aging') && (
+              <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
+                <div className="bg-white dark:bg-[#1e293b] p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+                  <div className="flex justify-between items-center mb-6 border-b border-slate-100 dark:border-slate-700/50 pb-4">
+                    <h2 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-widest">
+                      {activeTab === 'customer_aging' ? 'Customer Aging Details' : 'Supplier Aging Details'}
+                    </h2>
+                    <button 
+                      onClick={() => activeTab === 'customer_aging' ? setShowOnlyDueSales(!showOnlyDueSales) : setShowOnlyDuePurchases(!showOnlyDuePurchases)}
+                      className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center transition-all ${
+                        (activeTab === 'customer_aging' ? showOnlyDueSales : showOnlyDuePurchases) 
+                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' 
+                          : 'bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      <Filter size={14} className="mr-2" />
+                      Show Only Due
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto custom-scrollbar">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-100 dark:border-slate-800">
+                          <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">Entity Name</th>
+                          <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">0-30 Days</th>
+                          <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">31-60 Days</th>
+                          <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">61-90 Days</th>
+                          <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">90+ Days</th>
+                          <th className="py-4 px-4 text-xs font-black text-blue-500 uppercase tracking-widest text-right">Total Due</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                        {(() => {
+                          let reportData = buildAgingReport(activeTab === 'customer_aging' ? 'customer' : 'supplier');
+                          const isOnlyDue = activeTab === 'customer_aging' ? showOnlyDueSales : showOnlyDuePurchases;
+                          if (isOnlyDue) { reportData = reportData.filter(item => item.totalDue > 0); }
+
+                          if (reportData.length === 0) {
+                            return (
+                              <tr><td colSpan="6" className="py-12 text-center text-slate-300 dark:text-slate-600 uppercase tracking-widest">No aging records found.</td></tr>
+                            );
+                          }
+
+                          return reportData.map((item, index) => (
+                            <tr key={index} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
+                              <td className="py-4 px-4 font-black uppercase text-slate-800 dark:text-white">{item.name || item.entityName || 'UNKNOWN'}</td>
+                              <td className="py-4 px-4 text-right">{formatCurrency(item.current || 0)}</td>
+                              <td className="py-4 px-4 text-right">{formatCurrency(item.days31to60 || 0)}</td>
+                              <td className="py-4 px-4 text-right">{formatCurrency(item.days61to90 || 0)}</td>
+                              <td className="py-4 px-4 text-right text-rose-500 dark:text-rose-400">{formatCurrency((item.days91to120 || 0) + (item.days120Plus || 0))}</td>
+                              <td className="py-4 px-4 text-right font-black text-blue-600 dark:text-blue-400">{formatCurrency(item.totalDue || 0)}</td>
+                            </tr>
+                          ));
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+{/* --- CUSTOMERS AND SUPPLIERS VIEW --- */}
+            {(activeTab === 'customers' || activeTab === 'suppliers') && (
               <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
                   <button onClick={() => exportToExcel(activeTab === 'customers' ? customers : suppliers, activeTab)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
@@ -1630,7 +1274,7 @@ const App = () => {
                   )
                 )}
               </div>
-            ) : null}
+            )}
 
             {/* --- PRODUCTS VIEW --- */}
             {activeTab === 'products' && (
@@ -1686,6 +1330,51 @@ const App = () => {
               </div>
             )}
 
+            {/* --- SETTINGS VIEW --- */}
+            {activeTab === 'settings' && (
+              <div className="max-w-3xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
+                <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center space-x-4 mb-8 border-b border-slate-100 dark:border-slate-700/50 pb-6">
+                    <Settings size={28} className="text-blue-500"/>
+                    <div>
+                      <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Company Profile</h2>
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Manage your business details and logo</p>
+                    </div>
+                  </div>
+                  {settingsSuccess && <div className="mb-6 p-4 bg-emerald-100 text-emerald-700 rounded-xl text-xs font-black uppercase tracking-widest text-center">Settings Saved Successfully</div>}
+                  <form onSubmit={handleSettingsSave} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Company Name *</label>
+                        <input required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={settings.companyName || ''} onChange={e => setSettings({...settings, companyName: e.target.value})} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Tax / VAT ID</label>
+                        <input className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={settings.taxId || ''} onChange={e => setSettings({...settings, taxId: e.target.value})} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Phone Number</label>
+                        <input className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={settings.phone || ''} onChange={e => setSettings({...settings, phone: e.target.value})} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Email Address</label>
+                        <input type="email" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={settings.email || ''} onChange={e => setSettings({...settings, email: e.target.value})} />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Company Logo</label>
+                        <input type="file" accept="image/*" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20 text-xs" onChange={handleLogoUpload} />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Address / Location</label>
+                        <textarea rows="3" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20 resize-y" value={settings.address || ''} onChange={e => setSettings({...settings, address: e.target.value})}></textarea>
+                      </div>
+                    </div>
+                    <button type="submit" className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 transition-all">Save Profile Configuration</button>
+                  </form>
+                </div>
+              </div>
+            )}
+
             <div className="mt-auto pt-16 pb-8 flex flex-col items-center justify-center space-y-2 opacity-60 hover:opacity-100 transition-opacity duration-500 no-print group">
                 <div className="h-px w-24 bg-gradient-to-r from-transparent via-blue-500 to-transparent group-hover:w-48 transition-all duration-700"></div>
                 <p className="text-[10px] font-black uppercase tracking-[0.5em] bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-cyan-400 dark:to-blue-500 drop-shadow-sm hover:scale-110 transition-transform duration-500 cursor-default">
@@ -1696,7 +1385,7 @@ const App = () => {
           </div>
         </main>
 
-        {/* --- MODALS SECTION --- */}
+        {/* --- ESTIMATOR PUSH MODAL --- */}
         {estimatorPushModal.isOpen && (
             <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4 transition-all">
                 <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl border border-slate-200 dark:border-slate-800 animate-fade-in-up">
@@ -1737,6 +1426,7 @@ const App = () => {
             </div>
         )}
 
+        {/* --- ADMIN AUTH MODAL --- */}
         {adminAuth.isOpen && (
             <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4 transition-all">
                 <div className="bg-white dark:bg-[#1e293b] w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl border border-slate-200 dark:border-slate-800 animate-fade-in-up">
@@ -1759,6 +1449,7 @@ const App = () => {
             </div>
         )}
 
+        {/* --- MAIN FORM MODALS --- */}
         {modalState.isOpen && modalState.type !== 'ledger' && (
           <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4 overflow-y-auto no-print transition-all">
             <div className="bg-white dark:bg-[#1e293b] w-full max-w-5xl rounded-[2.5rem] shadow-2xl relative my-8 border border-slate-200 dark:border-slate-800">
@@ -2018,6 +1709,7 @@ const App = () => {
           </div>
         )}
         
+        {/* --- LEDGER MODAL --- */}
         {modalState.isOpen && modalState.type === 'ledger' && (
           <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4 overflow-y-auto no-print">
             <div className="bg-white dark:bg-[#1e293b] w-full max-w-5xl rounded-[2.5rem] shadow-2xl relative my-8 border border-slate-200 dark:border-slate-800">
@@ -2055,6 +1747,7 @@ const App = () => {
           </div>
         )}
 
+        {/* --- PRINT MODAL --- */}
         {printDoc.isOpen && (
           <div className="fixed inset-0 bg-slate-900/98 dark:bg-black/98 backdrop-blur-xl z-[500] overflow-y-auto print-overlay">
             <div className="max-w-4xl mx-auto flex justify-between items-center my-8 px-4 no-print">
@@ -2252,6 +1945,7 @@ const App = () => {
           </div>
         )}
 
+        {/* --- CONFIRM DELETE MODAL --- */}
         {confirmDelete.isOpen && (
           <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4 no-print transition-all">
             <div className="max-w-md w-full bg-white dark:bg-[#1e293b] rounded-[2.5rem] p-10 shadow-2xl text-center border border-slate-200 dark:border-slate-800">
