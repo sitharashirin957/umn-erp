@@ -334,10 +334,15 @@ const App = () => {
 const [aiReport, setAiReport] = useState('');
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiError, setAiError] = useState('');
+  
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isSendingChat, setIsSendingChat] = useState(false);
 
   const generateAIReport = async () => {
     setIsGeneratingAI(true);
     setAiError('');
+    setChatMessages([]); // Clear chat when generating new report
     try {
       const apiKey = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) {
@@ -382,6 +387,46 @@ const [aiReport, setAiReport] = useState('');
       setIsGeneratingAI(false);
     }
   };
+
+  const handleSendChat = async () => {
+    if (!chatInput.trim()) return;
+    
+    const userMsg = { role: 'user', content: chatInput };
+    setChatMessages(prev => [...prev, userMsg]);
+    setChatInput('');
+    setIsSendingChat(true);
+
+    try {
+      const apiKey = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY;
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+
+      const businessData = {
+        totalSales: analytics.totalSales,
+        totalPurchases: analytics.totalPurchases,
+        totalCollections: analytics.totalCollections,
+        totalExpenses: analytics.totalExpenses,
+        netProfit: analytics.netProfit,
+      };
+
+      const prompt = `
+        You are an expert CFO and Business Advisor for an ERP system.
+        Here is the current business data: ${JSON.stringify(businessData)}
+        
+        The user is asking a follow-up question: "${userMsg.content}"
+        
+        Provide a direct, professional, and insightful answer based on the business data. Keep it concise and use bullet points if necessary.
+      `;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      setChatMessages(prev => [...prev, { role: 'ai', content: response.text() }]);
+    } catch (error) {
+      console.error("Chat Error:", error);
+      setChatMessages(prev => [...prev, { role: 'ai', content: "Sorry, I encountered an error processing your question. Please try again." }]);
+    } finally {
+      setIsSendingChat(false);
+    }
   };
   const handleSave = async (e) => {
     e.preventDefault(); if (!user || isSubmitting) return; const { type, data } = modalState; const isEdit = !!data?.id;
