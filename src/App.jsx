@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend 
 } from 'recharts';
+
 import { 
   LayoutDashboard, Users, Settings, Plus, Search, Briefcase, X, Printer, TrendingUp, Trash2, Phone, Mail, 
   ShieldCheck, HandCoins, ShoppingBag, CreditCard, Menu, Edit3, Receipt, Package, Truck, FileText, 
   Bell, DownloadCloud, AlertTriangle, Activity, BookOpen, Image as ImageIcon,
-  Sun, Moon, ClipboardList, FilePlus, Lock, Calculator, Database, ShoppingCart, Info, Table, Wallet, SendToBack, ArrowRightCircle, BarChartHorizontal, Filter, FileSignature
+  Sun, Moon, ClipboardList, FilePlus, Lock, Calculator, Database, ShoppingCart, Info, Table, Wallet, SendToBack, ArrowRightCircle, BarChartHorizontal, Filter, FileSignature, Copy, Sparkles, MessageSquare
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
@@ -331,7 +332,8 @@ const App = () => {
   };
 
   const handleStatusChange = (id, field, value, collectionName = 'crms') => { requestAdminAuth(async () => { if(!user) return; try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionName, id), { [field]: value }); } catch(e) { console.error("Error updating status", e); } }); };
-const [aiReport, setAiReport] = useState('');
+// --- AI REPORT & CHAT LOGIC ---
+  const [aiReport, setAiReport] = useState('');
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiError, setAiError] = useState('');
   
@@ -339,55 +341,129 @@ const [aiReport, setAiReport] = useState('');
   const [chatInput, setChatInput] = useState('');
   const [isSendingChat, setIsSendingChat] = useState(false);
 
+  // Chat Suggestions
+  const suggestedQuestions = [
+    "What is our total net profit?",
+    "Who are our top 3 customers?",
+    "How can we improve our cash flow?",
+    "Summarize our outstanding receivables."
+  ];
+
+  // Helper: Copy & Print
+  const handleCopyReport = () => {
+    if(aiReport) { navigator.clipboard.writeText(aiReport); alert("Report copied to clipboard!"); }
+  };
+
+  const handlePrintAIReport = async () => {
+    const element = document.getElementById('ai-report-content');
+    if (!element) return;
+    if (!window.html2pdf) {
+        await new Promise((resolve) => { const script = document.createElement('script'); script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'; script.onload = resolve; document.head.appendChild(script); });
+    }
+    const opt = { margin: 15, filename: `Executive_Report_${new Date().getTime()}.pdf`, image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+    window.html2pdf().set(opt).from(element).save();
+  };
+
+  // Helper: Get Full ERP Data for AI
+  const getFullERPContext = () => ({
+    totalSales: analytics.totalSales, totalPurchases: analytics.totalPurchases,
+    totalCollections: analytics.totalCollections, totalExpenses: analytics.totalExpenses,
+    netProfit: analytics.netProfit, customersCount: customers.length,
+    suppliersCount: suppliers.length, salesCount: sales.length,
+    purchasesCount: purchases.length, topCustomers: topCustomersData,
+    topProducts: topProductsData, agingReceivables: agingReceivables, agingPayables: agingPayables
+  });
+
   const generateAIReport = async () => {
     setIsGeneratingAI(true);
     setAiError('');
-    setChatMessages([]); // Clear chat when generating new report
     try {
       const apiKey = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        setAiError("API Key not found in environment variables.");
-        setIsGeneratingAI(false);
-        return;
-      }
+      if (!apiKey) { setAiError("API Key not found."); setIsGeneratingAI(false); return; }
 
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-
-      const businessData = {
-        totalSales: analytics.totalSales,
-        totalPurchases: analytics.totalPurchases,
-        totalCollections: analytics.totalCollections,
-        totalExpenses: analytics.totalExpenses,
-        netProfit: analytics.netProfit,
-        customersCount: customers.length,
-        suppliersCount: suppliers.length,
-        salesCount: sales.length,
-        purchasesCount: purchases.length,
-        topCustomers: topCustomersData,
-        topProducts: topProductsData
-      };
+      const businessData = getFullERPContext();
 
       const prompt = `
-        You are an expert Chief Financial Officer (CFO) and Business Analyst for a trading company. 
+        You are an expert Chief Financial Officer (CFO) and Business Analyst for a company in Saudi Arabia. 
         Analyze the following ERP system data and provide a comprehensive, professional, and actionable business performance report in English. 
-        Format the output clearly with headings, bullet points, and strategic recommendations for growth and cash flow improvement.
         
+        CRITICAL RULES:
+        1. You MUST use 'SAR' (Saudi Riyal) for all currency values. NEVER USE the dollar sign ($) anywhere.
+        2. Format clearly with Markdown (use # for main titles, ## for subheadings, and * or - for bullet points).
+
         ERP Data Summary:
         ${JSON.stringify(businessData, null, 2)}
       `;
 
       const result = await model.generateContent(prompt);
-      const response = await result.response;
-      setAiReport(response.text());
+      setAiReport(result.response.text());
     } catch (error) {
-      console.error("AI Generation Error:", error);
-      setAiError("Failed to generate AI insights. Please check your API key or network connection.");
+      console.error("AI Error:", error);
+      setAiError("Failed to generate AI insights. Please check connection.");
     } finally {
       setIsGeneratingAI(false);
     }
   };
 
+  const handleSendChat = async (overrideMsg = null) => {
+    const messageToSend = overrideMsg || chatInput;
+    if (!messageToSend.trim()) return;
+    
+    const userMsg = { role: 'user', content: messageToSend };
+    const newChatHistory = [...chatMessages, userMsg];
+    setChatMessages(newChatHistory);
+    setChatInput('');
+    setIsSendingChat(true);
+
+    try {
+      const apiKey = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY;
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+
+      const businessData = getFullERPContext();
+      const historyContext = newChatHistory.map(m => `${m.role === 'user' ? 'User Question' : 'AI CFO Response'}: ${m.content}`).join('\n');
+
+      const prompt = `
+        You are an expert CFO and Business Advisor for a Saudi Arabian ERP system.
+        CRITICAL RULE: Always use 'SAR' (Saudi Riyal) for currency. NEVER use the dollar sign '$'.
+        
+        Current Complete Business Data: ${JSON.stringify(businessData)}
+        Conversation History: ${historyContext}
+        User's Latest Question: "${messageToSend}"
+        
+        Provide a direct, professional, and insightful answer based strictly on the provided business data and our conversation history. Keep it concise.
+      `;
+
+      const result = await model.generateContent(prompt);
+      setChatMessages(prev => [...prev, { role: 'ai', content: result.response.text() }]);
+    } catch (error) {
+      setChatMessages(prev => [...prev, { role: 'ai', content: "Sorry, I encountered an error. Please try again." }]);
+    } finally {
+      setIsSendingChat(false);
+    }
+  };
+
+  // Custom UI Formatter for Stunning Markdown Look
+  const formatAITextToHTML = (text) => {
+    if (!text) return null;
+    return text.split('\n').map((line, idx) => {
+        if (line.startsWith('### ')) return <h4 key={idx} className="text-sm font-black text-slate-800 dark:text-white mt-4 mb-2">{line.replace('### ', '').replace(/\*\*/g, '')}</h4>;
+        if (line.startsWith('## ')) return <h3 key={idx} className="text-base font-black text-blue-600 dark:text-blue-400 mt-6 mb-3 border-b border-slate-200 dark:border-slate-700/50 pb-2">{line.replace('## ', '').replace(/\*\*/g, '')}</h3>;
+        if (line.startsWith('# ')) return <h2 key={idx} className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-2 mb-4 uppercase tracking-tight">{line.replace('# ', '').replace(/\*\*/g, '')}</h2>;
+        if (line.trim() === '---') return <hr key={idx} className="my-4 border-slate-200 dark:border-slate-700" />;
+        if (line.startsWith('* ') || line.startsWith('- ')) {
+            const content = line.substring(2).replace(/\*\*(.*?)\*\*/g, '<span class="font-black text-slate-900 dark:text-white">$1</span>');
+            return <li key={idx} className="ml-4 mb-2 text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0 shadow-sm"></div><span dangerouslySetInnerHTML={{__html: content}} /></li>;
+        }
+        if (line.trim() !== '') {
+            const content = line.replace(/\*\*(.*?)\*\*/g, '<span class="font-black text-slate-900 dark:text-white">$1</span>');
+            return <p key={idx} className="mb-2 text-xs text-slate-600 dark:text-slate-300 leading-relaxed" dangerouslySetInnerHTML={{__html: content}} />;
+        }
+        return <div key={idx} className="h-1"></div>;
+    });
+  };
   const handleSendChat = async () => {
     if (!chatInput.trim()) return;
     
@@ -1260,116 +1336,145 @@ const [aiReport, setAiReport] = useState('');
               </div>
             )}
 {activeTab === 'ai_reports' && (
-              <div className="max-w-5xl mx-auto w-full space-y-6 animate-fade-in-up flex-1 pb-10">
-                <div className="bg-white dark:bg-[#1e293b] p-6 sm:p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 border-b border-slate-100 dark:border-slate-700/50 pb-6">
+              <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1 pb-10">
+                
+                {/* Main Header */}
+                <div className="bg-white dark:bg-[#1e293b] p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div className="flex items-center space-x-4">
-                      <div className="p-3.5 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl shadow-lg shadow-blue-500/30">
+                        <div className="p-3 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl shadow-lg shadow-blue-500/30">
                         <Activity size={24}/>
-                      </div>
-                      <div>
+                        </div>
+                        <div>
                         <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">AI Executive Advisor</h2>
-                        <p className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Smart Analytics & Interactive Chat</p>
-                      </div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Smart Analytics & Interactive Chat</p>
+                        </div>
                     </div>
                     <button 
-                      onClick={generateAIReport} 
-                      disabled={isGeneratingAI}
-                      className="w-full sm:w-auto px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg hover:scale-95 transition-all disabled:opacity-50 flex items-center justify-center"
+                        onClick={generateAIReport} 
+                        disabled={isGeneratingAI}
+                        className="w-full sm:w-auto px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-95 transition-all disabled:opacity-50 flex items-center justify-center"
                     >
-                      {isGeneratingAI ? 'Analyzing...' : 'Generate New Report'}
+                        {isGeneratingAI ? 'Generating...' : 'Generate Full PDF Report'}
                     </button>
-                  </div>
+                </div>
 
-                  {aiError && (
-                    <div className="mb-6 p-4 bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 rounded-2xl font-black text-xs uppercase tracking-widest border border-rose-200 dark:border-rose-500/30 flex items-center">
-                      <AlertTriangle size={16} className="mr-2 shrink-0"/> {aiError}
+                {aiError && (
+                    <div className="p-4 bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 rounded-2xl font-black text-xs uppercase tracking-widest border border-rose-200 dark:border-rose-500/30 flex items-center">
+                        <AlertTriangle size={16} className="mr-2 shrink-0"/> {aiError}
                     </div>
-                  )}
+                )}
 
-                  {isGeneratingAI ? (
-                    <div className="py-24 text-center space-y-6">
-                      <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
-                      <div>
-                        <p className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Processing Data</p>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">AI is reviewing your sales, expenses, and ledgers...</p>
-                      </div>
-                    </div>
-                  ) : aiReport ? (
-                    <div className="space-y-8">
-                      {/* Main Report Card */}
-                      <div className="prose dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 font-bold text-sm leading-relaxed whitespace-pre-wrap bg-slate-50 dark:bg-[#0f172a] p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-inner">
-                        {aiReport}
-                      </div>
-
-                      {/* Interactive Chat Section */}
-                      <div className="pt-6 border-t border-slate-200 dark:border-slate-700/50 flex flex-col gap-4">
-                        <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2 mb-2">
-                          <BookOpen size={16} className="text-blue-500" />
-                          Ask Follow-up Questions based on this report
-                        </h3>
-
-                        {/* Chat History Display */}
-                        {chatMessages.length > 0 && (
-                          <div className="space-y-4 mb-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
-                            {chatMessages.map((msg, idx) => (
-                              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[85%] sm:max-w-[75%] p-4 rounded-2xl text-sm font-bold whitespace-pre-wrap ${
-                                  msg.role === 'user' 
-                                    ? 'bg-blue-600 text-white rounded-tr-sm shadow-md shadow-blue-500/20' 
-                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-sm border border-slate-200 dark:border-slate-700'
-                                }`}>
-                                  {msg.content}
-                                </div>
-                              </div>
-                            ))}
-                            {isSendingChat && (
-                              <div className="flex justify-start">
-                                <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl rounded-tl-sm border border-slate-200 dark:border-slate-700 flex items-center gap-2">
-                                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-                                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-75"></div>
-                                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-150"></div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Chat Input Area */}
-                        <div className="flex gap-3 relative">
-                          <input
-                            type="text"
-                            placeholder="Ask about sales, profits, or tips to improve..."
-                            className="flex-1 bg-white dark:bg-[#1e293b] border-2 border-slate-200 dark:border-slate-700 rounded-2xl px-6 py-4 text-sm font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-all shadow-sm"
-                            value={chatInput}
-                            onChange={(e) => setChatInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSendChat();
-                            }}
-                            disabled={isSendingChat}
-                          />
-                          <button 
-                            onClick={handleSendChat}
-                            disabled={isSendingChat || !chatInput.trim()}
-                            className="px-6 sm:px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-600/30 hover:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
-                          >
-                            <span className="hidden sm:block">Send</span>
-                            <span className="sm:hidden"><ArrowRightCircle size={20}/></span>
-                          </button>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    
+                    {/* LEFT COLUMN: INTERACTIVE CHAT (Always Visible) */}
+                    <div className="lg:col-span-5 bg-white dark:bg-[#1e293b] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col h-[700px] overflow-hidden relative">
+                        <div className="p-6 bg-slate-50/50 dark:bg-[#0f172a]/50 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <MessageSquare size={18} className="text-blue-500"/>
+                                <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-tight text-sm">Ask ERP Assistant</h3>
+                            </div>
+                            <span className="flex items-center gap-1.5 px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 rounded-full text-[8px] font-black uppercase tracking-widest"><div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div> Online</span>
                         </div>
-                      </div>
+
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-4 bg-slate-50 dark:bg-[#0f172a]">
+                            {chatMessages.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
+                                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-500 rounded-full flex items-center justify-center">
+                                        <Sparkles size={28} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">How can I help you today?</p>
+                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-2 max-w-[250px] leading-relaxed">I have full access to your sales, purchases, and outstanding balances. Ask me anything!</p>
+                                    </div>
+                                    <div className="w-full space-y-2 mt-4">
+                                        {suggestedQuestions.map((sq, i) => (
+                                            <button key={i} onClick={() => handleSendChat(sq)} className="w-full p-3 text-left bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors shadow-sm truncate">
+                                                👉 {sq}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                chatMessages.map((msg, idx) => (
+                                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`max-w-[85%] p-4 rounded-2xl text-xs font-bold leading-relaxed shadow-sm ${
+                                        msg.role === 'user' 
+                                            ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-tr-sm' 
+                                            : 'bg-white dark:bg-[#1e293b] text-slate-700 dark:text-slate-300 rounded-tl-sm border border-slate-200 dark:border-slate-700'
+                                        }`}>
+                                        {msg.role === 'ai' ? formatAITextToHTML(msg.content) : msg.content}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                            {isSendingChat && (
+                                <div className="flex justify-start">
+                                    <div className="bg-white dark:bg-[#1e293b] p-4 rounded-2xl rounded-tl-sm border border-slate-200 dark:border-slate-700 flex items-center gap-2 shadow-sm">
+                                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></div>
+                                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce delay-75"></div>
+                                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce delay-150"></div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-4 bg-white dark:bg-[#1e293b] border-t border-slate-100 dark:border-slate-800">
+                            <div className="flex gap-2 relative">
+                                <input
+                                    type="text"
+                                    placeholder="Type your question..."
+                                    className="flex-1 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-xs font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 ring-blue-500/20 transition-all"
+                                    value={chatInput}
+                                    onChange={(e) => setChatInput(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') handleSendChat(); }}
+                                    disabled={isSendingChat}
+                                />
+                                <button 
+                                    onClick={() => handleSendChat()}
+                                    disabled={isSendingChat || !chatInput.trim()}
+                                    className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black transition-all shadow-md disabled:opacity-50 flex items-center justify-center shrink-0"
+                                >
+                                    <ArrowRightCircle size={18}/>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                  ) : (
-                    <div className="py-24 text-center space-y-4">
-                      <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <ClipboardList size={32} className="text-slate-400 dark:text-slate-500"/>
-                      </div>
-                      <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">No Report Generated</h3>
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest max-w-md mx-auto leading-relaxed">
-                        Click the button above to securely analyze your ERP data and generate a smart business summary.
-                      </p>
+
+                    {/* RIGHT COLUMN: FULL REPORT */}
+                    <div className="lg:col-span-7 bg-white dark:bg-[#1e293b] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col h-[700px] overflow-hidden relative">
+                        <div className="p-6 bg-slate-50/50 dark:bg-[#0f172a]/50 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <FileText size={18} className="text-indigo-500"/>
+                                <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-tight text-sm">Executive Summary Report</h3>
+                            </div>
+                            {aiReport && (
+                                <div className="flex gap-2">
+                                    <button onClick={handleCopyReport} className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 rounded-lg transition-colors" title="Copy Text"><Copy size={16}/></button>
+                                    <button onClick={handlePrintAIReport} className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 rounded-lg transition-colors" title="Download PDF"><Printer size={16}/></button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-white dark:bg-[#0f172a] relative">
+                            {isGeneratingAI ? (
+                                <div className="h-full flex flex-col items-center justify-center space-y-4">
+                                    <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto"></div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Generating formal report...</p>
+                                </div>
+                            ) : aiReport ? (
+                                <div id="ai-report-content" className="relative">
+                                    <div className="absolute top-0 right-0 opacity-5 pointer-events-none"><Activity size={200} /></div>
+                                    {formatAITextToHTML(aiReport)}
+                                </div>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-50">
+                                    <ClipboardList size={48} className="text-slate-400"/>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">No report generated yet.</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                  )}
+
                 </div>
               </div>
             )}
