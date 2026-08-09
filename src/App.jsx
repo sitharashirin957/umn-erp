@@ -381,8 +381,8 @@ git push origin main
 
   // Chat Suggestions in Manglish
   const suggestedQuestions = [
-    "HI !",
     "What is our total net profit?",
+    "HI !",
     "Top 3 customers aaranu?",
     "Cash flow engane improve cheyyam?",
     "Nammude outstanding receivables onnu parayamo?"
