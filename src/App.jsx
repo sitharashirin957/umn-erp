@@ -375,35 +375,9 @@ const App = () => {
     }
   }, []);
 
-  const toggleListening = () => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-    } else {
-      recognitionRef.current?.start();
-      setIsListening(true);
-    }
-  };
-
-  // Text to Speech for AI Response
-const speakText = (text) => {
-    if (!isVoiceEnabled || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel(); 
-    const cleanText = text.replace(/[*#]/g, ''); 
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    
-    const voices = window.speechSynthesis.getVoices();
-    const mlVoice = voices.find(v => v.lang === 'ml-IN' || v.name.includes('Google Malayalam') || v.lang.includes('ml'));
-    
-    if (mlVoice) {
-      utterance.voice = mlVoice;
-    } else {
-      utterance.lang = 'ml-IN';
-    }
-    
-    utterance.rate = 0.9;
-    window.speechSynthesis.speak(utterance);
-  };
+  git add .
+git commit -m "Fixed mic issue and updated voice to Indian English for Manglish"
+git push origin main
 
   // Chat Suggestions in Manglish
   const suggestedQuestions = [
