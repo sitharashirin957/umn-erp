@@ -846,17 +846,29 @@ const handleSave = async (e) => {
             </div>
           </header>
 
-<header className="h-20 bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 shrink-0 z-20 no-print">
-             {/* ഹെഡറിനുള്ളിലെ ബാക്കി കോഡുകൾ */}
-          </header> {/* <-- ഈ ഹെഡർ അവസാനിക്കുന്ന ഭാഗം */}
-
           {/* 👇 തൊട്ടുതാഴെ ഈ കോഡ് പേസ്റ്റ് ചെയ്യുക 👇 */}
+{/* Top Bar Quick Mic Button */}
+              <button
+                onClick={toggleListening}
+                className={`relative p-3 rounded-2xl flex items-center justify-center transition-all shadow-lg ${
+                  isListening 
+                    ? 'bg-rose-500 text-white animate-bounce shadow-rose-500/50' 
+                    : 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-indigo-500/40 hover:scale-105'
+                }`}
+                title="Click to speak command"
+              >
+                <Mic size={20} />
+                {isListening && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full animate-ping"></span>
+                )}
+              </button>
+          
           {voiceActionPrompt && (
             <div className="mx-6 mt-4 p-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl shadow-xl flex items-center justify-between animate-fade-in-up no-print">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-white/20 rounded-xl"><Sparkles size={20} className="text-cyan-300 animate-spin"/></div>
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Voice Assistant Action</p>
+                  <p className="text-[10px] font-black upperDcase tracking-widest opacity-80">Voice Assistant Action</p>
                   <p className="text-sm font-black uppercase tracking-wide">{voiceActionPrompt.label}</p>
                 </div>
               </div>
