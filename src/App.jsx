@@ -156,7 +156,7 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('dashboard'); const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024); const [showOnlyDueSales, setShowOnlyDueSales] = useState(false); const [showOnlyDuePurchases, setShowOnlyDuePurchases] = useState(false);
   const [hideZeroAging, setHideZeroAging] = useState(true); const [searchTerm, setSearchTerm] = useState(''); const [isNotifOpen, setIsNotifOpen] = useState(false); const notifRef = useRef(null);
-
+  const [voiceActionPrompt, setVoiceActionPrompt] = useState(null);
   const [customers, setCustomers] = useState([]); const [suppliers, setSuppliers] = useState([]); const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]); const [purchases, setPurchases] = useState([]); const [quotations, setQuotations] = useState([]);
   const [collections, setCollections] = useState([]); const [expenses, setExpenses] = useState([]); const [salesmen, setSalesmen] = useState([]); const [crms, setCrms] = useState([]);
@@ -368,28 +368,33 @@ const App = () => {
           setChatInput((prev) => prev + (prev ? ' ' : '') + transcript);
           setIsListening(false);
 
-          // Voice Navigation Logic (സംസാരിക്കുമ്പോൾ ടാബ് മാറാൻ)
+          // Voice Navigation & Action Banner Logic
           if (transcript.includes('dashboard') || transcript.includes('home')) {
+            setVoiceActionPrompt({ name: 'Dashboard', tab: 'dashboard', label: 'ഡാഷ്‌ബോർഡ് ഓപ്പൺ ചെയ്തു' });
             setActiveTab('dashboard');
             speakText('Dashboard open cheythittundu');
           } else if (transcript.includes('sales') || transcript.includes('invoice')) {
+            setVoiceActionPrompt({ name: 'Sales Invoices', tab: 'sales', label: 'സെയിൽസ് ഓപ്പൺ ചെയ്തു' });
             setActiveTab('sales');
             speakText('Sales open cheythittundu');
           } else if (transcript.includes('crm') || transcript.includes('job')) {
+            setVoiceActionPrompt({ name: 'CRM Job Tracker', tab: 'crm', label: 'സി.ആർ.എം. ജോബ് ട്രാക്കർ ഓപ്പൺ ചെയ്തു' });
             setActiveTab('crm');
             speakText('CRM job tracker open cheythittundu');
           } else if (transcript.includes('purchase') || transcript.includes('buying')) {
+            setVoiceActionPrompt({ name: 'Purchases', tab: 'purchases', label: 'പർച്ചേസസ് ഓപ്പൺ ചെയ്തു' });
             setActiveTab('purchases');
             speakText('Purchases open cheythittundu');
           } else if (transcript.includes('inventory') || transcript.includes('product')) {
+            setVoiceActionPrompt({ name: 'Inventory', tab: 'products', label: 'ഇൻവെന്ററി ഓപ്പൺ ചെയ്തു' });
             setActiveTab('products');
             speakText('Inventory open cheythittundu');
           } else if (transcript.includes('estimator') || transcript.includes('calculator')) {
+            setVoiceActionPrompt({ name: 'Price Estimator', tab: 'estimator', label: 'പ്രൈസ് എസ്റ്റിമേറ്റർ ഓപ്പൺ ചെയ്തു' });
             setActiveTab('estimator');
             speakText('Price estimator open cheythittundu');
           }
         };
-
         recognitionRef.current.onerror = (event) => {
           console.error("Speech recognition error", event.error);
           setIsListening(false);
@@ -841,6 +846,35 @@ const handleSave = async (e) => {
             </div>
           </header>
 
+<header className="h-20 bg-white/80 dark:bg-[#1e293b]/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 shrink-0 z-20 no-print">
+             {/* ഹെഡറിനുള്ളിലെ ബാക്കി കോഡുകൾ */}
+          </header> {/* <-- ഈ ഹെഡർ അവസാനിക്കുന്ന ഭാഗം */}
+
+          {/* 👇 തൊട്ടുതാഴെ ഈ കോഡ് പേസ്റ്റ് ചെയ്യുക 👇 */}
+          {voiceActionPrompt && (
+            <div className="mx-6 mt-4 p-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl shadow-xl flex items-center justify-between animate-fade-in-up no-print">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-white/20 rounded-xl"><Sparkles size={20} className="text-cyan-300 animate-spin"/></div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Voice Assistant Action</p>
+                  <p className="text-sm font-black uppercase tracking-wide">{voiceActionPrompt.label}</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <button 
+                  onClick={() => { setActiveTab(voiceActionPrompt.tab); setVoiceActionPrompt(null); }}
+                  className="px-5 py-2.5 bg-white text-blue-600 hover:bg-blue-50 rounded-xl font-black text-xs uppercase tracking-widest shadow-md transition-all"
+                >
+                  Open {voiceActionPrompt.name} 🚀
+                </button>
+                <button onClick={() => setVoiceActionPrompt(null)} className="p-2 text-white/70 hover:text-white rounded-lg"><X size={18}/></button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar relative flex flex-col">
+            {/* ബാക്കി കണ്ടന്റുകൾ */}
+          
           <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar relative flex flex-col">
             {activeTab === 'dashboard' && (
               <div className="max-w-[100rem] mx-auto w-full space-y-8 animate-fade-in-up flex-1">
