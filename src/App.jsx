@@ -2407,6 +2407,28 @@ const handleSave = async (e) => {
 
       </div>
     </div>
+
+    {/* Floating Voice Assistant Button (Responsive for PC & Mobile) */}
+      <div className="fixed bottom-5 right-5 sm:bottom-8 sm:right-8 z-[9999] flex items-center gap-3 no-print">
+        {isListening && (
+          <div className="hidden sm:flex px-4 py-2 bg-rose-600 text-white rounded-full shadow-2xl items-center gap-2 animate-pulse text-xs font-black uppercase tracking-widest">
+            <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+            Listening... Speak now
+          </div>
+        )}
+        <button
+          onClick={toggleListening}
+          className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 ${
+            isListening 
+              ? 'bg-rose-500 text-white animate-bounce shadow-rose-500/50 ring-4 ring-rose-300/50' 
+              : 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-indigo-500/40 hover:shadow-indigo-500/60'
+          }`}
+          title="Click to speak command"
+        >
+          <Mic size={24} className="sm:w-7 sm:h-7" />
+        </button>
+      </div>
+      
   );
 };
 
