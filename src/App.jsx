@@ -375,49 +375,9 @@ const App = () => {
     }
   }, []);
 
-  const toggleListening = () => {
-    // മൈക്ക് സപ്പോർട്ട് ചെയ്യാത്ത ബ്രൗസർ ആണെങ്കിൽ അലർട്ട് കൊടുക്കുക
-    if (!recognitionRef.current) {
-      alert("Voice input is not supported in this browser. Please use Google Chrome on Desktop or Mobile.");
-      return;
-    }
-    
-    try {
-      if (isListening) {
-        recognitionRef.current.stop();
-        setIsListening(false);
-      } else {
-        recognitionRef.current.start();
-        setIsListening(true);
-      }
-    } catch (error) {
-      console.error("Mic error:", error);
-      alert("Microphone access denied. Please allow microphone permissions in your browser settings.");
-      setIsListening(false);
-    }
-  };
-
-  // Text to Speech for AI Response
-  const speakText = (text) => {
-    if (!isVoiceEnabled || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel(); 
-    
-    const cleanText = text.replace(/[*#]/g, '').replace(/SAR/g, 'Riyals');
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    
-    // മംഗ്ലീഷ് നന്നായി വായിക്കാൻ Indian English (en-IN) വോയ്‌സ് ഉപയോഗിക്കുക
-    const voices = window.speechSynthesis.getVoices();
-    const optimalVoice = voices.find(v => v.lang === 'en-IN' || v.name.includes('India'));
-    
-    if (optimalVoice) {
-      utterance.voice = optimalVoice;
-    } else {
-      utterance.lang = 'en-IN'; 
-    }
-    
-    utterance.rate = 0.95; // അല്പം പതുക്കെ പറഞ്ഞാൽ കൂടുതൽ വ്യക്തത കിട്ടും
-    window.speechSynthesis.speak(utterance);
-  };
+  git add .
+git commit -m "Fixed mic issue and updated voice to Indian English for Manglish"
+git push origin main
 
   // Chat Suggestions in Manglish
   const suggestedQuestions = [
