@@ -375,10 +375,50 @@ const App = () => {
     }
   }, []);
 
-  git add .
-git commit -m "Fixed mic issue and updated voice to Indian English for Manglish"
-git push origin main
+const toggleListening = () => {
+    if (!recognitionRef.current) {
+      alert("Voice input is not supported in this browser. Please use Google Chrome on Desktop or Mobile.");
+      return;
+    }
+    
+    try {
+      if (isListening) {
+        recognitionRef.current.stop();
+        setIsListening(false);
+      } else {
+        recognitionRef.current.start();
+        setIsListening(true);
+      }
+    } catch (error) {
+      console.error("Mic error:", error);
+      alert("Microphone access denied. Please allow microphone permissions in your browser settings.");
+      setIsListening(false);
+    }
+  };
 
+  // Text to Speech for AI Response
+  const speakText = (text) => {
+    if (!isVoiceEnabled || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel(); 
+    
+    // അല്പം കൂടി നാച്ചുറൽ ആക്കാൻ ചില ഇംഗ്ലീഷ് വാക്കുകൾ മലയാളം ഉച്ചാരണത്തിലേക്ക് മാറ്റാം
+    const cleanText = text.replace(/[*#]/g, '').replace(/SAR/g, 'Riyals');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    
+    const voices = window.speechSynthesis.getVoices();
+    // 'Google English India' വോയിസ് ആണ് മംഗ്ലീഷ് നന്നായി വായിക്കുക
+    const optimalVoice = voices.find(v => v.name.includes('Google English India') || v.lang === 'en-IN');
+    
+    if (optimalVoice) {
+      utterance.voice = optimalVoice;
+    } else {
+      utterance.lang = 'en-IN'; 
+    }
+    
+    utterance.rate = 0.92; // സ്പീഡ് അല്പം കുറച്ചാൽ പക്കാ മലയാളി ടോൺ കിട്ടും
+    utterance.pitch = 1.0; 
+    window.speechSynthesis.speak(utterance);
+  };
   // Chat Suggestions in Manglish
   const suggestedQuestions = [
     "What is our total net profit?",
