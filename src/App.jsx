@@ -863,6 +863,29 @@ const handleSave = async (e) => {
                 )}
               </button>
           
+        {/* Top Bar Quick Mic Button Banner */}
+      <div className="mx-6 mt-4 p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-between shadow-sm">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={toggleListening}
+            className={`relative p-3 rounded-xl flex items-center justify-center transition-all shadow-md ${
+              isListening 
+                ? 'bg-rose-500 text-white animate-bounce shadow-rose-500/50' 
+                : 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-indigo-500/40 hover:scale-105'
+            }`}
+            title="Click to speak command"
+          >
+            <Mic size={18} />
+            {isListening && (
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full animate-ping"></span>
+            )}
+          </button>
+          <span className="text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">
+            {isListening ? "Listening... Speak now" : "Voice Assistant Ready (Click Mic)"}
+          </span>
+        </div>
+      </div>
+
           {voiceActionPrompt && (
             <div className="mx-6 mt-4 p-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl shadow-xl flex items-center justify-between animate-fade-in-up no-print">
               <div className="flex items-center space-x-3">
