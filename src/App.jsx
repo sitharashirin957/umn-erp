@@ -357,10 +357,37 @@ const App = () => {
         recognitionRef.current.interimResults = false;
         recognitionRef.current.lang = 'ml-IN';
 
+       if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = false;
+        recognitionRef.current.lang = 'ml-IN';
+
         recognitionRef.current.onresult = (event) => {
-          const transcript = event.results[0][0].transcript;
+          const transcript = event.results[0][0].transcript.toLowerCase();
           setChatInput((prev) => prev + (prev ? ' ' : '') + transcript);
           setIsListening(false);
+
+          // Voice Navigation Logic (സംസാരിക്കുമ്പോൾ ടാബ് മാറാൻ)
+          if (transcript.includes('dashboard') || transcript.includes('home')) {
+            setActiveTab('dashboard');
+            speakText('Dashboard open cheythittundu');
+          } else if (transcript.includes('sales') || transcript.includes('invoice')) {
+            setActiveTab('sales');
+            speakText('Sales open cheythittundu');
+          } else if (transcript.includes('crm') || transcript.includes('job')) {
+            setActiveTab('crm');
+            speakText('CRM job tracker open cheythittundu');
+          } else if (transcript.includes('purchase') || transcript.includes('buying')) {
+            setActiveTab('purchases');
+            speakText('Purchases open cheythittundu');
+          } else if (transcript.includes('inventory') || transcript.includes('product')) {
+            setActiveTab('products');
+            speakText('Inventory open cheythittundu');
+          } else if (transcript.includes('estimator') || transcript.includes('calculator')) {
+            setActiveTab('estimator');
+            speakText('Price estimator open cheythittundu');
+          }
         };
 
         recognitionRef.current.onerror = (event) => {
@@ -372,8 +399,6 @@ const App = () => {
           setIsListening(false);
         };
       }
-    }
-  }, []);
 
 const toggleListening = () => {
     if (!recognitionRef.current) {
