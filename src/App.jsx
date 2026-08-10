@@ -908,9 +908,6 @@ const handleSave = async (e) => {
           )}
 
           <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar relative flex flex-col">
-            {/* ബാക്കി കണ്ടന്റുകൾ */}
-          
-          <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar relative flex flex-col">
             {activeTab === 'dashboard' && (
               <div className="max-w-[100rem] mx-auto w-full space-y-8 animate-fade-in-up flex-1">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -2425,7 +2422,7 @@ const handleSave = async (e) => {
             </div>
           </div>
         )}
-{/* --- CONFIRM DELETE MODAL --- */}
+          {/* --- CONFIRM DELETE MODAL --- */}
         {confirmDelete.isOpen && (
           <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4 no-print transition-all">
             <div className="max-w-md w-full bg-white dark:bg-[#1e293b] rounded-[2.5rem] p-10 shadow-2xl text-center border border-slate-200 dark:border-slate-800">
@@ -2439,9 +2436,9 @@ const handleSave = async (e) => {
           </div>
         )}
 
-      </div> {/* <-- Flex Container Closing --> */}
+      </div> {/* <-- ഇതാണ് Flex കണ്ടെയ്നർ ക്ലോസ് ചെയ്യുന്നത് --> */}
 
-      {/* Floating Voice Assistant Button */}
+      {/* Floating Voice Assistant Button (Responsive for PC & Mobile) */}
       <div className="fixed bottom-5 right-5 sm:bottom-8 sm:right-8 z-[9999] flex items-center gap-3 no-print">
         {isListening && (
           <div className="hidden sm:flex px-4 py-2 bg-rose-600 text-white rounded-full shadow-2xl items-center gap-2 animate-pulse text-xs font-black uppercase tracking-widest">
@@ -2462,7 +2459,7 @@ const handleSave = async (e) => {
         </button>
       </div>
 
-    </div> {/* <-- Root Container Closing --> */}
+    </div> {/* <-- ഇതാണ് മെയിൻ റൂട്ട് കണ്ടെയ്നർ ക്ലോസ് ചെയ്യുന്നത് --> */}
   );
 };
 
