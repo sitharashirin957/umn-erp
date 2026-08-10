@@ -2391,44 +2391,44 @@ const handleSave = async (e) => {
           </div>
         )}
 
-        {/* --- CONFIRM DELETE MODAL --- */}
-        {confirmDelete.isOpen && (
-          <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4 no-print transition-all">
-            <div className="max-w-md w-full bg-white dark:bg-[#1e293b] rounded-[2.5rem] p-10 shadow-2xl text-center border border-slate-200 dark:border-slate-800">
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2 uppercase">Delete Record?</h2>
-              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-8 uppercase">Permanently remove <span className="text-slate-900 dark:text-white font-black">"{String(confirmDelete.title)}"</span>?</p>
-              <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => setConfirmDelete({ isOpen: false })} className="py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancel</button>
-                <button onClick={executeDelete} className="py-4 bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-95 transition-transform">Confirm</button>
-              </div>
+{/* --- CONFIRM DELETE MODAL --- */}
+      {confirmDelete.isOpen && (
+        <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4 no-print transition-all">
+          <div className="max-w-md w-full bg-white dark:bg-[#1e293b] rounded-[2.5rem] p-10 shadow-2xl text-center border border-slate-200 dark:border-slate-800">
+            <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2 uppercase">Delete Record?</h2>
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-8 uppercase">Permanently remove <span className="text-slate-900 dark:text-white font-black">"{String(confirmDelete.title)}"</span>?</p>
+            <div className="grid grid-cols-2 gap-4">
+              <button onClick={() => setConfirmDelete({ isOpen: false })} className="py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancel</button>
+              <button onClick={executeDelete} className="py-4 bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-95 transition-transform">Confirm</button>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
       </div>
     </div>
 
     {/* Floating Voice Assistant Button (Responsive for PC & Mobile) */}
-      <div className="fixed bottom-5 right-5 sm:bottom-8 sm:right-8 z-[9999] flex items-center gap-3 no-print">
-        {isListening && (
-          <div className="hidden sm:flex px-4 py-2 bg-rose-600 text-white rounded-full shadow-2xl items-center gap-2 animate-pulse text-xs font-black uppercase tracking-widest">
-            <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
-            Listening... Speak now
-          </div>
-        )}
-        <button
-          onClick={toggleListening}
-          className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 ${
-            isListening 
-              ? 'bg-rose-500 text-white animate-bounce shadow-rose-500/50 ring-4 ring-rose-300/50' 
-              : 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-indigo-500/40 hover:shadow-indigo-500/60'
-          }`}
-          title="Click to speak command"
-        >
-          <Mic size={24} className="sm:w-7 sm:h-7" />
-        </button>
-      </div>
-      
+    <div className="fixed bottom-5 right-5 sm:bottom-8 sm:right-8 z-[9999] flex items-center gap-3 no-print">
+      {isListening && (
+        <div className="hidden sm:flex px-4 py-2 bg-rose-600 text-white rounded-full shadow-2xl items-center gap-2 animate-pulse text-xs font-black uppercase tracking-widest">
+          <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+          Listening... Speak now
+        </div>
+      )}
+      <button
+        onClick={toggleListening}
+        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 ${
+          isListening 
+            ? 'bg-rose-500 text-white animate-bounce shadow-rose-500/50 ring-4 ring-rose-300/50' 
+            : 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-indigo-500/40 hover:shadow-indigo-500/60'
+        }`}
+        title="Click to speak command"
+      >
+        <Mic size={24} className="sm:w-7 sm:h-7" />
+      </button>
+    </div>
+  </div>
   );
 };
 
