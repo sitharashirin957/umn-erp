@@ -2425,7 +2425,6 @@ const handleSave = async (e) => {
             </div>
           </div>
         )}
-
 {/* --- CONFIRM DELETE MODAL --- */}
         {confirmDelete.isOpen && (
           <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4 no-print transition-all">
@@ -2440,9 +2439,9 @@ const handleSave = async (e) => {
           </div>
         )}
 
-      </div> {/* ക്ലോസിങ് 1: മെയിൻ കണ്ടന്റ് ഏരിയ */}
+      </div> {/* <-- Flex Container Closing --> */}
 
-      {/* Floating Voice Assistant Button (Responsive for PC & Mobile) */}
+      {/* Floating Voice Assistant Button */}
       <div className="fixed bottom-5 right-5 sm:bottom-8 sm:right-8 z-[9999] flex items-center gap-3 no-print">
         {isListening && (
           <div className="hidden sm:flex px-4 py-2 bg-rose-600 text-white rounded-full shadow-2xl items-center gap-2 animate-pulse text-xs font-black uppercase tracking-widest">
@@ -2463,7 +2462,7 @@ const handleSave = async (e) => {
         </button>
       </div>
 
-    </div> {/* ക്ലോസിങ് 2: റൂട്ട് ആപ്പ് കണ്ടെയ്നർ */}
+    </div> {/* <-- Root Container Closing --> */}
   );
 };
 
