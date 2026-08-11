@@ -696,6 +696,80 @@ const prompt = `
     });
   };
 
+       const handleBulkExcelImport = async (e, type) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (!window.XLSX) { 
+      await new Promise((resolve) => { 
+        const script = document.createElement('script'); 
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; 
+        script.onload = resolve; 
+        document.head.appendChild(script); 
+      }); 
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = window.XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonRows = window.XLSX.utils.sheet_to_json(worksheet);
+
+        if (!jsonRows || jsonRows.length === 0) {
+          alert("Excel file is empty or formatted incorrectly.");
+          return;
+        }
+
+        const colMap = { 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products' };
+        const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', colMap[type]);
+        const batch = writeBatch(db);
+        let count = 0;
+
+        jsonRows.forEach(row => {
+          let payload = {};
+          if (type === 'customer' || type === 'supplier') {
+            payload = cleanObject({
+              name: String(row.Name || row.name || ''),
+              phone: String(row.Phone || row.phone || ''),
+              email: String(row.Email || row.email || ''),
+              gst: String(row.Gst || row.gst || row.Tax || ''),
+              openingBalance: Number(row.OpeningBalance || row.openingBalance || 0),
+              createdAt: serverTimestamp()
+            });
+          } else if (type === 'product') {
+            payload = cleanObject({
+              name: String(row.Name || row.name || ''),
+              category: String(row.Category || row.category || 'General'),
+              stock: Number(row.Stock || row.stock || 0),
+              purchasePrice: Number(row.PurchasePrice || row.purchasePrice || 0),
+              sellingPrice: Number(row.SellingPrice || row.sellingPrice || 0),
+              tax: Number(row.Tax || row.tax || 0),
+              minStock: Number(row.MinStock || row.minStock || 5),
+              createdAt: serverTimestamp()
+            });
+          }
+
+          if (payload.name) {
+            const newDocRef = doc(collectionRef);
+            batch.set(newDocRef, payload);
+            count++;
+          }
+        });
+
+        await batch.commit();
+        alert(`Successfully imported ${count} ${type}s!`);
+      } catch (err) {
+        console.error("Import error:", err);
+        alert("Failed to import excel file. Please check format.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = ''; // Reset input
+  };
+
 const handleSave = async (e) => {
     e.preventDefault(); if (!user || isSubmitting) return; const { type, data } = modalState; const isEdit = !!data?.id;
     if (type === 'customer' || type === 'supplier') {
@@ -1804,6 +1878,10 @@ const handleSave = async (e) => {
               <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
                   <button onClick={() => exportToExcel(activeTab === 'customers' ? customers : suppliers, activeTab)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
+                  <label className="px-6 py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all cursor-pointer">
+    <Plus size={16} className="mr-2"/> Import Excel
+    <input type="file" accept=".xlsx, .xls, .csv" className="hidden" onChange={(e) => handleBulkExcelImport(e, activeTab === 'customers' ? 'customer' : activeTab === 'suppliers' ? 'supplier' : 'product')} />
+  </label>
                   <button onClick={() => openModal(activeTab.slice(0, -1))} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Plus size={16} className="mr-2"/> Add {activeTab.slice(0, -1)}</button>
                 </div>
                 {renderTable(['Entity Name', 'Contact Info', 'Tax / GST', 'Opening Bal.', 'Status'], (activeTab === 'customers' ? customers : suppliers).filter(c => safeSearch(c.name, searchTerm) || safeSearch(c.phone, searchTerm) || safeSearch(c.email, searchTerm) || safeSearch(c.gst, searchTerm)), activeTab,
