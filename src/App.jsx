@@ -347,17 +347,11 @@ const App = () => {
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const recognitionRef = useRef(null);
 
-  // Initialize Speech Recognition for Voice Input
+ // Initialize Speech Recognition for Voice Input
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = false;
-        recognitionRef.current.interimResults = false;
-        recognitionRef.current.lang = 'ml-IN';
-
-       if (SpeechRecognition) {
         recognitionRef.current = new SpeechRecognition();
         recognitionRef.current.continuous = false;
         recognitionRef.current.interimResults = false;
@@ -395,6 +389,7 @@ const App = () => {
             speakText('Price estimator open cheythittundu');
           }
         };
+
         recognitionRef.current.onerror = (event) => {
           console.error("Speech recognition error", event.error);
           setIsListening(false);
@@ -404,8 +399,9 @@ const App = () => {
           setIsListening(false);
         };
       }
+    }
+  }, []);
 
-const toggleListening = () => {
     if (!recognitionRef.current) {
       alert("Voice input is not supported in this browser. Please use Google Chrome on Desktop or Mobile.");
       return;
@@ -2437,8 +2433,7 @@ const handleSave = async (e) => {
         )}
 
       </div> {/* <-- ഇതാണ് Flex കണ്ടെയ്നർ ക്ലോസ് ചെയ്യുന്നത് --> */}
-
-      {/* Floating Voice Assistant Button (Responsive for PC & Mobile) */}
+{/* Floating Voice Assistant Button (Responsive for PC & Mobile) */}
       <div className="fixed bottom-5 right-5 sm:bottom-8 sm:right-8 z-[9999] flex items-center gap-3 no-print">
         {isListening && (
           <div className="hidden sm:flex px-4 py-2 bg-rose-600 text-white rounded-full shadow-2xl items-center gap-2 animate-pulse text-xs font-black uppercase tracking-widest">
@@ -2459,7 +2454,7 @@ const handleSave = async (e) => {
         </button>
       </div>
 
-    </div> {/* <-- ഇതാണ് മെയിൻ റൂട്ട് കണ്ടെയ്നർ ക്ലോസ് ചെയ്യുന്നത് --> */}
+    </div> 
   );
 };
 
