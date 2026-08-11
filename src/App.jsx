@@ -347,7 +347,7 @@ const App = () => {
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const recognitionRef = useRef(null);
 
-  // Initialize Speech Recognition for Voice Input
+// Initialize Speech Recognition for Voice Input
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -355,35 +355,36 @@ const App = () => {
         recognitionRef.current = new SpeechRecognition();
         recognitionRef.current.continuous = false;
         recognitionRef.current.interimResults = false;
-        recognitionRef.current.lang = 'ml-IN';
+        // ഇംഗ്ലീഷ്/മംഗ്ലീഷ് കൃത്യമായി മനസ്സിലാക്കാൻ en-IN ആക്കി മാറ്റി
+        recognitionRef.current.lang = 'en-IN';
 
         recognitionRef.current.onresult = (event) => {
           const transcript = event.results[0][0].transcript.toLowerCase();
           setChatInput((prev) => prev + (prev ? ' ' : '') + transcript);
           setIsListening(false);
 
-          // Voice Navigation & Action Banner Logic
-          if (transcript.includes('dashboard') || transcript.includes('home')) {
+          // Voice Navigation (രണ്ട് ഭാഷയും സപ്പോർട്ട് ചെയ്യും)
+          if (transcript.includes('dashboard') || transcript.includes('home') || transcript.includes('ഡാഷ്‌ബോർഡ്')) {
             setVoiceActionPrompt({ name: 'Dashboard', tab: 'dashboard', label: 'ഡാഷ്‌ബോർഡ് ഓപ്പൺ ചെയ്തു' });
             setActiveTab('dashboard');
             speakText('Dashboard open cheythittundu');
-          } else if (transcript.includes('sales') || transcript.includes('invoice')) {
+          } else if (transcript.includes('sales') || transcript.includes('invoice') || transcript.includes('സെയിൽസ്')) {
             setVoiceActionPrompt({ name: 'Sales Invoices', tab: 'sales', label: 'സെയിൽസ് ഓപ്പൺ ചെയ്തു' });
             setActiveTab('sales');
             speakText('Sales open cheythittundu');
-          } else if (transcript.includes('crm') || transcript.includes('job')) {
+          } else if (transcript.includes('crm') || transcript.includes('job') || transcript.includes('സി ആർ എം')) {
             setVoiceActionPrompt({ name: 'CRM Job Tracker', tab: 'crm', label: 'സി.ആർ.എം. ജോബ് ട്രാക്കർ ഓപ്പൺ ചെയ്തു' });
             setActiveTab('crm');
             speakText('CRM job tracker open cheythittundu');
-          } else if (transcript.includes('purchase') || transcript.includes('buying')) {
+          } else if (transcript.includes('purchase') || transcript.includes('buying') || transcript.includes('പർച്ചേസ്')) {
             setVoiceActionPrompt({ name: 'Purchases', tab: 'purchases', label: 'പർച്ചേസസ് ഓപ്പൺ ചെയ്തു' });
             setActiveTab('purchases');
             speakText('Purchases open cheythittundu');
-          } else if (transcript.includes('inventory') || transcript.includes('product')) {
+          } else if (transcript.includes('inventory') || transcript.includes('product') || transcript.includes('ഇൻവെന്ററി') || transcript.includes('സ്റ്റോക്ക്')) {
             setVoiceActionPrompt({ name: 'Inventory', tab: 'products', label: 'ഇൻവെന്ററി ഓപ്പൺ ചെയ്തു' });
             setActiveTab('products');
             speakText('Inventory open cheythittundu');
-          } else if (transcript.includes('estimator') || transcript.includes('calculator')) {
+          } else if (transcript.includes('estimator') || transcript.includes('calculator') || transcript.includes('എസ്റ്റിമേറ്റർ')) {
             setVoiceActionPrompt({ name: 'Price Estimator', tab: 'estimator', label: 'പ്രൈസ് എസ്റ്റിമേറ്റർ ഓപ്പൺ ചെയ്തു' });
             setActiveTab('estimator');
             speakText('Price estimator open cheythittundu');
@@ -401,7 +402,7 @@ const App = () => {
       }
     }
   }, []);
-
+  
   const toggleListening = () => {
     if (!recognitionRef.current) {
       alert("Voice input is not supported in this browser. Please use Google Chrome on Desktop or Mobile.");
@@ -2396,7 +2397,7 @@ const handleSave = async (e) => {
 
       </div> {/* <-- ഇതാണ് Flex കണ്ടെയ്നർ ക്ലോസ് ചെയ്യുന്നത് --> */}
 {/* Floating Voice Assistant Button (Responsive for PC & Mobile) */}
-      <div className="fixed bottom-5 right-5 sm:bottom-8 sm:right-8 z-[9999] flex items-center gap-3 no-print">
+      <div className="fixed bottom-24 right-5 sm:bottom-8 sm:right-8 z-[99999] flex items-center gap-3 no-print pointer-events-auto">
         {isListening && (
           <div className="hidden sm:flex px-4 py-2 bg-rose-600 text-white rounded-full shadow-2xl items-center gap-2 animate-pulse text-xs font-black uppercase tracking-widest">
             <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
@@ -2404,8 +2405,8 @@ const handleSave = async (e) => {
           </div>
         )}
         <button
-          onClick={toggleListening}
-          className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 ${
+          onClick={(e) => { e.preventDefault(); toggleListening(); }}
+          className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 cursor-pointer touch-manipulation ${
             isListening 
               ? 'bg-rose-500 text-white animate-bounce shadow-rose-500/50 ring-4 ring-rose-300/50' 
               : 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-indigo-500/40 hover:shadow-indigo-500/60'
