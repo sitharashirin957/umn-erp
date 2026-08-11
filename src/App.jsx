@@ -281,6 +281,29 @@ const App = () => {
 
   const closeModal = () => { setModalState({ isOpen: false, type: null, data: null }); setFormData({}); setInvoiceItems([]); setFormError(''); setIsSubmitting(false); };
 
+const handleDuplicateItem = (type, item) => {
+    const clonedItem = cleanObject({ ...item });
+    // പഴയ ഐഡികൾ കളയുന്നു, പുതിയത് സിസ്റ്റം തനിയെ ജനറേറ്റ് ചെയ്തോളും
+    delete clonedItem.id;
+    delete clonedItem.invoiceNo;
+    delete clonedItem.quotationNo;
+    delete clonedItem.jobId;
+    delete clonedItem.createdAt;
+    
+    clonedItem.date = new Date().toISOString().split('T')[0]; // ഇന്നത്തെ ഡേറ്റ് ആക്കുന്നു
+    
+    // സ്റ്റാറ്റസുകൾ റീസെറ്റ് ചെയ്യുന്നു
+    if (type === 'crm') {
+        clonedItem.workStatus = 'Work Onboarded';
+        clonedItem.invoicingStatus = 'Not invoiced';
+        clonedItem.collectionStatus = 'Pending';
+    } else if (type === 'quotation') {
+        clonedItem.status = 'Draft';
+    }
+    
+    openModal(type, clonedItem);
+  };
+
   const handlePushToInvoice = (crmItem) => {
     setActiveTab('sales'); openModal('sale', { customerId: crmItem.customerId || '', customerName: crmItem.customerName || '', partyName: crmItem.customerName || '', salesmanId: crmItem.salesmanId || '', linkedJobId: crmItem.id, date: new Date().toISOString().split('T')[0], items: crmItem.items && crmItem.items.length > 0 ? crmItem.items.map(i => ({...i, tax: 0})) : [{ productId: '', name: 'CUSTOM JOB', description: crmItem.description || '', qty: 1, rate: 0, tax: 0, total: 0 }] }); 
   };
@@ -1379,6 +1402,7 @@ const handleSave = async (e) => {
                             </td>
                             <td className="px-4 py-3 text-right space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end no-print">
                               {!isSmartLinked && <button onClick={() => handlePushToInvoice(item)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg" title="Push to Sales Invoice"><FilePlus size={14}/></button>}
+                             <button onClick={() => handleDuplicateItem('crm', item)} className="p-1.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg" title="Duplicate Job"><Copy size={14}/></button>
                               <button onClick={() => openModal('crm', item)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg" title="Edit Full Job"><Edit3 size={14}/></button>
                               <button onClick={() => triggerDelete('crm', item.id, String(item.jobId))} className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg"><Trash2 size={14}/></button>
                             </td>
@@ -1438,6 +1462,7 @@ const handleSave = async (e) => {
                                   <button onClick={() => handlePushQuoteTo(item, 'sale')} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg" title="Push to Sales Invoice"><FilePlus size={16}/></button>
                                 </>
                               )}
+                              <button onClick={() => handleDuplicateItem('quotation', item)} className="p-1.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg" title="Duplicate Quotation"><Copy size={16}/></button>
                               <button onClick={() => setPrintDoc({ isOpen: true, type: 'quotation', data: item })} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-50 dark:hover:bg-slate-900/30 rounded-lg" title="Print Quotation"><Printer size={16}/></button>
                               <button onClick={() => openModal('quotation', item)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg" title="Edit Quotation"><Edit3 size={16}/></button>
                               <button onClick={() => triggerDelete('quotation', item.id, String(item.quotationNo))} className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg"><Trash2 size={16}/></button>
@@ -1580,6 +1605,7 @@ const handleSave = async (e) => {
                             {aiReport && (
                                 <div className="flex gap-2">
                                     <button onClick={handleCopyReport} className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 rounded-lg transition-colors" title="Copy Text"><Copy size={16}/></button>
+                                    <button onClick={() => handleDuplicateItem(activeTab.slice(0, -1), item)} className="p-2 text-amber-500 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded-lg shrink-0" title="Duplicate"><Copy size={16}/></button>
                                     <button onClick={handlePrintAIReport} className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 rounded-lg transition-colors" title="Download PDF"><Printer size={16}/></button>
                                 </div>
                             )}
@@ -1671,6 +1697,7 @@ const handleSave = async (e) => {
                       <td className="px-6 py-4"><span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${getBadgeStyle(status)}`}>{status}</span></td>
                       <td className="px-6 py-4 text-right space-x-2 flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
                         {pendingAmount > 0 && <button onClick={() => handleQuickPayment(item, activeTab.slice(0, -1), pendingAmount)} className="p-2 text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg shrink-0" title={`Settle Pending: ${formatCurrency(pendingAmount)}`}><HandCoins size={16}/></button>}
+                        <button onClick={() => handleDuplicateItem(activeTab.slice(0, -1), item)} className="p-2 text-amber-500 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded-lg shrink-0" title="Duplicate"><Copy size={16}/></button>
                         <button onClick={() => setPrintDoc({ isOpen: true, type: activeTab.slice(0, -1), data: item })} className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-800 rounded-lg shrink-0" title="Download PDF"><Printer size={16}/></button>
                         <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg shrink-0"><Edit3 size={16}/></button>
                         <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, String(item.invoiceNo))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg shrink-0"><Trash2 size={16}/></button>
