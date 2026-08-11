@@ -211,8 +211,8 @@ const App = () => {
   useEffect(() => { const root = window.document.documentElement; if (isDarkMode) { root.classList.add('dark'); localStorage.setItem('erp_theme', 'dark'); } else { root.classList.remove('dark'); localStorage.setItem('erp_theme', 'light'); } }, [isDarkMode]);
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
 
-  const handleWhatsAppShare = (docType, data) => {
-    const compName = settings?.companyName || 'Oxad BS Co.';
+ const handleWhatsAppShare = (docType, data) => {
+    const compName = 'Oxad BS Co.';
     const refNo = data.invoiceNo || data.quotationNo || 'DOC';
     const totalAmt = formatCurrency(data.grandTotal || data.totalPrice || 0);
     const clientName = data.customerName || data.supplierName || 'Valued Client';
@@ -225,7 +225,7 @@ const App = () => {
   };
 
   const handleEmailShare = (docType, data) => {
-    const compName = settings?.companyName || 'Oxad BS Co.';
+    const compName = 'Oxad BS Co.';
     const refNo = data.invoiceNo || data.quotationNo || 'DOC';
     const totalAmt = formatCurrency(data.grandTotal || data.totalPrice || 0);
     const clientName = data.customerName || data.supplierName || 'Valued Client';
@@ -237,7 +237,7 @@ const App = () => {
     const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(url, '_blank');
   };
-
+  
   useEffect(() => { const handleClickOutside = (event) => { if (notifRef.current && !notifRef.current.contains(event.target)) { setIsNotifOpen(false); } }; document.addEventListener("mousedown", handleClickOutside); return () => document.removeEventListener("mousedown", handleClickOutside); }, []);
   useEffect(() => { if (settings?.logo) { let link = document.querySelector("link[rel~='icon']"); if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.getElementsByTagName('head')[0].appendChild(link); } link.href = settings.logo; } }, [settings?.logo]);
 
