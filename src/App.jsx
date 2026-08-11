@@ -64,6 +64,33 @@ const cleanObject = (obj) => {
 const COLORS = ['#10b981', '#3b82f6', '#94a3b8', '#f43f5e', '#eab308', '#8b5cf6', '#06b6d4'];
 const AGING_COLORS = ['#38bdf8', '#fbbf24', '#34d399', '#a78bfa', '#fb923c', '#f43f5e'];
 
+const handleWhatsAppShare = (docType, data) => {
+    const compName = settings?.companyName || 'Oxad BS Co.';
+    const refNo = data.invoiceNo || data.quotationNo || 'DOC';
+    const totalAmt = formatCurrency(data.grandTotal || data.totalPrice || 0);
+    const clientName = data.customerName || data.supplierName || 'Valued Client';
+    const phone = data.entity?.phone || '';
+
+    const message = `*${compName}* - Statement / Update\n\nHello *${clientName}*,\nHere are the details for *${docType.toUpperCase()}* (${refNo}).\n\n*Total Amount:* ${totalAmt}\n\nPlease feel free to contact us for any clarifications.\n\nThank you!`;
+
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
+
+  const handleEmailShare = (docType, data) => {
+    const compName = settings?.companyName || 'Oxad BS Co.';
+    const refNo = data.invoiceNo || data.quotationNo || 'DOC';
+    const totalAmt = formatCurrency(data.grandTotal || data.totalPrice || 0);
+    const clientName = data.customerName || data.supplierName || 'Valued Client';
+    const email = data.entity?.email || '';
+
+    const subject = `${compName} - ${docType.toUpperCase()} (${refNo})`;
+    const body = `Hello ${clientName},\n\nPlease find the details regarding ${docType} (${refNo}).\nTotal Amount: ${totalAmt}\n\nThank you,\n${compName}`;
+
+    const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(url, '_blank');
+  };
+
 const triggerSystemPrint = async (customFilename) => {
   const element = document.getElementById('printable-area');
   if (!element) return;
@@ -2268,6 +2295,15 @@ const handleSave = async (e) => {
         )}
 
         {/* --- PRINT MODAL --- */}
+        <div className="flex space-x-3">
+                <button onClick={() => handleWhatsAppShare(printDoc.type, printDoc.data)} className="px-6 py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-600/30 hover:scale-95 flex items-center transition-all">WhatsApp</button>
+                <button onClick={() => handleEmailShare(printDoc.type, printDoc.data)} className="px-6 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/30 hover:scale-95 flex items-center transition-all">Email</button>
+                <button onClick={() => {
+                  const refNo = printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.ref || printDoc.data?.entity?.name || 'DOC';
+                  triggerSystemPrint(`${settings?.companyName || 'MY'}_${String(printDoc.type).toUpperCase()}_${refNo}`);
+                }} className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 flex items-center transition-all"><DownloadCloud size={18} className="mr-2"/> Generate PDF</button>
+                <button onClick={() => setPrintDoc({ isOpen: false, type: '', data: null })} className="p-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition-colors"><X size={20}/></button>
+              </div>
         {printDoc.isOpen && (
           <div className="fixed inset-0 bg-slate-900/98 dark:bg-black/98 backdrop-blur-xl z-[500] overflow-y-auto print-overlay">
             <div className="max-w-4xl mx-auto flex justify-between items-center my-8 px-4 no-print">
