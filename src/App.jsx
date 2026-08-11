@@ -63,19 +63,7 @@ const cleanObject = (obj) => {
 
 const COLORS = ['#10b981', '#3b82f6', '#94a3b8', '#f43f5e', '#eab308', '#8b5cf6', '#06b6d4'];
 const AGING_COLORS = ['#38bdf8', '#fbbf24', '#34d399', '#a78bfa', '#fb923c', '#f43f5e'];
-
-    const compName = settings?.companyName || 'Oxad BS Co.';
-    const refNo = data.invoiceNo || data.quotationNo || 'DOC';
-    const totalAmt = formatCurrency(data.grandTotal || data.totalPrice || 0);
-    const clientName = data.customerName || data.supplierName || 'Valued Client';
-    const email = data.entity?.email || '';
-
-    const subject = `${compName} - ${docType.toUpperCase()} (${refNo})`;
-    const body = `Hello ${clientName},\n\nPlease find the details regarding ${docType} (${refNo}).\nTotal Amount: ${totalAmt}\n\nThank you,\n${compName}`;
-
-    const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(url, '_blank');
-  
+ 
 
 const triggerSystemPrint = async (customFilename) => {
   const element = document.getElementById('printable-area');
@@ -211,7 +199,7 @@ const App = () => {
   useEffect(() => { const root = window.document.documentElement; if (isDarkMode) { root.classList.add('dark'); localStorage.setItem('erp_theme', 'dark'); } else { root.classList.remove('dark'); localStorage.setItem('erp_theme', 'light'); } }, [isDarkMode]);
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
 
- const handleWhatsAppShare = (docType, data) => {
+const handleWhatsAppShare = (docType, data) => {
     const compName = 'Oxad BS Co.';
     const refNo = data.invoiceNo || data.quotationNo || 'DOC';
     const totalAmt = formatCurrency(data.grandTotal || data.totalPrice || 0);
@@ -237,7 +225,7 @@ const App = () => {
     const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(url, '_blank');
   };
-  
+
   useEffect(() => { const handleClickOutside = (event) => { if (notifRef.current && !notifRef.current.contains(event.target)) { setIsNotifOpen(false); } }; document.addEventListener("mousedown", handleClickOutside); return () => document.removeEventListener("mousedown", handleClickOutside); }, []);
   useEffect(() => { if (settings?.logo) { let link = document.querySelector("link[rel~='icon']"); if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.getElementsByTagName('head')[0].appendChild(link); } link.href = settings.logo; } }, [settings?.logo]);
 
