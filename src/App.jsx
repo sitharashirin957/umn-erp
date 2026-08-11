@@ -2294,16 +2294,7 @@ const handleSave = async (e) => {
           </div>
         )}
 
-        {/* --- PRINT MODAL --- */}
-        <div className="flex space-x-3">
-                <button onClick={() => handleWhatsAppShare(printDoc.type, printDoc.data)} className="px-6 py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-600/30 hover:scale-95 flex items-center transition-all">WhatsApp</button>
-                <button onClick={() => handleEmailShare(printDoc.type, printDoc.data)} className="px-6 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/30 hover:scale-95 flex items-center transition-all">Email</button>
-                <button onClick={() => {
-                  const refNo = printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.ref || printDoc.data?.entity?.name || 'DOC';
-                  triggerSystemPrint(`${settings?.companyName || 'MY'}_${String(printDoc.type).toUpperCase()}_${refNo}`);
-                }} className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 flex items-center transition-all"><DownloadCloud size={18} className="mr-2"/> Generate PDF</button>
-                <button onClick={() => setPrintDoc({ isOpen: false, type: '', data: null })} className="p-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition-colors"><X size={20}/></button>
-              </div>
+        
         {printDoc.isOpen && (
           <div className="fixed inset-0 bg-slate-900/98 dark:bg-black/98 backdrop-blur-xl z-[500] overflow-y-auto print-overlay">
             <div className="max-w-4xl mx-auto flex justify-between items-center my-8 px-4 no-print">
@@ -2311,7 +2302,9 @@ const handleSave = async (e) => {
                 <div className="p-3 bg-blue-600 rounded-2xl shadow-lg"><FileText size={24}/></div>
                 <div><h2 className="text-2xl font-black uppercase tracking-tighter leading-none">Document Engine</h2><p className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest mt-1">Ready for PDF Download</p></div>
               </div>
-              <div className="flex space-x-4">
+              <div className="flex space-x-3">
+                <button onClick={() => handleWhatsAppShare(printDoc.type, printDoc.data)} className="px-6 py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-600/30 hover:scale-95 flex items-center transition-all">WhatsApp</button>
+                <button onClick={() => handleEmailShare(printDoc.type, printDoc.data)} className="px-6 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/30 hover:scale-95 flex items-center transition-all">Email</button>
                 <button onClick={() => {
                   const refNo = printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.ref || printDoc.data?.entity?.name || 'DOC';
                   triggerSystemPrint(`${settings?.companyName || 'MY'}_${String(printDoc.type).toUpperCase()}_${refNo}`);
