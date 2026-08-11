@@ -355,39 +355,95 @@ const App = () => {
         recognitionRef.current = new SpeechRecognition();
         recognitionRef.current.continuous = false;
         recognitionRef.current.interimResults = false;
-        // ഇംഗ്ലീഷ്/മംഗ്ലീഷ് കൃത്യമായി മനസ്സിലാക്കാൻ en-IN ആക്കി മാറ്റി
-        recognitionRef.current.lang = 'en-IN';
+        
+        // ഇംഗ്ലീഷും മലയാളവും മംഗ്ലീഷും നന്നായി സപ്പോർട്ട് ചെയ്യാൻ:
+        recognitionRef.current.lang = 'ml-IN';
 
         recognitionRef.current.onresult = (event) => {
           const transcript = event.results[0][0].transcript.toLowerCase();
           setChatInput((prev) => prev + (prev ? ' ' : '') + transcript);
           setIsListening(false);
 
-          // Voice Navigation (രണ്ട് ഭാഷയും സപ്പോർട്ട് ചെയ്യും)
-          if (transcript.includes('dashboard') || transcript.includes('home') || transcript.includes('ഡാഷ്‌ബോർഡ്')) {
+          // MASTER ROUTING LOGIC: All Tabs (Malayalam + English + Manglish)
+          if (transcript.match(/dashboard|home|overview|analytics|ഡാഷ്‌ബോർഡ്|ഹോം|ഡാഷ്ബോർഡ്/)) {
             setVoiceActionPrompt({ name: 'Dashboard', tab: 'dashboard', label: 'ഡാഷ്‌ബോർഡ് ഓപ്പൺ ചെയ്തു' });
             setActiveTab('dashboard');
-            speakText('Dashboard open cheythittundu');
-          } else if (transcript.includes('sales') || transcript.includes('invoice') || transcript.includes('സെയിൽസ്')) {
+            speakText('Dashboard open aakki');
+          } 
+          else if (transcript.match(/crm|job|work|lead|സി ആർ എം|സിആർഎം|ജോബ്|വർക്ക്/)) {
+            setVoiceActionPrompt({ name: 'CRM Job Tracker', tab: 'crm', label: 'CRM ട്രാക്കർ ഓപ്പൺ ചെയ്തു' });
+            setActiveTab('crm');
+            speakText('CRM open aakki');
+          } 
+          else if (transcript.match(/quotation|quote|കൊട്ടേഷൻ|ക്വോട്ട്/)) {
+            setVoiceActionPrompt({ name: 'Sales Quotations', tab: 'quotations', label: 'കൊട്ടേഷൻസ് ഓപ്പൺ ചെയ്തു' });
+            setActiveTab('quotations');
+            speakText('Quotations open aakki');
+          } 
+          else if (transcript.match(/sales|invoice|bill|സെയിൽസ്|ഇൻവോയ്സ്|ബിൽ/)) {
             setVoiceActionPrompt({ name: 'Sales Invoices', tab: 'sales', label: 'സെയിൽസ് ഓപ്പൺ ചെയ്തു' });
             setActiveTab('sales');
-            speakText('Sales open cheythittundu');
-          } else if (transcript.includes('crm') || transcript.includes('job') || transcript.includes('സി ആർ എം')) {
-            setVoiceActionPrompt({ name: 'CRM Job Tracker', tab: 'crm', label: 'സി.ആർ.എം. ജോബ് ട്രാക്കർ ഓപ്പൺ ചെയ്തു' });
-            setActiveTab('crm');
-            speakText('CRM job tracker open cheythittundu');
-          } else if (transcript.includes('purchase') || transcript.includes('buying') || transcript.includes('പർച്ചേസ്')) {
+            speakText('Sales open aakki');
+          } 
+          else if (transcript.match(/purchase|buy|പർച്ചേസ്|വാങ്ങിയത്/)) {
             setVoiceActionPrompt({ name: 'Purchases', tab: 'purchases', label: 'പർച്ചേസസ് ഓപ്പൺ ചെയ്തു' });
             setActiveTab('purchases');
-            speakText('Purchases open cheythittundu');
-          } else if (transcript.includes('inventory') || transcript.includes('product') || transcript.includes('ഇൻവെന്ററി') || transcript.includes('സ്റ്റോക്ക്')) {
+            speakText('Purchases open aakki');
+          } 
+          else if (transcript.match(/collection|receipt|കിട്ടിയ കാശ്|വരവ്|കളക്ഷൻ/)) {
+            setVoiceActionPrompt({ name: 'Collections', tab: 'collections', label: 'കളക്ഷൻസ് ഓപ്പൺ ചെയ്തു' });
+            setActiveTab('collections');
+            speakText('Collections open aakki');
+          } 
+          else if (transcript.match(/expense|payment out|ചിലവ്|ചെലവ്|പേയ്മെന്റ്/)) {
+            setVoiceActionPrompt({ name: 'Expenses', tab: 'expenses', label: 'എക്സ്പെൻസസ് ഓപ്പൺ ചെയ്തു' });
+            setActiveTab('expenses');
+            speakText('Expenses open aakki');
+          } 
+          else if (transcript.match(/customer aging|കിട്ടാനുള്ള|റിസീവബിൾ/)) {
+            setVoiceActionPrompt({ name: 'Customer Aging', tab: 'customer_aging', label: 'കസ്റ്റമർ ഏജിങ് ഓപ്പൺ ചെയ്തു' });
+            setActiveTab('customer_aging');
+            speakText('Customer aging open aakki');
+          } 
+          else if (transcript.match(/supplier aging|കൊടുക്കാനുള്ള|പേയബിൾ/)) {
+            setVoiceActionPrompt({ name: 'Supplier Aging', tab: 'supplier_aging', label: 'സപ്ലയർ ഏജിങ് ഓപ്പൺ ചെയ്തു' });
+            setActiveTab('supplier_aging');
+            speakText('Supplier aging open aakki');
+          } 
+          else if (transcript.match(/ai|report|insight|റിപ്പോർട്ട്|അനലിറ്റിക്സ്/)) {
+            setVoiceActionPrompt({ name: 'AI Reports', tab: 'ai_reports', label: 'AI റിപ്പോർട്ട് ഓപ്പൺ ചെയ്തു' });
+            setActiveTab('ai_reports');
+            speakText('AI reports open aakki');
+          } 
+          else if (transcript.match(/customer|client list|കസ്റ്റമർ/)) {
+            setVoiceActionPrompt({ name: 'Customers', tab: 'customers', label: 'കസ്റ്റമേഴ്സ് ഓപ്പൺ ചെയ്തു' });
+            setActiveTab('customers');
+            speakText('Customers open aakki');
+          } 
+          else if (transcript.match(/supplier|vendor|സപ്ലയർ/)) {
+            setVoiceActionPrompt({ name: 'Suppliers', tab: 'suppliers', label: 'സപ്ലയേഴ്സ് ഓപ്പൺ ചെയ്തു' });
+            setActiveTab('suppliers');
+            speakText('Suppliers open aakki');
+          } 
+          else if (transcript.match(/inventory|product|stock|item|ഇൻവെന്ററി|സ്റ്റോക്ക്|പ്രൊഡക്റ്റ്/)) {
             setVoiceActionPrompt({ name: 'Inventory', tab: 'products', label: 'ഇൻവെന്ററി ഓപ്പൺ ചെയ്തു' });
             setActiveTab('products');
-            speakText('Inventory open cheythittundu');
-          } else if (transcript.includes('estimator') || transcript.includes('calculator') || transcript.includes('എസ്റ്റിമേറ്റർ')) {
-            setVoiceActionPrompt({ name: 'Price Estimator', tab: 'estimator', label: 'പ്രൈസ് എസ്റ്റിമേറ്റർ ഓപ്പൺ ചെയ്തു' });
+            speakText('Inventory open aakki');
+          } 
+          else if (transcript.match(/salesman|staff|employee|സെയിൽസ്മാൻ|സ്റ്റാഫ്/)) {
+            setVoiceActionPrompt({ name: 'Sales Team', tab: 'salesmen', label: 'സെയിൽസ് ടീം ഓപ്പൺ ചെയ്തു' });
+            setActiveTab('salesmen');
+            speakText('Sales team open aakki');
+          } 
+          else if (transcript.match(/estimator|calculate|എസ്റ്റിമേറ്റർ|കാൽക്കുലേറ്റർ/)) {
+            setVoiceActionPrompt({ name: 'Price Estimator', tab: 'estimator', label: 'എസ്റ്റിമേറ്റർ ഓപ്പൺ ചെയ്തു' });
             setActiveTab('estimator');
-            speakText('Price estimator open cheythittundu');
+            speakText('Estimator open aakki');
+          } 
+          else if (transcript.match(/setting|profile|സെറ്റിംഗ്സ്|പ്രൊഫൈൽ/)) {
+            setVoiceActionPrompt({ name: 'Settings', tab: 'settings', label: 'സെറ്റിംഗ്സ് ഓപ്പൺ ചെയ്തു' });
+            setActiveTab('settings');
+            speakText('Settings open aakki');
           }
         };
 
@@ -402,7 +458,7 @@ const App = () => {
       }
     }
   }, []);
-  
+    
   const toggleListening = () => {
     if (!recognitionRef.current) {
       alert("Voice input is not supported in this browser. Please use Google Chrome on Desktop or Mobile.");
