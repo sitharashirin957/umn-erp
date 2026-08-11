@@ -1544,8 +1544,8 @@ const handleSave = async (e) => {
                         <div className="p-4 bg-white dark:bg-[#1e293b] border-t border-slate-100 dark:border-slate-800">
                             <div className="flex gap-2 relative items-center">
                                 <button 
-                                    onClick={toggleListening}
-                                    className={`p-3 rounded-xl transition-all ${isListening ? 'bg-rose-500 text-white animate-pulse shadow-lg shadow-rose-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400'}`}
+                                    onClick={(e) => { e.preventDefault(); toggleListening(); }}
+                                    className={`relative z-20 p-3 rounded-xl transition-all cursor-pointer touch-manipulation ${isListening ? 'bg-rose-500 text-white animate-pulse shadow-lg shadow-rose-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-blue-500 dark:hover:text-blue-400'}`}
                                     title="Speak your question"
                                 >
                                     <Mic size={18} />
