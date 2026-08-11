@@ -334,7 +334,7 @@ const App = () => {
 // --- AI REPORT & CHAT LOGIC ---
 
 // --- AI REPORT & CHAT LOGIC ---
-  const [aiReport, setAiReport] = useState('');
+ const [aiReport, setAiReport] = useState('');
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiError, setAiError] = useState('');
   
@@ -347,7 +347,7 @@ const App = () => {
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const recognitionRef = useRef(null);
 
- // Initialize Speech Recognition for Voice Input
+  // Initialize Speech Recognition for Voice Input
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -402,6 +402,7 @@ const App = () => {
     }
   }, []);
 
+  const toggleListening = () => {
     if (!recognitionRef.current) {
       alert("Voice input is not supported in this browser. Please use Google Chrome on Desktop or Mobile.");
       return;
@@ -445,6 +446,7 @@ const App = () => {
     utterance.pitch = 1.0; 
     window.speechSynthesis.speak(utterance);
   };
+
   // Chat Suggestions in Manglish
   const suggestedQuestions = [
     "What is our total net profit?",
