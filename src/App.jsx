@@ -383,7 +383,6 @@ const handleDuplicateItem = (type, item) => {
   };
 
   const handleStatusChange = (id, field, value, collectionName = 'crms') => { requestAdminAuth(async () => { if(!user) return; try { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionName, id), { [field]: value }); } catch(e) { console.error("Error updating status", e); } }); };
-// --- AI REPORT & CHAT LOGIC ---
 
 // --- AI REPORT & CHAT LOGIC ---
  const [aiReport, setAiReport] = useState('');
@@ -1056,6 +1055,7 @@ const handleSave = async (e) => {
                   <KPICard title="Total Purchase" value={formatCurrency(analytics.totalPurchases)} icon={ShoppingBag} colorClass="text-[#3b82f6]" bgClass="bg-[#eff6ff] dark:bg-[#3b82f6]/10 border-[#bfdbfe] dark:border-[#3b82f6]/20" />
                   <KPICard title="Total Receipt" value={formatCurrency(analytics.totalCollections)} icon={HandCoins} colorClass="text-[#f59e0b]" bgClass="bg-[#fffbeb] dark:bg-[#f59e0b]/10 border-[#fde68a] dark:border-[#f59e0b]/20" />
                   <KPICard title="Total Payment" value={formatCurrency(analytics.totalExpenses)} icon={CreditCard} colorClass="text-[#f43f5e]" bgClass="bg-[#fff1f2] dark:bg-[#f43f5e]/10 border-[#fecdd3] dark:border-[#f43f5e]/20" />
+                  <KPICard title="Net Profit / Loss" value={formatCurrency(analytics.netProfit)} icon={TrendingUp} colorClass={analytics.netProfit >= 0 ? "text-[#10b981]" : "text-[#f43f5e]"} bgClass={analytics.netProfit >= 0 ? "bg-[#ecfdf5] dark:bg-[#10b981]/10 border-[#a7f3d0]" : "bg-[#fff1f2] dark:bg-[#f43f5e]/10 border-[#fecdd3]"} />
                 </div>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <button onClick={() => openModal('product')} className="py-4 border-2 border-[#10b981] text-[#10b981] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#10b981] hover:text-white transition-all flex items-center justify-center bg-white dark:bg-[#1e293b]"><Package size={16} className="mr-2"/> Create Product</button>
