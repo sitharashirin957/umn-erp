@@ -1873,72 +1873,102 @@ const handleSave = async (e) => {
                 </div>
               </div>
             )}
-{/* --- CUSTOMERS AND SUPPLIERS VIEW --- */}
-            {(activeTab === 'customers' || activeTab === 'suppliers') && (
-              <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
-                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-                  <button onClick={() => exportToExcel(activeTab === 'customers' ? customers : suppliers, activeTab)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
-                  <label className="px-6 py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all cursor-pointer">
-    <Plus size={16} className="mr-2"/> Import Excel
-    <input type="file" accept=".xlsx, .xls, .csv" className="hidden" onChange={(e) => handleBulkExcelImport(e, activeTab === 'customers' ? 'customer' : activeTab === 'suppliers' ? 'supplier' : 'product')} />
-  </label>
-                  <button onClick={() => openModal(activeTab.slice(0, -1))} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Plus size={16} className="mr-2"/> Add {activeTab.slice(0, -1)}</button>
-                </div>
-                {renderTable(['Entity Name', 'Contact Info', 'Tax / GST', 'Opening Bal.', 'Status'], (activeTab === 'customers' ? customers : suppliers).filter(c => safeSearch(c.name, searchTerm) || safeSearch(c.phone, searchTerm) || safeSearch(c.email, searchTerm) || safeSearch(c.gst, searchTerm)), activeTab,
-                  (item) => (
-                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                      <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.name || '')}</td>
-                      <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400"><div><Phone size={12} className="inline mr-2 opacity-70"/>{String(item.phone || 'N/A')}</div><div className="mt-1"><Mail size={12} className="inline mr-2 opacity-70"/>{String(item.email || 'N/A')}</div></td>
-                      <td className="px-6 py-4 font-bold text-xs uppercase text-slate-700 dark:text-slate-300">{String(item.gst || 'UNREGISTERED')}</td>
-                      <td className="px-6 py-4 font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(item.openingBalance)}</td>
-                      <td className="px-6 py-4"><span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-200 dark:border-emerald-500/30">Active</span></td>
-                      <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
-                        <button onClick={() => generateLedger(activeTab.slice(0, -1), item)} className="p-2 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg" title="View Ledger"><BookOpen size={16}/></button>
-                        <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg"><Edit3 size={16}/></button>
-                        <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, String(item.name))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
-                      </td>
-                    </tr>
-                  )
-                )}
-              </div>
-            )}
+         {/* --- CUSTOMERS AND SUPPLIERS VIEW --- */}
+            {/* --- CUSTOMERS AND SUPPLIERS VIEW --- */}
+{(activeTab === 'customers' || activeTab === 'suppliers') && (
+  <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
+    <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex-wrap gap-4">
+      <button onClick={() => exportToExcel(activeTab === 'customers' ? customers : suppliers, activeTab)} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
+      
+      <div className="relative">
+        <select 
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val === 'sample') {
+              downloadSampleExcel(activeTab === 'customers' ? 'customer' : 'supplier');
+            }
+            e.target.value = "";
+          }} 
+          className="px-6 py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl font-black text-[10px] uppercase tracking-widest border border-indigo-200 dark:border-indigo-800/40 outline-none cursor-pointer appearance-none pr-10 shadow-sm"
+        >
+          <option value="" disabled selected>📂 Excel Actions...</option>
+          <option value="sample">📥 Download Sample Template</option>
+        </select>
+        
+        <label className="absolute inset-0 cursor-pointer opacity-0">
+          <input type="file" accept=".xlsx, .xls, .csv" onChange={(e) => handleBulkExcelImport(e, activeTab === 'customers' ? 'customer' : 'supplier')} />
+        </label>
+      </div>
+
+      <button onClick={() => openModal(activeTab.slice(0, -1))} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Plus size={16} className="mr-2"/> Add {activeTab.slice(0, -1)}</button>
+    </div>
+    {renderTable(['Entity Name', 'Contact Info', 'Tax / GST', 'Opening Bal.', 'Status'], (activeTab === 'customers' ? customers : suppliers).filter(c => safeSearch(c.name, searchTerm) || safeSearch(c.phone, searchTerm) || safeSearch(c.email, searchTerm) || safeSearch(c.gst, searchTerm)), activeTab,
+      (item) => (
+        <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+          <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.name || '')}</td>
+          <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400"><div><Phone size={12} className="inline mr-2 opacity-70"/>{String(item.phone || 'N/A')}</div><div className="mt-1"><Mail size={12} className="inline mr-2 opacity-70"/>{String(item.email || 'N/A')}</div></td>
+          <td className="px-6 py-4 font-bold text-xs uppercase text-slate-700 dark:text-slate-300">{String(item.gst || 'UNREGISTERED')}</td>
+          <td className="px-6 py-4 font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(item.openingBalance)}</td>
+          <td className="px-6 py-4"><span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-200 dark:border-emerald-500/30">Active</span></td>
+          <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
+            <button onClick={() => generateLedger(activeTab.slice(0, -1), item)} className="p-2 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg" title="View Ledger"><BookOpen size={16}/></button>
+            <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg"><Edit3 size={16}/></button>
+            <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, String(item.name))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
+          </td>
+        </tr>
+      )
+    )}
+  </div>
+)}
 
             {/* --- PRODUCTS VIEW --- */}
-            {activeTab === 'products' && (
-              <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
-                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex-wrap gap-4">
-                  <div className="flex space-x-3 items-center flex-wrap gap-3">
-                    <button onClick={() => exportToExcel(products, 'products')} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
-                    
-                    <label className="px-6 py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all cursor-pointer">
-                      <Plus size={16} className="mr-2"/> Import Excel
-                      <input type="file" accept=".xlsx, .xls, .csv" className="hidden" onChange={(e) => handleBulkExcelImport(e, 'product')} />
-                    </label>
+           {/* --- PRODUCTS VIEW --- */}
+{activeTab === 'products' && (
+  <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
+    <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex-wrap gap-4">
+      <div className="flex space-x-3 items-center flex-wrap gap-3">
+        <button onClick={() => exportToExcel(products, 'products')} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
+        
+        <div className="relative">
+          <select 
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === 'sample') {
+                downloadSampleExcel('product');
+              }
+              e.target.value = "";
+            }} 
+            className="px-6 py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl font-black text-[10px] uppercase tracking-widest border border-indigo-200 dark:border-indigo-800/40 outline-none cursor-pointer appearance-none pr-10 shadow-sm"
+          >
+            <option value="" disabled selected>📂 Excel Actions...</option>
+            <option value="sample">📥 Download Sample Template</option>
+          </select>
+          
+          <label className="absolute inset-0 cursor-pointer opacity-0">
+            <input type="file" accept=".xlsx, .xls, .csv" onChange={(e) => handleBulkExcelImport(e, 'product')} />
+          </label>
+        </div>
+      </div>
 
-                    <button onClick={() => downloadSampleExcel('product')} className="px-4 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all">
-                      Sample Template
-                    </button>
-                  </div>
-
-                  <button onClick={() => openModal('product')} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase flex items-center hover:scale-95 transition-all shadow-lg shadow-blue-500/30"><Plus size={16} className="mr-2"/> Add Product</button>
-                </div>
-                {renderTable(['Product Name', 'Category', 'Stock Lvl', 'Cost Price', 'Selling Price'], products.filter(p => safeSearch(p.name, searchTerm) || safeSearch(p.category, searchTerm) || safeSearch(p.sellingPrice, searchTerm) || safeSearch(p.purchasePrice, searchTerm)), 'product',
-                  (item) => (
-                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                      <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.name || '')}</td>
-                      <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">{String(item.category || 'General')}</td>
-                      <td className="px-6 py-4"><span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${Number(item.stock) <= Number(item.minStock) ? 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/30' : 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/30'}`}>{String(item.stock || 0)} Units</span></td>
-                      <td className="px-6 py-4 font-black text-slate-500 dark:text-slate-400">{formatCurrency(item.purchasePrice)}</td>
-                      <td className="px-6 py-4 font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(item.sellingPrice)}</td>
-                      <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => openModal('product', item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg"><Edit3 size={16}/></button>
-                        <button onClick={() => triggerDelete('product', item.id, String(item.name))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
-                      </td>
-                    </tr>
-                  )
-                )}
-              </div>
-            )}
+      <button onClick={() => openModal('product')} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase flex items-center hover:scale-95 transition-all shadow-lg shadow-blue-500/30"><Plus size={16} className="mr-2"/> Add Product</button>
+    </div>
+    {renderTable(['Product Name', 'Category', 'Stock Lvl', 'Cost Price', 'Selling Price'], products.filter(p => safeSearch(p.name, searchTerm) || safeSearch(p.category, searchTerm) || safeSearch(p.sellingPrice, searchTerm) || safeSearch(p.purchasePrice, searchTerm)), 'product',
+      (item) => (
+        <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+          <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.name || '')}</td>
+          <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">{String(item.category || 'General')}</td>
+          <td className="px-6 py-4"><span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${Number(item.stock) <= Number(item.minStock) ? 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/30' : 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/30'}`}>{String(item.stock || 0)} Units</span></td>
+          <td className="px-6 py-4 font-black text-slate-500 dark:text-slate-400">{formatCurrency(item.purchasePrice)}</td>
+          <td className="px-6 py-4 font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(item.sellingPrice)}</td>
+          <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onClick={() => openModal('product', item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg"><Edit3 size={16}/></button>
+            <button onClick={() => triggerDelete('product', item.id, String(item.name))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
+          </td>
+        </tr>
+      )
+    )}
+  </div>
+)}
 
             {/* --- SALESMEN VIEW --- */}
             {activeTab === 'salesmen' && (
