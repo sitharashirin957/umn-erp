@@ -1765,7 +1765,7 @@ const handleSave = async (e) => {
               </div>
             )}
 
-            {/* --- SALES AND PURCHASES VIEW --- */}
+{/* --- SALES AND PURCHASES VIEW --- */}
             {(activeTab === 'sales' || activeTab === 'purchases') && (
               <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
@@ -1800,6 +1800,12 @@ const handleSave = async (e) => {
                       <td className="px-6 py-4"><span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${getBadgeStyle(status)}`}>{status}</span></td>
                       <td className="px-6 py-4 text-right space-x-2 flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
                         {pendingAmount > 0 && <button onClick={() => handleQuickPayment(item, activeTab.slice(0, -1), pendingAmount)} className="p-2 text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg shrink-0" title={`Settle Pending: ${formatCurrency(pendingAmount)}`}><HandCoins size={16}/></button>}
+                        
+                        {/* WhatsApp Payment Reminder Button */}
+                        <button onClick={() => handleWhatsAppShare(activeTab.slice(0, -1), item)} className="p-2 text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg shrink-0" title="Send WhatsApp Payment Reminder">
+                          <MessageSquare size={16}/>
+                        </button>
+
                         <button onClick={() => handleDuplicateItem(activeTab.slice(0, -1), item)} className="p-2 text-amber-500 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded-lg shrink-0" title="Duplicate"><Copy size={16}/></button>
                         <button onClick={() => setPrintDoc({ isOpen: true, type: activeTab.slice(0, -1), data: item })} className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-800 rounded-lg shrink-0" title="Download PDF"><Printer size={16}/></button>
                         <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg shrink-0"><Edit3 size={16}/></button>
