@@ -1906,8 +1906,20 @@ const handleSave = async (e) => {
             {/* --- PRODUCTS VIEW --- */}
             {activeTab === 'products' && (
               <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
-                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-                  <button onClick={() => exportToExcel(products, 'products')} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
+                <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex-wrap gap-4">
+                  <div className="flex space-x-3 items-center flex-wrap gap-3">
+                    <button onClick={() => exportToExcel(products, 'products')} className="px-6 py-3 bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase flex items-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><DownloadCloud size={16} className="mr-2"/> Export Data</button>
+                    
+                    <label className="px-6 py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-all cursor-pointer">
+                      <Plus size={16} className="mr-2"/> Import Excel
+                      <input type="file" accept=".xlsx, .xls, .csv" className="hidden" onChange={(e) => handleBulkExcelImport(e, 'product')} />
+                    </label>
+
+                    <button onClick={() => downloadSampleExcel('product')} className="px-4 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all">
+                      Sample Template
+                    </button>
+                  </div>
+
                   <button onClick={() => openModal('product')} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase flex items-center hover:scale-95 transition-all shadow-lg shadow-blue-500/30"><Plus size={16} className="mr-2"/> Add Product</button>
                 </div>
                 {renderTable(['Product Name', 'Category', 'Stock Lvl', 'Cost Price', 'Selling Price'], products.filter(p => safeSearch(p.name, searchTerm) || safeSearch(p.category, searchTerm) || safeSearch(p.sellingPrice, searchTerm) || safeSearch(p.purchasePrice, searchTerm)), 'product',
