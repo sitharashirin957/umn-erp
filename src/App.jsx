@@ -200,17 +200,17 @@ const App = () => {
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
 
 const handleWhatsAppShare = (docType, data) => {
-    const compName = 'Oxad BS Co.';
-    const refNo = data.invoiceNo || data.quotationNo || 'DOC';
-    const totalAmt = formatCurrency(data.grandTotal || data.totalPrice || 0);
-    const clientName = data.customerName || data.supplierName || 'Valued Client';
-    const phone = data.phone || data.entity?.phone || '';
+  const compName = settings?.companyName || 'Oxad BS Co.';
+  const refNo = data.invoiceNo || data.quotationNo || data.ref || 'STATEMENT';
+  const totalAmt = formatCurrency(data.grandTotal || data.amount || 0);
+  const clientName = data.customerName || data.name || data.supplierName || 'Valued Client';
+  const phone = data.phone || data.entity?.phone || '';
 
-    const message = `*${compName}* - Statement / Update\n\nHello *${clientName}*,\nHere are the details for *${docType.toUpperCase()}* (${refNo}).\n\n*Total Amount:* ${totalAmt}\n\nPlease feel free to contact us for any clarifications.\n\nThank you!`;
+  const message = `*${compName}* - Payment Reminder\n\nHello *${clientName}*,\nThis is a gentle reminder regarding your pending balance/invoice (${refNo}).\n\n*Pending Amount:* ${totalAmt}\n\nKindly arrange the payment at your earliest convenience. Thank you!`;
 
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
-  };
+  const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank');
+};
 
   const handleEmailShare = (docType, data) => {
     const compName = 'Oxad BS Co.';
@@ -1811,68 +1811,78 @@ const handleSave = async (e) => {
               </div>
             )}
 
-            {/* --- AGING REPORTS VIEW --- */}
-            {(activeTab === 'customer_aging' || activeTab === 'supplier_aging') && (
-              <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
-                <div className="bg-white dark:bg-[#1e293b] p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
-                  <div className="flex justify-between items-center mb-6 border-b border-slate-100 dark:border-slate-700/50 pb-4">
-                    <h2 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-widest">
-                      {activeTab === 'customer_aging' ? 'Customer Aging Details' : 'Supplier Aging Details'}
-                    </h2>
+{/* --- AGING REPORTS VIEW --- */}
+{(activeTab === 'customer_aging' || activeTab === 'supplier_aging') && (
+  <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
+    <div className="bg-white dark:bg-[#1e293b] p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+      <div className="flex justify-between items-center mb-6 border-b border-slate-100 dark:border-slate-700/50 pb-4">
+        <h2 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-widest">
+          {activeTab === 'customer_aging' ? 'Customer Aging Details' : 'Supplier Aging Details'}
+        </h2>
+        <button 
+          onClick={() => activeTab === 'customer_aging' ? setShowOnlyDueSales(!showOnlyDueSales) : setShowOnlyDuePurchases(!showOnlyDuePurchases)}
+          className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center transition-all ${
+            (activeTab === 'customer_aging' ? showOnlyDueSales : showOnlyDuePurchases) 
+              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' 
+              : 'bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Filter size={14} className="mr-2" />
+          Show Only Due
+        </button>
+      </div>
+
+      <div className="overflow-x-auto custom-scrollbar">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-slate-100 dark:border-slate-800">
+              <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">Entity Name</th>
+              <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">0-30 Days</th>
+              <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">31-60 Days</th>
+              <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">61-90 Days</th>
+              <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">90+ Days</th>
+              <th className="py-4 px-4 text-xs font-black text-blue-500 uppercase tracking-widest text-right">Total Due</th>
+              <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-[11px] font-bold text-slate-700 dark:text-slate-300">
+            {(() => {
+              let reportData = buildAgingReport(activeTab === 'customer_aging' ? 'customer' : 'supplier');
+              const isOnlyDue = activeTab === 'customer_aging' ? showOnlyDueSales : showOnlyDuePurchases;
+              if (isOnlyDue) { reportData = reportData.filter(item => item.totalDue > 0); }
+
+              if (reportData.length === 0) {
+                return (
+                  <tr><td colSpan="7" className="py-12 text-center text-slate-300 dark:text-slate-600 uppercase tracking-widest">No aging records found.</td></tr>
+                );
+              }
+
+              return reportData.map((item, index) => (
+                <tr key={index} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
+                  <td className="py-4 px-4 font-black uppercase text-slate-800 dark:text-white">{item.name || item.entityName || 'UNKNOWN'}</td>
+                  <td className="py-4 px-4 text-right">{formatCurrency(item.current || 0)}</td>
+                  <td className="py-4 px-4 text-right">{formatCurrency(item.days31to60 || 0)}</td>
+                  <td className="py-4 px-4 text-right">{formatCurrency(item.days61to90 || 0)}</td>
+                  <td className="py-4 px-4 text-right text-rose-500 dark:text-rose-400">{formatCurrency((item.days91to120 || 0) + (item.days120Plus || 0))}</td>
+                  <td className="py-4 px-4 text-right font-black text-blue-600 dark:text-blue-400">{formatCurrency(item.totalDue || 0)}</td>
+                  <td className="py-4 px-4 text-right no-print">
                     <button 
-                      onClick={() => activeTab === 'customer_aging' ? setShowOnlyDueSales(!showOnlyDueSales) : setShowOnlyDuePurchases(!showOnlyDuePurchases)}
-                      className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center transition-all ${
-                        (activeTab === 'customer_aging' ? showOnlyDueSales : showOnlyDuePurchases) 
-                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' 
-                          : 'bg-slate-50 dark:bg-[#0f172a] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                      }`}
+                      onClick={() => handleWhatsAppShare(activeTab === 'customer_aging' ? 'customer' : 'supplier', item)} 
+                      className="p-2 text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg inline-flex items-center transition-colors" 
+                      title="Send WhatsApp Reminder"
                     >
-                      <Filter size={14} className="mr-2" />
-                      Show Only Due
+                      <MessageSquare size={16}/>
                     </button>
-                  </div>
-
-                  <div className="overflow-x-auto custom-scrollbar">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-slate-100 dark:border-slate-800">
-                          <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">Entity Name</th>
-                          <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">0-30 Days</th>
-                          <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">31-60 Days</th>
-                          <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">61-90 Days</th>
-                          <th className="py-4 px-4 text-xs font-black text-slate-400 uppercase tracking-widest text-right">90+ Days</th>
-                          <th className="py-4 px-4 text-xs font-black text-blue-500 uppercase tracking-widest text-right">Total Due</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                        {(() => {
-                          let reportData = buildAgingReport(activeTab === 'customer_aging' ? 'customer' : 'supplier');
-                          const isOnlyDue = activeTab === 'customer_aging' ? showOnlyDueSales : showOnlyDuePurchases;
-                          if (isOnlyDue) { reportData = reportData.filter(item => item.totalDue > 0); }
-
-                          if (reportData.length === 0) {
-                            return (
-                              <tr><td colSpan="6" className="py-12 text-center text-slate-300 dark:text-slate-600 uppercase tracking-widest">No aging records found.</td></tr>
-                            );
-                          }
-
-                          return reportData.map((item, index) => (
-                            <tr key={index} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
-                              <td className="py-4 px-4 font-black uppercase text-slate-800 dark:text-white">{item.name || item.entityName || 'UNKNOWN'}</td>
-                              <td className="py-4 px-4 text-right">{formatCurrency(item.current || 0)}</td>
-                              <td className="py-4 px-4 text-right">{formatCurrency(item.days31to60 || 0)}</td>
-                              <td className="py-4 px-4 text-right">{formatCurrency(item.days61to90 || 0)}</td>
-                              <td className="py-4 px-4 text-right text-rose-500 dark:text-rose-400">{formatCurrency((item.days91to120 || 0) + (item.days120Plus || 0))}</td>
-                              <td className="py-4 px-4 text-right font-black text-blue-600 dark:text-blue-400">{formatCurrency(item.totalDue || 0)}</td>
-                            </tr>
-                          ));
-                        })()}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
+                  </td>
+                </tr>
+              ));
+            })()}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+)}
 
 {/* --- CUSTOMERS AND SUPPLIERS VIEW --- */}
 {(activeTab === 'customers' || activeTab === 'suppliers') && (
