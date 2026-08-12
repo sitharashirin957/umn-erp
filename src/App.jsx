@@ -1873,8 +1873,8 @@ const handleSave = async (e) => {
                 </div>
               </div>
             )}
-         {/* --- CUSTOMERS AND SUPPLIERS VIEW --- */}
-            {/* --- CUSTOMERS AND SUPPLIERS VIEW --- */}
+
+{/* --- CUSTOMERS AND SUPPLIERS VIEW --- */}
 {(activeTab === 'customers' || activeTab === 'suppliers') && (
   <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
     <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex-wrap gap-4">
@@ -1886,6 +1886,8 @@ const handleSave = async (e) => {
             const val = e.target.value;
             if (val === 'sample') {
               downloadSampleExcel(activeTab === 'customers' ? 'customer' : 'supplier');
+            } else if (val === 'import') {
+              document.getElementById(`fileInput-${activeTab}`).click();
             }
             e.target.value = "";
           }} 
@@ -1893,11 +1895,16 @@ const handleSave = async (e) => {
         >
           <option value="" disabled selected>📂 Excel Actions...</option>
           <option value="sample">📥 Download Sample Template</option>
+          <option value="import">📤 Upload & Import Excel</option>
         </select>
         
-        <label className="absolute inset-0 cursor-pointer opacity-0">
-          <input type="file" accept=".xlsx, .xls, .csv" onChange={(e) => handleBulkExcelImport(e, activeTab === 'customers' ? 'customer' : 'supplier')} />
-        </label>
+        <input 
+          id={`fileInput-${activeTab}`} 
+          type="file" 
+          accept=".xlsx, .xls, .csv" 
+          className="hidden" 
+          onChange={(e) => handleBulkExcelImport(e, activeTab === 'customers' ? 'customer' : 'supplier')} 
+        />
       </div>
 
       <button onClick={() => openModal(activeTab.slice(0, -1))} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Plus size={16} className="mr-2"/> Add {activeTab.slice(0, -1)}</button>
@@ -1921,8 +1928,7 @@ const handleSave = async (e) => {
   </div>
 )}
 
-            {/* --- PRODUCTS VIEW --- */}
-           {/* --- PRODUCTS VIEW --- */}
+  {/* --- PRODUCTS VIEW --- */}
 {activeTab === 'products' && (
   <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
     <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex-wrap gap-4">
@@ -1935,6 +1941,8 @@ const handleSave = async (e) => {
               const val = e.target.value;
               if (val === 'sample') {
                 downloadSampleExcel('product');
+              } else if (val === 'import') {
+                document.getElementById('fileInput-product').click();
               }
               e.target.value = "";
             }} 
@@ -1942,11 +1950,16 @@ const handleSave = async (e) => {
           >
             <option value="" disabled selected>📂 Excel Actions...</option>
             <option value="sample">📥 Download Sample Template</option>
+            <option value="import">📤 Upload & Import Excel</option>
           </select>
           
-          <label className="absolute inset-0 cursor-pointer opacity-0">
-            <input type="file" accept=".xlsx, .xls, .csv" onChange={(e) => handleBulkExcelImport(e, 'product')} />
-          </label>
+          <input 
+            id="fileInput-product" 
+            type="file" 
+            accept=".xlsx, .xls, .csv" 
+            className="hidden" 
+            onChange={(e) => handleBulkExcelImport(e, 'product')} 
+          />
         </div>
       </div>
 
