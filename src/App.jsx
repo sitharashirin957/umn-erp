@@ -150,6 +150,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 const App = () => {
   const [user, setUser] = useState(null);
+  const [viewReceiptModal, setViewReceiptModal] = useState({ isOpen: false, image: null });
   const [isAppUnlocked, setIsAppUnlocked] = useState(() => { if (typeof window !== 'undefined') return sessionStorage.getItem('erp_unlocked') === 'true'; return false; });
   const [appPinInput, setAppPinInput] = useState(''); const [appPinError, setAppPinError] = useState(false);
   const [adminAuth, setAdminAuth] = useState({ isOpen: false, callback: null }); const [adminPinInput, setAdminPinInput] = useState(''); const [adminPinError, setAdminPinError] = useState(false);
