@@ -163,6 +163,7 @@ const App = () => {
   const [sales, setSales] = useState([]); const [purchases, setPurchases] = useState([]); const [quotations, setQuotations] = useState([]);
   const [collections, setCollections] = useState([]); const [expenses, setExpenses] = useState([]); const [salesmen, setSalesmen] = useState([]); const [crms, setCrms] = useState([]);
   const [crmDropdownOpen, setCrmDropdownOpen] = useState(null);
+  const [tasks, setTasks] = useState([]);
 
   // FIXED AGING LOGIC
   const buildAgingReport = (type = 'customer') => {
@@ -239,7 +240,7 @@ const handleWhatsAppShare = (docType, data) => {
 
   useEffect(() => {
     if (!user || !isAppUnlocked) return; 
-    const collectionsMap = { customers: setCustomers, suppliers: setSuppliers, products: setProducts, sales: setSales, purchases: setPurchases, quotations: setQuotations, collections: setCollections, expenses: setExpenses, salesmen: setSalesmen, crms: setCrms, estimator_items: setEstimatorItems };
+    const collectionsMap = { customers: setCustomers, suppliers: setSuppliers, products: setProducts, sales: setSales, purchases: setPurchases, quotations: setQuotations, collections: setCollections, expenses: setExpenses, salesmen: setSalesmen, crms: setCrms, estimator_items: setEstimatorItems, tasks: setTasks };
     const unsubscribers = Object.entries(collectionsMap).map(([colName, setter]) => 
       onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', colName), (snap) => { const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })); setter(data.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0))); }, (error) => { console.error(`Error syncing ${colName}:`, error); if (error.code === 'permission-denied') setDbError(true); })
     );
@@ -258,6 +259,29 @@ const handleWhatsAppShare = (docType, data) => {
     const totalCollections = collections.reduce((acc, c) => acc + (Number(c.amount) || 0), 0); const totalExpenses = expenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
     return { totalSales, totalPurchases, totalCollections, totalExpenses, outstandingReceivables: totalSales - totalCollections, netProfit: totalSales - totalPurchases - totalExpenses };
   }, [sales, purchases, collections, expenses]);
+
+  // 👉 dashboardAlerts ലോജിക് ഇവിടെ ചേർക്കുക
+  const dashboardAlerts = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const alerts = [];
+
+    sales.forEach(s => {
+      const paid = collections.filter(c => c.ref === s.invoiceNo).reduce((a,b)=>a+Number(b.amount), 0);
+      const pending = (Number(s.grandTotal) || 0) - paid;
+      if (pending > 0 && s.date === today) {
+        alerts.push({ id: s.id, type: 'payment', title: `Payment Due: ${s.customerName}`, desc: `SAR ${pending} pending for invoice ${s.invoiceNo}` });
+      }
+    });
+
+    tasks.forEach(t => {
+      if (t.dueDate === today && !t.isCompleted) {
+        alerts.push({ id: t.id, type: 'task', title: `⚠️ Reminder: ${t.title}`, desc: 'This task is due today! Action required.' });
+      }
+    });
+
+    return alerts;
+  }, [sales, collections, tasks]);
+
 
   const monthlyTrends = useMemo(() => {
     const map = {};
@@ -1052,6 +1076,33 @@ const handleSave = async (e) => {
           <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar relative flex flex-col">
             {activeTab === 'dashboard' && (
               <div className="max-w-[100rem] mx-auto w-full space-y-8 animate-fade-in-up flex-1">
+ 
+{/* 👉 അലേർട്ട് ബാനർ ഇവിടെ വെക്കുക */}
+                {dashboardAlerts.length > 0 && (
+                  <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-6 rounded-[2rem] shadow-xl mb-8 animate-fade-in-up text-white no-print">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <div className="p-2 bg-white/20 rounded-xl">
+                        <AlertTriangle size={24} className="text-white animate-bounce" />
+                      </div>
+                      <div>
+                        <h3 className="font-black uppercase tracking-widest text-sm">Today's Attention Required</h3>
+                        <p className="text-[10px] font-bold opacity-90 uppercase">You have {dashboardAlerts.length} pending items needing action today.</p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {dashboardAlerts.map(alert => (
+                        <div key={alert.id} className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-sm flex flex-col justify-between">
+                          <div>
+                            <p className="font-black text-xs uppercase tracking-wide">{alert.title}</p>
+                            <p className="text-[10px] font-bold opacity-80 mt-1 uppercase">{alert.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
   <KPICard title="Total Sales" value={formatCurrency(analytics.totalSales)} icon={Receipt} colorClass="text-[#10b981]" bgClass="bg-[#ecfdf5] dark:bg-[#10b981]/10 border-[#a7f3d0] dark:border-[#10b981]/20" />
   <KPICard title="Total Purchase" value={formatCurrency(analytics.totalPurchases)} icon={ShoppingBag} colorClass="text-[#3b82f6]" bgClass="bg-[#eff6ff] dark:bg-[#3b82f6]/10 border-[#bfdbfe] dark:border-[#3b82f6]/20" />
