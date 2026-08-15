@@ -325,15 +325,19 @@ const handleWhatsAppShare = (docType, data) => {
     return notifs;
   }, [products, topCustomersData, quotations, salesmen]);
 
-  const openModal = (type, data = null) => {
+ const openModal = (type, data = null) => {
     const executeOpen = () => {
-      setFormError(''); setFormData(data ? { ...data } : { name: '', phone: '', email: '', gst: '', openingBalance: '', category: '', stock: '', purchasePrice: '', sellingPrice: '', tax: '', minStock: '', amount: '', method: '', description: '', ref: '', rate: '', timeRate: '', calcType: 'Area', tiers: [], thicknessTiers: [] });
+      setFormError(''); 
+      setFormData(data ? { ...data } : { 
+        name: '', phone: '', email: '', gst: '', openingBalance: '', category: '', stock: '', purchasePrice: '', sellingPrice: '', tax: '', minStock: '', amount: '', method: '', description: '', ref: '', rate: '', timeRate: '', calcType: 'Area', tiers: [], thicknessTiers: [], 
+        title: '', dueDate: new Date().toISOString().split('T')[0] // <--- പുതിയതായി ചേർത്തത്
+      });
       if (['sale', 'purchase', 'crm', 'quotation'].includes(type)) { setInvoiceItems(data?.items || [{ productId: '', name: '', description: '', qty: 1, rate: 0, tax: 0, total: 0 }]); }
       setModalState({ isOpen: true, type, data });
     };
     if (data && type !== 'estimatorItem') { requestAdminAuth(executeOpen); } else { executeOpen(); }
   };
-
+      
   const closeModal = () => { setModalState({ isOpen: false, type: null, data: null }); setFormData({}); setInvoiceItems([]); setFormError(''); setIsSubmitting(false); };
 
 const handleDuplicateItem = (type, item) => {
