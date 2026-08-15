@@ -158,6 +158,7 @@ const App = () => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024); const [showOnlyDueSales, setShowOnlyDueSales] = useState(false); const [showOnlyDuePurchases, setShowOnlyDuePurchases] = useState(false);
   const [hideZeroAging, setHideZeroAging] = useState(true); const [searchTerm, setSearchTerm] = useState(''); const [isNotifOpen, setIsNotifOpen] = useState(false); const notifRef = useRef(null);
   const [voiceActionPrompt, setVoiceActionPrompt] = useState(null);
+  const [viewReceiptModal, setViewReceiptModal] = useState({ isOpen: false, image: null });
   const [customers, setCustomers] = useState([]); const [suppliers, setSuppliers] = useState([]); const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]); const [purchases, setPurchases] = useState([]); const [quotations, setQuotations] = useState([]);
   const [collections, setCollections] = useState([]); const [expenses, setExpenses] = useState([]); const [salesmen, setSalesmen] = useState([]); const [crms, setCrms] = useState([]);
@@ -1796,6 +1797,21 @@ const handleSave = async (e) => {
                       <td className="px-6 py-4 font-bold text-xs uppercase text-slate-400 dark:text-slate-500">{String(salesmen.find(s=>s.id === item.salesmanId)?.name || 'N/A')}</td>
                       <td className={`px-6 py-4 font-black ${activeTab === 'collections' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{formatCurrency(item.amount)}</td>
                       <td className="px-6 py-4 font-bold text-xs uppercase text-slate-500 dark:text-slate-400">{String(item.method || 'Cash')}</td>
+                      
+                       {/* 👉 പുതിയതായി ചേർത്ത 'Receipt' കോളം */}
+          <td className="px-6 py-4">
+            {item.receiptImage ? (
+              <button 
+                onClick={() => setViewReceiptModal({ isOpen: true, image: item.receiptImage })}
+                className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-colors flex items-center gap-1"
+              >
+                📷 View Bill
+              </button>
+            ) : (
+              <span className="text-[10px] text-slate-400 uppercase">No Bill</span>
+            )}
+          </td>
+                      
                       <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity no-print flex justify-end items-center">
                         <button onClick={() => setPrintDoc({ isOpen: true, type: activeTab.slice(0, -1), data: item })} className="p-2 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-800 rounded-lg" title="Print"><Printer size={16}/></button>
                         <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg" title={`Edit ${activeTab.slice(0, -1)}`}><Edit3 size={16}/></button>
@@ -2751,5 +2767,18 @@ const handleSave = async (e) => {
     </div> 
   );
 };
+
+{viewReceiptModal.isOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#1e293b] p-6 rounded-[2.5rem] max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center animate-fade-in-up">
+            <div className="flex justify-between items-center w-full mb-4">
+              <h3 className="font-black uppercase text-sm text-slate-800 dark:text-white tracking-tight">Attached Receipt Preview</h3>
+              <button onClick={() => setViewReceiptModal({ isOpen: false, image: null })} className="p-2 text-slate-400 hover:text-slate-600 rounded-full font-bold">✕</button>
+            </div>
+            <img src={viewReceiptModal.image} alt="Full Receipt" className="w-full max-h-[60vh] object-contain rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner bg-slate-50 dark:bg-black/20" />
+            <button onClick={() => setViewReceiptModal({ isOpen: false, image: null })} className="mt-6 w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg hover:scale-95 transition-all">Close Preview</button>
+          </div>
+        </div>
+      )}
 
 export default App;
