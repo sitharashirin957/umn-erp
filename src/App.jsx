@@ -150,7 +150,6 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 const App = () => {
   const [user, setUser] = useState(null);
-  const [viewReceiptModal, setViewReceiptModal] = useState({ isOpen: false, image: null });
   const [isAppUnlocked, setIsAppUnlocked] = useState(() => { if (typeof window !== 'undefined') return sessionStorage.getItem('erp_unlocked') === 'true'; return false; });
   const [appPinInput, setAppPinInput] = useState(''); const [appPinError, setAppPinError] = useState(false);
   const [adminAuth, setAdminAuth] = useState({ isOpen: false, callback: null }); const [adminPinInput, setAdminPinInput] = useState(''); const [adminPinError, setAdminPinError] = useState(false);
@@ -163,8 +162,8 @@ const App = () => {
   const [customers, setCustomers] = useState([]); const [suppliers, setSuppliers] = useState([]); const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]); const [purchases, setPurchases] = useState([]); const [quotations, setQuotations] = useState([]);
   const [collections, setCollections] = useState([]); const [expenses, setExpenses] = useState([]); const [salesmen, setSalesmen] = useState([]); const [crms, setCrms] = useState([]);
-  const [crmDropdownOpen, setCrmDropdownOpen] = useState(null); 
-
+  const [crmDropdownOpen, setCrmDropdownOpen] = useState(null);
+  
   // FIXED AGING LOGIC
   const buildAgingReport = (type = 'customer') => {
     const dataList = type === 'customer' ? customers : suppliers; const txList = type === 'customer' ? sales : purchases; const paymentList = type === 'customer' ? collections : expenses;
