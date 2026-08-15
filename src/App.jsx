@@ -2743,45 +2743,43 @@ const handleSave = async (e) => {
         )}
 
       </div> {/* <-- ഇതാണ് Flex കണ്ടെയ്നർ ക്ലോസ് ചെയ്യുന്നത് --> */}
-{/* Floating Voice Assistant Button (Responsive for PC & Mobile) */}
-      <div className="fixed bottom-24 right-5 sm:bottom-8 sm:right-8 z-[99999] flex items-center gap-3 no-print pointer-events-auto">
-        {isListening && (
-          <div className="hidden sm:flex px-4 py-2 bg-rose-600 text-white rounded-full shadow-2xl items-center gap-2 animate-pulse text-xs font-black uppercase tracking-widest">
-            <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
-            Listening... Speak now
-          </div>
-        )}
-        <button
-          onClick={(e) => { e.preventDefault(); toggleListening(); }}
-          className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 cursor-pointer touch-manipulation ${
-            isListening 
-              ? 'bg-rose-500 text-white animate-bounce shadow-rose-500/50 ring-4 ring-rose-300/50' 
-              : 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-indigo-500/40 hover:shadow-indigo-500/60'
-          }`}
-          title="Click to speak command"
-        >
-          <Mic size={24} className="sm:w-7 sm:h-7" />
-        </button>
-      </div>
-
-    </div> 
-  );
-
-  {/* View Receipt Modal */}
-   {viewReceiptModal.isOpen && (
-          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-[#1e293b] p-6 rounded-[2.5rem] max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center animate-fade-in-up">
-              <div className="flex justify-between items-center w-full mb-4">
-                <h3 className="font-black uppercase text-sm text-slate-800 dark:text-white tracking-tight">Attached Receipt Preview</h3>
-                <button onClick={() => setViewReceiptModal({ isOpen: false, image: null })} className="p-2 text-slate-400 hover:text-slate-600 rounded-full font-bold">✕</button>
-              </div>
-              <img src={viewReceiptModal.image} alt="Full Receipt" className="w-full max-h-[60vh] object-contain rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner bg-slate-50 dark:bg-black/20" />
-              <button onClick={() => setViewReceiptModal({ isOpen: false, image: null })} className="mt-6 w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg hover:scale-95 transition-all">Close Preview</button>
+       {/* Floating Voice Assistant Button (Responsive for PC & Mobile) */}
+        <div className="fixed bottom-24 right-5 sm:bottom-8 sm:right-8 z-[99999] flex items-center gap-3 no-print pointer-events-auto">
+          {isListening && (
+            <div className="hidden sm:flex px-4 py-2 bg-rose-600 text-white rounded-full shadow-2xl items-center gap-2 animate-pulse text-xs font-black uppercase tracking-widest">
+              <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+              Listening... Speak now
             </div>
-          </div>
-        )}
+          )}
+          <button
+            onClick={(e) => { e.preventDefault(); toggleListening(); }}
+            className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 cursor-pointer touch-manipulation ${
+              isListening 
+                ? 'bg-rose-500 text-white animate-bounce shadow-rose-500/50 ring-4 ring-rose-300/50' 
+                : 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-indigo-500/40 hover:shadow-indigo-500/60'
+            }`}
+            title="Click to speak command"
+          >
+            <Mic size={24} className="sm:w-7 sm:h-7" />
+          </button>
+        </div>
 
       </div> 
+
+      {/* --- View Receipt Modal (ഇത് return ബ്ലോക്കിന്റെ ഉള്ളിലാണ്) --- */}
+      {viewReceiptModal.isOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#1e293b] p-6 rounded-[2.5rem] max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center animate-fade-in-up">
+            <div className="flex justify-between items-center w-full mb-4">
+              <h3 className="font-black uppercase text-sm text-slate-800 dark:text-white tracking-tight">Attached Receipt Preview</h3>
+              <button onClick={() => setViewReceiptModal({ isOpen: false, image: null })} className="p-2 text-slate-400 hover:text-slate-600 rounded-full font-bold">✕</button>
+            </div>
+            <img src={viewReceiptModal.image} alt="Full Receipt" className="w-full max-h-[60vh] object-contain rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner bg-slate-50 dark:bg-black/20" />
+            <button onClick={() => setViewReceiptModal({ isOpen: false, image: null })} className="mt-6 w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg hover:scale-95 transition-all">Close Preview</button>
+          </div>
+        </div>
+      )}
+
     </div> 
   );
 };
