@@ -2768,7 +2768,7 @@ const handleSave = async (e) => {
   );
 };
 
-{viewReceiptModal.isOpen && (
+     {viewReceiptModal.isOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#1e293b] p-6 rounded-[2.5rem] max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center animate-fade-in-up">
             <div className="flex justify-between items-center w-full mb-4">
