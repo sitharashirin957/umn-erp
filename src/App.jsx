@@ -806,8 +806,8 @@ const handleSave = async (e) => {
         if (listToCheck.find(item => String(item.name || '').trim().toLowerCase() === inputName && item.id !== data?.id)) { setFormError(`A ${type} with this name already exists. Please edit the existing one to avoid duplicates.`); return; }
     }
     setIsSubmitting(true); setFormError('');
-    const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms', 'estimatorItem': 'estimator_items', 'quotation': 'quotations' };
-    const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', colMap[type]); let payload = cleanObject({ ...formData });
+   const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms', 'estimatorItem': 'estimator_items', 'quotation': 'quotations', 'task': 'tasks' };
+  const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', colMap[type]); let payload = cleanObject({ ...formData });
 
     try {
       if (['sale', 'purchase', 'crm', 'quotation'].includes(type)) {
@@ -841,7 +841,8 @@ const handleSave = async (e) => {
   const executeDelete = async () => {
     if (!confirmDelete.id || !confirmDelete.type || !user) return;
     try {
-      const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms', 'estimatorItem': 'estimator_items', 'quotation': 'quotations' };
+     const colMap = { 'salesman': 'salesmen', 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'sale': 'sales', 'purchase': 'purchases', 'collection': 'collections', 'expense': 'expenses', 'crm': 'crms', 'estimatorItem': 'estimator_items', 'quotation': 'quotations', 'task': 'tasks' };
+    
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', colMap[confirmDelete.type], confirmDelete.id)); setConfirmDelete({ isOpen: false, type: '', id: null, title: '' });
     } catch (e) { console.error("Delete Error", e); }
   };
@@ -1080,7 +1081,17 @@ const handleSave = async (e) => {
           <div className="flex-1 overflow-y-auto p-6 sm:p-10 custom-scrollbar relative flex flex-col">
             {activeTab === 'dashboard' && (
               <div className="max-w-[100rem] mx-auto w-full space-y-8 animate-fade-in-up flex-1">
- 
+
+<div className="flex justify-between items-center mb-6">
+  <div>
+    <h3 className="text-sm font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">System Reminders & Tasks</h3>
+    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Manage licenses, renewals & urgent alerts</p>
+  </div>
+  <button onClick={() => openModal('task')} className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-md hover:scale-95 transition-all flex items-center shrink-0">
+    <Plus size={14} className="mr-2"/> Add Reminder / License Date
+  </button>
+</div>
+                
 {/* 👉 അലേർട്ട് ബാനർ ഇവിടെ വെക്കുക */}
                 {dashboardAlerts.length > 0 && (
                   <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-6 rounded-[2rem] shadow-xl mb-8 animate-fade-in-up text-white no-print">
@@ -2400,6 +2411,19 @@ const handleSave = async (e) => {
                   </div>
                 )}
 
+                {modalState.type === 'task' && (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2 md:col-span-2">
+          <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Reminder / Task Title *</label>
+          <input required placeholder="E.g., Trade License Expiry" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})} />
+        </div>
+        <div className="space-y-2 md:col-span-2">
+          <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Expiry / Due Date *</label>
+          <input type="date" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.dueDate || ''} onChange={e => setFormData({...formData, dueDate: e.target.value})} />
+        </div>
+      </div>
+    )}
+                
                 {(modalState.type === 'customer' || modalState.type === 'supplier' || modalState.type === 'salesman') && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Full Name *</label><input required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} /></div>
