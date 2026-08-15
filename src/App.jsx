@@ -2280,8 +2280,8 @@ const handleSave = async (e) => {
                   <div className="p-6 bg-slate-50 dark:bg-[#0f172a] rounded-3xl border border-slate-200 dark:border-slate-800 mb-6 shadow-inner dark:shadow-none">
                      <label className="block text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 mb-3">Select Entity / Customer *</label>
                      <select required className="w-full p-4 bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 font-black text-slate-800 dark:text-white uppercase focus:ring-2 ring-blue-500/20 shadow-sm" 
-                             value={formData.customerId || formData.supplierId || formData.partyName || ''} 
-                             onChange={e => {
+                            value={formData.customerId || formData.supplierId || formData.partyName || ''} 
+                            onChange={e => {
                                if(modalState.type === 'sale' || modalState.type === 'collection' || modalState.type === 'crm' || modalState.type === 'quotation') {
                                  const entity = customers.find(c => c.id === e.target.value);
                                  if(entity) setFormData({...formData, customerId: entity.id, customerName: entity.name, partyName: entity.name});
@@ -2291,7 +2291,7 @@ const handleSave = async (e) => {
                                } else {
                                  setFormData({...formData, partyName: e.target.value});
                                }
-                             }}>
+                            }}>
                        <option value="">Choose Existing Entity...</option>
                        {(['sale', 'collection', 'crm', 'quotation'].includes(modalState.type) ? customers : suppliers).map(c => <option key={c.id} value={c.id}>{String(c.name)}</option>)}
                      </select>
@@ -2370,6 +2370,32 @@ const handleSave = async (e) => {
                       </div>
                     )}
                     <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Ref / Linked Invoice Notes</label><input className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase" value={formData.ref || formData.description || ''} onChange={e => setFormData({...formData, [modalState.type === 'collection' ? 'ref' : 'description']: e.target.value})} /></div>
+                    
+                    {/* പുതിയതായി ചേർത്ത ബിൽ / ഫോട്ടോ അപ്‌ലോഡ് ഫീൽഡ് */}
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Upload Receipt / Bill Image</label>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white text-xs" 
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setFormData({...formData, receiptImage: reader.result});
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }} 
+                      />
+                      {formData.receiptImage && (
+                        <div className="mt-2 flex items-center gap-3">
+                          <img src={formData.receiptImage} alt="Receipt Preview" className="w-16 h-16 object-cover rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm" />
+                          <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Receipt Attached Successfully ✓</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -2421,7 +2447,7 @@ const handleSave = async (e) => {
                               <input type="number" placeholder="Qty" required className="flex-1 md:w-16 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-center text-xs" value={item.qty || ''} onChange={(e) => handleItemChange(idx, 'qty', e.target.value)} />
                               <input type="number" placeholder="Rate" required className="flex-1 md:w-24 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-right text-xs" value={item.rate || ''} onChange={(e) => handleItemChange(idx, 'rate', e.target.value)} />
                               {modalState.type !== 'crm' && (
-                                 <input type="number" placeholder="Tax" className="flex-1 md:w-16 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-center text-xs" value={item.tax || ''} onChange={(e) => handleItemChange(idx, 'tax', e.target.value)} />
+                                   <input type="number" placeholder="Tax" className="flex-1 md:w-16 p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-center text-xs" value={item.tax || ''} onChange={(e) => handleItemChange(idx, 'tax', e.target.value)} />
                               )}
                             </div>
                             
@@ -2448,7 +2474,7 @@ const handleSave = async (e) => {
             </div>
           </div>
         )}
-        
+                
         {/* --- LEDGER MODAL --- */}
         {modalState.isOpen && modalState.type === 'ledger' && (
           <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4 overflow-y-auto no-print">
