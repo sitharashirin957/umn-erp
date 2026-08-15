@@ -163,7 +163,7 @@ const App = () => {
   const [sales, setSales] = useState([]); const [purchases, setPurchases] = useState([]); const [quotations, setQuotations] = useState([]);
   const [collections, setCollections] = useState([]); const [expenses, setExpenses] = useState([]); const [salesmen, setSalesmen] = useState([]); const [crms, setCrms] = useState([]);
   const [crmDropdownOpen, setCrmDropdownOpen] = useState(null);
-  
+
   // FIXED AGING LOGIC
   const buildAgingReport = (type = 'customer') => {
     const dataList = type === 'customer' ? customers : suppliers; const txList = type === 'customer' ? sales : purchases; const paymentList = type === 'customer' ? collections : expenses;
@@ -2766,19 +2766,24 @@ const handleSave = async (e) => {
 
     </div> 
   );
-};
 
-     {viewReceiptModal.isOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1e293b] p-6 rounded-[2.5rem] max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center animate-fade-in-up">
-            <div className="flex justify-between items-center w-full mb-4">
-              <h3 className="font-black uppercase text-sm text-slate-800 dark:text-white tracking-tight">Attached Receipt Preview</h3>
-              <button onClick={() => setViewReceiptModal({ isOpen: false, image: null })} className="p-2 text-slate-400 hover:text-slate-600 rounded-full font-bold">✕</button>
+  {/* View Receipt Modal */}
+   {viewReceiptModal.isOpen && (
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-[#1e293b] p-6 rounded-[2.5rem] max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center animate-fade-in-up">
+              <div className="flex justify-between items-center w-full mb-4">
+                <h3 className="font-black uppercase text-sm text-slate-800 dark:text-white tracking-tight">Attached Receipt Preview</h3>
+                <button onClick={() => setViewReceiptModal({ isOpen: false, image: null })} className="p-2 text-slate-400 hover:text-slate-600 rounded-full font-bold">✕</button>
+              </div>
+              <img src={viewReceiptModal.image} alt="Full Receipt" className="w-full max-h-[60vh] object-contain rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner bg-slate-50 dark:bg-black/20" />
+              <button onClick={() => setViewReceiptModal({ isOpen: false, image: null })} className="mt-6 w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg hover:scale-95 transition-all">Close Preview</button>
             </div>
-            <img src={viewReceiptModal.image} alt="Full Receipt" className="w-full max-h-[60vh] object-contain rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner bg-slate-50 dark:bg-black/20" />
-            <button onClick={() => setViewReceiptModal({ isOpen: false, image: null })} className="mt-6 w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg hover:scale-95 transition-all">Close Preview</button>
           </div>
-        </div>
-      )}
+        )}
+
+      </div> 
+    </div> 
+  );
+};
 
 export default App;
