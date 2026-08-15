@@ -2743,30 +2743,8 @@ const handleSave = async (e) => {
         )}
 
       </div> {/* <-- ഇതാണ് Flex കണ്ടെയ്നർ ക്ലോസ് ചെയ്യുന്നത് --> */}
-       {/* Floating Voice Assistant Button (Responsive for PC & Mobile) */}
-        <div className="fixed bottom-24 right-5 sm:bottom-8 sm:right-8 z-[99999] flex items-center gap-3 no-print pointer-events-auto">
-          {isListening && (
-            <div className="hidden sm:flex px-4 py-2 bg-rose-600 text-white rounded-full shadow-2xl items-center gap-2 animate-pulse text-xs font-black uppercase tracking-widest">
-              <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
-              Listening... Speak now
-            </div>
-          )}
-          <button
-            onClick={(e) => { e.preventDefault(); toggleListening(); }}
-            className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 cursor-pointer touch-manipulation ${
-              isListening 
-                ? 'bg-rose-500 text-white animate-bounce shadow-rose-500/50 ring-4 ring-rose-300/50' 
-                : 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-indigo-500/40 hover:shadow-indigo-500/60'
-            }`}
-            title="Click to speak command"
-          >
-            <Mic size={24} className="sm:w-7 sm:h-7" />
-          </button>
-        </div>
 
-      </div> 
-
-      {/* --- View Receipt Modal (ഇത് return ബ്ലോക്കിന്റെ ഉള്ളിലാണ്) --- */}
+      {/* --- View Receipt Modal --- */}
       {viewReceiptModal.isOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#1e293b] p-6 rounded-[2.5rem] max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center animate-fade-in-up">
@@ -2780,7 +2758,28 @@ const handleSave = async (e) => {
         </div>
       )}
 
-    </div> 
+      {/* Floating Voice Assistant Button (Responsive for PC & Mobile) */}
+      <div className="fixed bottom-24 right-5 sm:bottom-8 sm:right-8 z-[99999] flex items-center gap-3 no-print pointer-events-auto">
+        {isListening && (
+          <div className="hidden sm:flex px-4 py-2 bg-rose-600 text-white rounded-full shadow-2xl items-center gap-2 animate-pulse text-xs font-black uppercase tracking-widest">
+            <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+            Listening... Speak now
+          </div>
+        )}
+        <button
+          onClick={(e) => { e.preventDefault(); toggleListening(); }}
+          className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 cursor-pointer touch-manipulation ${
+            isListening 
+              ? 'bg-rose-500 text-white animate-bounce shadow-rose-500/50 ring-4 ring-rose-300/50' 
+              : 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-indigo-500/40 hover:shadow-indigo-500/60'
+          }`}
+          title="Click to speak command"
+        >
+          <Mic size={24} className="sm:w-7 sm:h-7" />
+        </button>
+      </div>
+
+    </div>  
   );
 };
 
