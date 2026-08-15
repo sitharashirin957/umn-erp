@@ -161,6 +161,7 @@ const App = () => {
   const [customers, setCustomers] = useState([]); const [suppliers, setSuppliers] = useState([]); const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]); const [purchases, setPurchases] = useState([]); const [quotations, setQuotations] = useState([]);
   const [collections, setCollections] = useState([]); const [expenses, setExpenses] = useState([]); const [salesmen, setSalesmen] = useState([]); const [crms, setCrms] = useState([]);
+  const [crmDropdownOpen, setCrmDropdownOpen] = useState(null); 
 
   // FIXED AGING LOGIC
   const buildAgingReport = (type = 'customer') => {
@@ -1503,12 +1504,53 @@ const handleSave = async (e) => {
                                     </select>
                                 )}
                             </td>
-                            <td className="px-4 py-3 text-right space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end no-print">
-                              {!isSmartLinked && <button onClick={() => handlePushToInvoice(item)} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg" title="Push to Sales Invoice"><FilePlus size={14}/></button>}
-                             <button onClick={() => handleDuplicateItem('crm', item)} className="p-1.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg" title="Duplicate Job"><Copy size={14}/></button>
-                              <button onClick={() => openModal('crm', item)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg" title="Edit Full Job"><Edit3 size={14}/></button>
-                              <button onClick={() => triggerDelete('crm', item.id, String(item.jobId))} className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg"><Trash2 size={14}/></button>
-                            </td>
+                            <td className="px-4 py-3 text-right space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end no-print relative">
+  {!isSmartLinked && (
+    <div className="relative inline-block text-left">
+      <button 
+        onClick={() => setCrmDropdownOpen(crmDropdownOpen === item.id ? null : item.id)} 
+        className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg" 
+        title="Push to Quotation or Invoice"
+      >
+        <FilePlus size={14}/>
+      </button>
+
+      {crmDropdownOpen === item.id && (
+        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#1e293b] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-[999] overflow-hidden animate-fade-in-up">
+          <button 
+            onClick={() => {
+              setCrmDropdownOpen(null);
+              setActiveTab('quotations');
+              openModal('quotation', {
+                customerId: item.customerId || '',
+                customerName: item.customerName || '',
+                salesmanId: item.salesmanId || '',
+                linkedJobId: item.id,
+                date: new Date().toISOString().split('T')[0],
+                items: item.items && item.items.length > 0 ? item.items : [{ productId: '', name: 'CUSTOM JOB', description: item.description || '', qty: 1, rate: 0, tax: 0, total: 0 }]
+              });
+            }}
+            className="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-2 border-b border-slate-100 dark:border-slate-700/50"
+          >
+            <FileSignature size={14} className="text-blue-500"/> Push to Quotation
+          </button>
+          <button 
+            onClick={() => {
+              setCrmDropdownOpen(null);
+              handlePushToInvoice(item);
+            }}
+            className="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
+          >
+            <Receipt size={14} className="text-emerald-500"/> Push to Invoice
+          </button>
+        </div>
+      )}
+    </div>
+  )}
+  <button onClick={() => handleDuplicateItem('crm', item)} className="p-1.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg" title="Duplicate Job"><Copy size={14}/></button>
+  <button onClick={() => openModal('crm', item)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg" title="Edit Full Job"><Edit3 size={14}/></button>
+  <button onClick={() => triggerDelete('crm', item.id, String(item.jobId))} className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg"><Trash2 size={14}/></button>
+</td>
                           </tr>
                         )})}
                         {crms.length === 0 && <tr><td colSpan="10" className="py-12 text-center text-slate-300 dark:text-slate-600 uppercase tracking-widest">No Jobs Tracked Yet</td></tr>}
