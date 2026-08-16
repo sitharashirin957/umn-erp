@@ -1709,7 +1709,7 @@ const handleSave = async (e) => {
               </div>
             )}
 
-{/* --- QUOTATIONS VIEW --- */}
+            {/* --- QUOTATIONS VIEW --- */}
             {activeTab === 'quotations' && (
               <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
@@ -1737,7 +1737,7 @@ const handleSave = async (e) => {
                         {quotations.filter(q => safeSearch(q.quotationNo, searchTerm) || safeSearch(q.customerName, searchTerm) || safeSearch(q.status, searchTerm)).map((item) => {
                           const isConverted = item.status === 'Converted'; const isDropped = item.status === 'Dropped';
                           return (
-                          <tr key={item.id} className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group ${isDropped ? 'opacity-50' : ''}`}>
+                          <tr key={item.id} className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${isDropped ? 'opacity-50' : ''}`}>
                             <td className="px-4 py-4 uppercase tracking-wider text-blue-600 dark:text-blue-400 font-black">{item.quotationNo}</td>
                             <td className="px-4 py-4 text-slate-500 dark:text-slate-400">{item.date}</td>
                             <td className="px-4 py-4 uppercase">{item.customerName}</td>
@@ -1748,17 +1748,13 @@ const handleSave = async (e) => {
                                     <option value="Draft">Draft</option><option value="Sent">Sent (Pending)</option><option value="Follow Up (48 Hrs)">Follow Up (48 Hrs)</option><option value="Follow Up (1 Week)">Follow Up (1 Week)</option><option value="Follow Up (1 Month)">Follow Up (1 Month)</option><option value="Converted">Converted</option><option value="Dropped">Dropped</option>
                                 </select>
                             </td>
-                            <td className="px-4 py-4 text-right space-x-1 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end no-print">
-                              {!isConverted && !isDropped && (
-                                <>
-                                  <button onClick={() => handlePushQuoteTo(item, 'crm')} className="p-1.5 text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg" title="Push to CRM Job Tracker"><SendToBack size={16}/></button>
-                                  <button onClick={() => handlePushQuoteTo(item, 'sale')} className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg" title="Push to Sales Invoice"><FilePlus size={16}/></button>
-                                </>
-                              )}
-                              <button onClick={() => handleDuplicateItem('quotation', item)} className="p-1.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg" title="Duplicate Quotation"><Copy size={16}/></button>
-                              <button onClick={() => setPrintDoc({ isOpen: true, type: 'quotation', data: item })} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-50 dark:hover:bg-slate-900/30 rounded-lg" title="Print Quotation"><Printer size={16}/></button>
-                              <button onClick={() => openModal('quotation', item)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg" title="Edit Quotation"><Edit3 size/></button>
-                              <button onClick={() => triggerDelete('quotation', item.id, String(item.quotationNo))} className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg"><Trash2 size={16}/></button>
+                            <td className="px-4 py-4 text-right space-x-1 flex justify-end no-print items-center">
+                              <button onClick={() => handlePushQuoteTo(item, 'crm')} className="p-1.5 text-purple-500 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 rounded-lg" title="Push to CRM Job Tracker"><SendToBack size={16}/></button>
+                              <button onClick={() => handlePushQuoteTo(item, 'sale')} className="p-1.5 text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 rounded-lg" title="Push to Sales Invoice"><FilePlus size={16}/></button>
+                              <button onClick={() => handleDuplicateItem('quotation', item)} className="p-1.5 text-amber-500 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 rounded-lg" title="Duplicate Quotation"><Copy size={16}/></button>
+                              <button onClick={() => setPrintDoc({ isOpen: true, type: 'quotation', data: item })} className="p-1.5 text-slate-500 bg-slate-100 dark:bg-slate-800 hover:text-blue-500 rounded-lg" title="Print Quotation"><Printer size={16}/></button>
+                              <button onClick={() => openModal('quotation', item)} className="p-1.5 text-blue-500 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 rounded-lg" title="Edit Quotation"><Edit3 size={16}/></button>
+                              <button onClick={() => triggerDelete('quotation', item.id, String(item.quotationNo))} className="p-1.5 text-rose-500 bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 rounded-lg" title="Delete"><Trash2 size={16}/></button>
                             </td>
                           </tr>
                         )})}
