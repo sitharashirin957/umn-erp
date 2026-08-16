@@ -1158,9 +1158,9 @@ const handleSave = async (e) => {
                               <td className="py-3 px-4 text-right space-x-2">
                                 <button 
                                   type="button"
-                                  onClick={() => openModal('task', task)}
+                                  onClick={() => openModal('task')}
                                   className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all relative z-10 cursor-pointer"
-                                  title="Edit Task"
+                                  title="Add/Edit Task"
                                 >
                                   <Edit size={14}/>
                                 </button>
