@@ -752,7 +752,7 @@ const prompt = `
           return;
         }
 
-        const colMap = { 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products' };
+        const colMap = { 'customer': 'customers', 'supplier': 'suppliers', 'product': 'products', 'task': 'tasks' };
         const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', colMap[type]);
         const batch = writeBatch(db);
         let count = 0;
@@ -956,6 +956,18 @@ const handleSave = async (e) => {
       </div>
     );
   }
+
+    // Task Complete Toggle Handlers
+  const handleToggleTaskComplete = async (taskId, currentStatus) => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskId), {
+        isCompleted: !currentStatus
+      });
+    } catch (error) {
+      console.error("Error updating task status:", error);
+    }
+  };
 
   const renderTable = (headers, tableData, type, renderRow) => (
     <div className="bg-white dark:bg-[#1e293b] rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
