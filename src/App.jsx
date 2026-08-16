@@ -1117,7 +1117,7 @@ const handleSave = async (e) => {
                   </div>
                 )}
 
-                {/* 👉 Active Reminders & Tasks Table */}
+               {/* 👉 Active Reminders & Tasks Table */}
                 <div className="bg-white dark:bg-[#1e293b] p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 mb-8 no-print">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Active Reminders & Tasks</h3>
@@ -1141,9 +1141,10 @@ const handleSave = async (e) => {
                             <tr key={task.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
                               <td className="py-3 px-4">
                                 <button 
+                                  type="button"
                                   onClick={() => handleToggleTaskComplete(task.id, task.isCompleted)}
-                                  className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${
-                                    task.isCompleted ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm' : 'border-slate-300 dark:border-slate-600 hover:border-blue-500'
+                                  className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all relative z-10 cursor-pointer ${
+                                    task.isCompleted ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-blue-500'
                                   }`}
                                   title={task.isCompleted ? "Mark Incomplete" : "Mark Complete"}
                                 >
@@ -1156,8 +1157,17 @@ const handleSave = async (e) => {
                               <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{task.dueDate}</td>
                               <td className="py-3 px-4 text-right space-x-2">
                                 <button 
+                                  type="button"
+                                  onClick={() => openModal('task', task)}
+                                  className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all relative z-10 cursor-pointer"
+                                  title="Edit Task"
+                                >
+                                  <Pencil size={14}/>
+                                </button>
+                                <button 
+                                  type="button"
                                   onClick={() => triggerDelete('task', task.id, task.title)}
-                                  className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all"
+                                  className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all relative z-10 cursor-pointer"
                                   title="Delete Task"
                                 >
                                   <Trash2 size={14}/>
