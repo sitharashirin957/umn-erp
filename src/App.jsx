@@ -1117,12 +1117,12 @@ const handleSave = async (e) => {
                   </div>
                 )}
 
-               {/* 👉 Active Reminders & Tasks Table */}
+              {/* 👉 Active Reminders & Tasks Table */}
                 <div className="bg-white dark:bg-[#1e293b] p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 mb-8 no-print">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Active Reminders & Tasks</h3>
                     <span className="px-3 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-full text-[9px] font-bold uppercase tracking-widest">
-                      {tasks.filter(t => !t.isCompleted).length} Pending
+                      {(tasks || []).filter(t => !t.isCompleted).length} Pending
                     </span>
                   </div>
                   <div className="overflow-x-auto">
@@ -1136,13 +1136,13 @@ const handleSave = async (e) => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-xs font-bold text-slate-700 dark:text-slate-300">
-                        {tasks.length > 0 ? (
-                          tasks.map(task => (
+                        {(tasks || []).length > 0 ? (
+                          (tasks || []).map(task => (
                             <tr key={task.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
                               <td className="py-3 px-4">
                                 <button 
                                   type="button"
-                                  onClick={() => handleToggleTaskComplete(task.id, task.isCompleted)}
+                                  onClick={() => handleToggleTaskComplete && handleToggleTaskComplete(task.id, task.isCompleted)}
                                   className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all relative z-10 cursor-pointer ${
                                     task.isCompleted ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-blue-500'
                                   }`}
@@ -1166,7 +1166,7 @@ const handleSave = async (e) => {
                                 </button>
                                 <button 
                                   type="button"
-                                  onClick={() => triggerDelete('task', task.id, task.title)}
+                                  onClick={() => triggerDelete && triggerDelete('task', task.id, task.title)}
                                   className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all relative z-10 cursor-pointer"
                                   title="Delete Task"
                                 >
