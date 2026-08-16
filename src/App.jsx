@@ -1749,11 +1749,22 @@ const handleSave = async (e) => {
                                 </select>
                             </td>
                             <td className="px-4 py-4 text-right space-x-1 flex justify-end no-print items-center">
+                              {/* Push to CRM Job Tracker */}
                               <button onClick={() => handlePushQuoteTo(item, 'crm')} className="p-1.5 text-purple-500 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 rounded-lg" title="Push to CRM Job Tracker"><SendToBack size={16}/></button>
+                              
+                              {/* Push to Sales Invoice */}
                               <button onClick={() => handlePushQuoteTo(item, 'sale')} className="p-1.5 text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 rounded-lg" title="Push to Sales Invoice"><FilePlus size={16}/></button>
+
+                              {/* Duplicate */}
                               <button onClick={() => handleDuplicateItem('quotation', item)} className="p-1.5 text-amber-500 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 rounded-lg" title="Duplicate Quotation"><Copy size={16}/></button>
+                              
+                              {/* Print */}
                               <button onClick={() => setPrintDoc({ isOpen: true, type: 'quotation', data: item })} className="p-1.5 text-slate-500 bg-slate-100 dark:bg-slate-800 hover:text-blue-500 rounded-lg" title="Print Quotation"><Printer size={16}/></button>
+                              
+                              {/* Edit Button */}
                               <button onClick={() => openModal('quotation', item)} className="p-1.5 text-blue-500 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 rounded-lg" title="Edit Quotation"><Edit3 size={16}/></button>
+                              
+                              {/* Delete Button */}
                               <button onClick={() => triggerDelete('quotation', item.id, String(item.quotationNo))} className="p-1.5 text-rose-500 bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 rounded-lg" title="Delete"><Trash2 size={16}/></button>
                             </td>
                           </tr>
@@ -1765,7 +1776,6 @@ const handleSave = async (e) => {
                 </div>
               </div>
             )}
-
 
 {activeTab === 'ai_reports' && (
               <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1 pb-10">
