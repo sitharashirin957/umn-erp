@@ -1709,7 +1709,7 @@ const handleSave = async (e) => {
               </div>
             )}
 
-            {/* --- QUOTATIONS VIEW --- */}
+{/* --- QUOTATIONS VIEW --- */}
             {activeTab === 'quotations' && (
               <div className="max-w-[100rem] mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
@@ -1757,7 +1757,7 @@ const handleSave = async (e) => {
                               )}
                               <button onClick={() => handleDuplicateItem('quotation', item)} className="p-1.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg" title="Duplicate Quotation"><Copy size={16}/></button>
                               <button onClick={() => setPrintDoc({ isOpen: true, type: 'quotation', data: item })} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-50 dark:hover:bg-slate-900/30 rounded-lg" title="Print Quotation"><Printer size={16}/></button>
-                              <button onClick={() => openModal('quotation', item)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg" title="Edit Quotation"><Edit3 size={16}/></button>
+                              <button onClick={() => openModal('quotation', item)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg" title="Edit Quotation"><Edit3 size/></button>
                               <button onClick={() => triggerDelete('quotation', item.id, String(item.quotationNo))} className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg"><Trash2 size={16}/></button>
                             </td>
                           </tr>
