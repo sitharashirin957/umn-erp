@@ -1162,7 +1162,7 @@ const handleSave = async (e) => {
                                   className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all relative z-10 cursor-pointer"
                                   title="Edit Task"
                                 >
-                                  <Pencil size={14}/>
+                                  <Edit size={14}/>
                                 </button>
                                 <button 
                                   type="button"
