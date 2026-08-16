@@ -149,6 +149,16 @@ const CustomTooltip = ({ active, payload, label }) => {
 }
 
 const App = () => {
+   const handleToggleTaskComplete = async (taskId, currentStatus) => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskId), {
+        isCompleted: !currentStatus
+      });
+    } catch (error) {
+      console.error("Error updating task status:", error);
+    }
+  };
   const [user, setUser] = useState(null);
   const [isAppUnlocked, setIsAppUnlocked] = useState(() => { if (typeof window !== 'undefined') return sessionStorage.getItem('erp_unlocked') === 'true'; return false; });
   const [appPinInput, setAppPinInput] = useState(''); const [appPinError, setAppPinError] = useState(false);
@@ -957,18 +967,6 @@ const handleSave = async (e) => {
     );
   }
 
-    // Task Complete Toggle Handlers
-  const handleToggleTaskComplete = async (taskId, currentStatus) => {
-    if (!user) return;
-    try {
-      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskId), {
-        isCompleted: !currentStatus
-      });
-    } catch (error) {
-      console.error("Error updating task status:", error);
-    }
-  };
-
   const renderTable = (headers, tableData, type, renderRow) => (
     <div className="bg-white dark:bg-[#1e293b] rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
       <div className="overflow-x-auto">
@@ -1170,11 +1168,11 @@ const handleSave = async (e) => {
                               <td className="py-3 px-4 text-right space-x-2">
                                 <button 
                                   type="button"
-                                  onClick={() => openModal('task')}
+                                  onClick={() => openModal('task', task)}
                                   className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all relative z-10 cursor-pointer"
-                                  title="Add/Edit Task"
+                                  title="Edit Task"
                                 >
-                                  <Edit size={14}/>
+                                  <Edit3 size={14}/>
                                 </button>
                                 <button 
                                   type="button"
@@ -1196,152 +1194,6 @@ const handleSave = async (e) => {
                     </table>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-                  <KPICard title="Total Sales" value={formatCurrency(analytics.totalSales)} icon={Receipt} colorClass="text-[#10b981]" bgClass="bg-[#ecfdf5] dark:bg-[#10b981]/10 border-[#a7f3d0] dark:border-[#10b981]/20" />
-                  <KPICard title="Total Purchase" value={formatCurrency(analytics.totalPurchases)} icon={ShoppingBag} colorClass="text-[#3b82f6]" bgClass="bg-[#eff6ff] dark:bg-[#3b82f6]/10 border-[#bfdbfe] dark:border-[#3b82f6]/20" />
-                  <KPICard title="Total Receipt" value={formatCurrency(analytics.totalCollections)} icon={HandCoins} colorClass="text-[#f59e0b]" bgClass="bg-[#fffbeb] dark:bg-[#f59e0b]/10 border-[#fde68a] dark:border-[#f59e0b]/20" />
-                  <KPICard title="Total Payment" value={formatCurrency(analytics.totalExpenses)} icon={CreditCard} colorClass="text-[#f43f5e]" bgClass="bg-[#fff1f2] dark:bg-[#f43f5e]/10 border-[#fecdd3] dark:border-[#f43f5e]/20" />
-                  <KPICard title="Net Profit / Loss" value={analytics.netProfit < 0 ? `- ${formatCurrency(Math.abs(analytics.netProfit))}` : formatCurrency(analytics.netProfit)} icon={TrendingUp} colorClass={analytics.netProfit >= 0 ? "text-[#10b981]" : "text-[#f43f5e]"} bgClass={analytics.netProfit >= 0 ? "bg-[#ecfdf5] dark:bg-[#10b981]/10 border-[#a7f3d0]" : "bg-[#fff1f2] dark:bg-[#f43f5e]/10 border-[#fecdd3]"} />
-                </div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <button onClick={() => openModal('product')} className="py-4 border-2 border-[#10b981] text-[#10b981] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#10b981] hover:text-white transition-all flex items-center justify-center bg-white dark:bg-[#1e293b]"><Package size={16} className="mr-2"/> Create Product</button>
-                  <button onClick={() => setActiveTab('products')} className="py-4 border-2 border-[#10b981] text-[#10b981] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#10b981] hover:text-white transition-all flex items-center justify-center bg-white dark:bg-[#1e293b]"><Activity size={16} className="mr-2"/> Update Rates</button>
-                  <button onClick={() => openModal('customer')} className="py-4 border-2 border-[#10b981] text-[#10b981] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#10b981] hover:text-white transition-all flex items-center justify-center bg-white dark:bg-[#1e293b]"><Users size={16} className="mr-2"/> Create Customer</button>
-                  <button onClick={() => openModal('supplier')} className="py-4 border-2 border-[#10b981] text-[#10b981] rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#10b981] hover:text-white transition-all flex items-center justify-center bg-white dark:bg-[#1e293b]"><Truck size={16} className="mr-2"/> Create Supplier</button>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
-                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Outstanding Payable</h3>
-                    <div className="w-full h-72">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={agingPayables} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} angle={-60} textAnchor="end" />
-                          <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
-                          <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}}/>
-                          <Bar dataKey="amount" radius={[4,4,0,0]}>{agingPayables.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}</Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
-                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Outstanding Receivables</h3>
-                    <div className="w-full h-72">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={agingReceivables} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} angle={-60} textAnchor="end" />
-                          <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
-                          <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}}/>
-                          <Bar dataKey="amount" radius={[4,4,0,0]}>{agingReceivables.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}</Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
-                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Sales Analysis</h3>
-                    <div className="flex items-center space-x-2 mb-4"><div className="w-8 h-4 bg-[#10b981] rounded-sm"></div><span className="text-xs font-bold dark:text-slate-300">Sales Amount</span></div>
-                    <div className="w-full h-72">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={monthlyTrends} margin={{ top: 10, right: 10, left: -10, bottom: 40 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={true} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} angle={-45} textAnchor="end" />
-                          <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Line type="monotone" dataKey="sales" stroke="#10b981" strokeWidth={4} dot={{r: 4, fill: '#10b981'}} activeDot={{r: 6}} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-
-                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
-                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Purchase Analysis</h3>
-                    <div className="flex items-center space-x-2 mb-4"><div className="w-8 h-4 bg-[#991b1b] rounded-sm"></div><span className="text-xs font-bold dark:text-slate-300">Purchase Amount</span></div>
-                    <div className="w-full h-72">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={monthlyTrends} margin={{ top: 10, right: 10, left: -10, bottom: 40 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={true} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} angle={-45} textAnchor="end" />
-                          <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Line type="monotone" dataKey="purchases" stroke="#991b1b" strokeWidth={4} dot={{r: 4, fill: 'transparent', stroke: '#991b1b', strokeWidth: 2}} activeDot={{r: 6}} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
-                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Top Selling Customers</h3>
-                    <div className="flex items-center space-x-2 mb-4"><div className="w-8 h-4 bg-[#2dd4bf] rounded-sm"></div><span className="text-xs font-bold dark:text-slate-300">Top Selling Customers</span></div>
-                    <div className="w-full h-72">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart layout="vertical" data={topCustomersData} margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
-                          <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
-                          <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={150} tick={{fontSize: 9, fontWeight: 'bold'}} />
-                          <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}}/>
-                          <Bar dataKey="amount" fill="#2dd4bf" barSize={20} radius={[0,4,4,0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-
-                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
-                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-6">Top Suppliers</h3>
-                    <div className="flex items-center space-x-2 mb-4"><div className="w-8 h-4 bg-[#2dd4bf] rounded-sm"></div><span className="text-xs font-bold dark:text-slate-300">Amount</span></div>
-                    <div className="w-full h-72">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart layout="vertical" data={topSuppliersData} margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={isDarkMode ? '#334155' : '#f1f5f9'} />
-                          <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
-                          <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={150} tick={{fontSize: 9, fontWeight: 'bold'}} />
-                          <Tooltip content={<CustomTooltip />} cursor={{fill: 'transparent'}}/>
-                          <Bar dataKey="amount" fill="#2dd4bf" barSize={20} radius={[0,4,4,0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pb-10">
-                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
-                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-2">Top Selling Products</h3>
-                    <div className="w-full h-72">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie data={topProductsData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2} dataKey="value" stroke="none">
-                            {topProductsData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                          </Pie>
-                          <Tooltip content={<CustomTooltip />} />
-                          <Legend wrapperStyle={{fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase'}} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-
-                  <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center">
-                    <h3 className="text-sm font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest mb-2">VAT Analysis</h3>
-                    <div className="w-full h-72">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie data={vatData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2} dataKey="value" stroke="none">
-                            <Cell fill="#f43f5e" />
-                            <Cell fill="#eab308" />
-                            <Cell fill="#ef4444" />
-                          </Pie>
-                          <Tooltip content={<CustomTooltip />} />
-                          <Legend wrapperStyle={{fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase'}} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
                 </div>
               </div>
             )}
