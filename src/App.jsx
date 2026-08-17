@@ -2721,7 +2721,7 @@ const handleSave = async (e) => {
                     <h2 className="font-black text-lg uppercase tracking-tight text-slate-900">{settings?.companyName || 'My Custom ERP'}</h2>
                 </div>
                 <div className="text-right">
-                  <h1 className="text-3xl font-black uppercase tracking-tighter text-slate-900 mb-1">
+                 <h1 className="text-3xl font-black uppercase tracking-tighter text-slate-900 mb-1">
   {printDoc.type === 'sale' ? (printDoc.data?.gst ? 'TAX INVOICE / فاتورة ضريبية' : 'SIMPLIFIED TAX INVOICE / فاتورة ضريبية مبسطة') : 
    printDoc.type === 'quotation' ? 'SALES QUOTATION / عرض سعر' : 
    printDoc.type === 'purchase' ? 'PURCHASE ORDER / امر شراء' : 
