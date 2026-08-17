@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { QRCodeSVG } from 'qrcode.react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend 
 } from 'recharts';
@@ -2713,22 +2714,21 @@ const handleSave = async (e) => {
                 <button onClick={() => setPrintDoc({ isOpen: false, type: '', data: null })} className="p-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition-colors"><X size={20}/></button>
               </div>
             </div>
-
-            <div id="printable-area" className="max-w-[210mm] mx-auto bg-white min-h-[297mm] p-[15mm] shadow-2xl relative font-sans text-slate-900 mb-20 uppercase print:shadow-none" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
+<div id="printable-area" className="max-w-[210mm] mx-auto bg-white min-h-[297mm] p-[15mm] shadow-2xl relative font-sans text-slate-900 mb-20 uppercase print:shadow-none" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
               <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8 mb-8">
                 <div className="w-64 text-slate-900">
                     {settings?.logo ? <img src={settings.logo} className="w-16 h-16 object-contain mb-2 rounded-xl" alt="Logo"/> : <div className="text-3xl font-black tracking-tighter mb-2 text-slate-900">C<span className="text-blue-500">E</span></div>}
                     <h2 className="font-black text-lg uppercase tracking-tight text-slate-900">{settings?.companyName || 'My Custom ERP'}</h2>
                 </div>
                 <div className="text-right">
-                  <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 mb-1">
-                    {printDoc.type === 'sale' ? 'INVOICE' : 
-                     printDoc.type === 'quotation' ? 'SALES QUOTATION' : 
-                     printDoc.type === 'purchase' ? 'PURCHASE ORDER' : 
-                     printDoc.type === 'collection' ? 'PAYMENT RECEIPT' : 
-                     printDoc.type === 'estimate' ? 'PRICE ESTIMATE' : 
-                     printDoc.type === 'ledger' ? 'STATEMENT OF ACCOUNT' : 'EXPENSE VOUCHER'}
-                  </h1>
+                  <h1 className="text-3xl font-black uppercase tracking-tighter text-slate-900 mb-1">
+  {printDoc.type === 'sale' ? (printDoc.data?.gst ? 'TAX INVOICE / فاتورة ضريبية' : 'SIMPLIFIED TAX INVOICE / فاتورة ضريبية مبسطة') : 
+   printDoc.type === 'quotation' ? 'SALES QUOTATION / عرض سعر' : 
+   printDoc.type === 'purchase' ? 'PURCHASE ORDER / امر شراء' : 
+   printDoc.type === 'collection' ? 'PAYMENT RECEIPT / سند قبض' : 
+   printDoc.type === 'estimate' ? 'PRICE ESTIMATE / تقدير السعر' : 
+   printDoc.type === 'ledger' ? 'STATEMENT OF ACCOUNT / كشف حساب' : 'EXPENSE VOUCHER / سند صرف'}
+</h1>
                   {printDoc.type !== 'estimate' && (
                       <p className="text-lg font-black text-blue-600 uppercase">
                         {String(printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
@@ -2739,6 +2739,22 @@ const handleSave = async (e) => {
                   </p>
                 </div>
               </div>
+
+              {/* 👉 QR Code Section (പ്രിന്റ് പേജിന്റെ ഏറ്റവും താഴെ ഫൂട്ടർ ഭാഗത്ത് നൽകേണ്ട കോഡ്) */}
+              {printDoc.type === 'sale' && (
+                <div className="mt-12 flex items-center justify-between border-t-2 border-slate-200 pt-6">
+                  <div>
+                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">ZATCA Compliant E-Invoice</p>
+                    <p className="text-[8px] font-bold text-slate-500 uppercase mt-1">Kingdom of Saudi Arabia</p>
+                  </div>
+                  <div className="p-2 bg-white border border-slate-200 rounded-xl shadow-sm">
+                    <QRCodeSVG 
+                      value={`Seller: ${settings?.companyName || 'Oxad'}, VAT: ${settings?.taxId || ''}, Date: ${printDoc.data?.date || ''}, Total: ${printDoc.data?.grandTotal || 0}, VAT: ${printDoc.data?.taxTotal || 0}`} 
+                      size={80} 
+                    />
+                  </div>
+                </div>
+              )}
 
               {printDoc.type !== 'estimate' && (
                   <div className="grid grid-cols-2 gap-12 mb-12">
@@ -2758,6 +2774,9 @@ const handleSave = async (e) => {
                       </h2>
                       <p className="font-black text-sm uppercase text-slate-900">
                         {String(printDoc.data?.customerName || printDoc.data?.supplierName || printDoc.data?.category || printDoc.data?.description || printDoc.data?.entity?.name || '')}
+                      </p>
+                      <p className="text-xs font-bold text-slate-500 uppercase mt-1">
+                        Customer VAT ID: {String(printDoc.data?.gst || 'N/A')}
                       </p>
                       <p className="text-xs font-bold text-slate-500 uppercase mt-1">
                         Contact: {String(printDoc.data?.entity?.phone || '--')}
@@ -2820,15 +2839,15 @@ const handleSave = async (e) => {
                 <>
                   <table className="w-full text-left border-collapse mb-12">
                     <thead className="bg-slate-50 border-y-2 border-slate-900">
-                      <tr>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">S.No</th>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">Product Description</th>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Qty</th>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Unit Rate</th>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Tax %</th>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Line Total</th>
-                      </tr>
-                    </thead>
+                  <tr>
+                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">S.No <br/><span className="text-[8px] font-normal">الرقم</span></th>
+                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">Product Description <br/><span className="text-[8px] font-normal">وصف المنتج</span></th>
+                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Qty <br/><span className="text-[8px] font-normal">الكمية</span></th>
+                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Unit Rate <br/><span className="text-[8px] font-normal">السعر</span></th>
+                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Tax % <br/><span className="text-[8px] font-normal">ضريبة القيمة المضافة</span></th>
+                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Line Total <br/><span className="text-[8px] font-normal">المجموع</span></th>
+                  </tr>
+                </thead>
                     <tbody className="divide-y divide-slate-100 text-sm font-bold uppercase text-slate-900">
                       {printDoc.data?.items?.map((item, idx) => (
                         <tr key={idx}>
@@ -2848,10 +2867,24 @@ const handleSave = async (e) => {
 
                   <div className="flex justify-end mb-16">
                     <div className="w-80 space-y-3 bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                      <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest"><span>Subtotal</span><span>{formatCurrency(printDoc.data?.subTotal)}</span></div>
-                      <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest"><span>Total Tax</span><span>{formatCurrency(printDoc.data?.taxTotal)}</span></div>
-                      {Number(printDoc.data?.discount) > 0 && <div className="flex justify-between text-xs font-bold text-rose-500 uppercase tracking-widest"><span>Discount</span><span>-{formatCurrency(printDoc.data?.discount)}</span></div>}
-                      <div className="border-t-2 border-slate-900 pt-4 flex justify-between text-xl font-black text-slate-900 uppercase"><span>Grand Total</span><span className="text-blue-600">{formatCurrency(printDoc.data?.grandTotal)}</span></div>
+                      <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                        <span>Subtotal / المجموع</span>
+                        <span>{formatCurrency(printDoc.data?.subTotal)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+                        <span>Total Tax (15%) / الضريبة</span>
+                        <span>{formatCurrency(printDoc.data?.taxTotal)}</span>
+                      </div>
+                      {Number(printDoc.data?.discount) > 0 && (
+                        <div className="flex justify-between text-xs font-bold text-rose-500 uppercase tracking-widest">
+                          <span>Discount / الخصم</span>
+                          <span>-{formatCurrency(printDoc.data?.discount)}</span>
+                        </div>
+                      )}
+                      <div className="border-t-2 border-slate-900 pt-4 flex justify-between text-xl font-black text-slate-900 uppercase">
+                        <span>Grand Total / الإجمالي</span>
+                        <span className="text-blue-600">{formatCurrency(printDoc.data?.grandTotal)}</span>
+                      </div>
                     </div>
                   </div>
                 </>
