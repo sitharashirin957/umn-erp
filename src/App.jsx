@@ -2721,16 +2721,14 @@ const handleSave = async (e) => {
                     <h2 className="font-black text-lg uppercase tracking-tight text-slate-900">{settings?.companyName || 'My Custom ERP'}</h2>
                 </div>
                 <div className="text-right">
-               <thead className="bg-slate-50 border-y-2 border-slate-900">
-  <tr>
-    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">S.No <br/><span className="text-[8px] font-normal">الرقم</span></th>
-    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">Product Description <br/><span className="text-[8px] font-normal">وصف المنتج</span></th>
-    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Qty <br/><span className="text-[8px] font-normal">الكمية</span></th>
-    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Unit Rate <br/><span className="text-[8px] font-normal">السعر</span></th>
-    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Tax % <br/><span className="text-[8px] font-normal">ضريبة القيمة المضافة</span></th>
-    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Line Total <br/><span className="text-[8px] font-normal">المجموع</span></th>
-  </tr>
-</thead>
+                  <h1 className="text-3xl font-black uppercase tracking-tighter text-slate-900 mb-1">
+  {printDoc.type === 'sale' ? (printDoc.data?.gst ? 'TAX INVOICE / فاتورة ضريبية' : 'SIMPLIFIED TAX INVOICE / فاتورة ضريبية مبسطة') : 
+   printDoc.type === 'quotation' ? 'SALES QUOTATION / عرض سعر' : 
+   printDoc.type === 'purchase' ? 'PURCHASE ORDER / امر شراء' : 
+   printDoc.type === 'collection' ? 'PAYMENT RECEIPT / سند قبض' : 
+   printDoc.type === 'estimate' ? 'PRICE ESTIMATE / تقدير السعر' : 
+   printDoc.type === 'ledger' ? 'STATEMENT OF ACCOUNT / كشف حساب' : 'EXPENSE VOUCHER / سند صرف'}
+</h1>
                   {printDoc.type !== 'estimate' && (
                       <p className="text-lg font-black text-blue-600 uppercase">
                         {String(printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
