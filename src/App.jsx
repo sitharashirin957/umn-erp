@@ -3001,269 +3001,274 @@ const handleSave = async (e) => {
               </div>
             </div>
 
-            <div id="printable-area" className="max-w-[210mm] mx-auto bg-white min-h-[297mm] p-[15mm] shadow-2xl relative font-sans text-slate-900 mb-20 uppercase print:shadow-none" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
-              
-              {/* --- 1. PERFECTLY ALIGNED LETTERHEAD LOGO --- */}
-              <div className="-mt-[9mm] mb-6 w-full flex justify-center">
-                {settings?.printLogo || settings?.logo ? (
-                  <img 
-                    src={settings?.printLogo || settings.logo} 
-                    className="w-full max-h-36 object-contain mx-auto" 
-                    alt="Company Header"
-                  />
-                ) : (
-                  <div className="pt-4 text-center">
-                    <h2 className="font-black text-3xl uppercase tracking-tight text-slate-900">
-                      {settings?.companyName || 'My Custom ERP'}
-                    </h2>
-                  </div>
-                )}
-              </div>
-              
-              {/* --- 2. INVOICE TITLE & DETAILS --- */}
-              <div className="flex justify-between items-end pb-4 border-b-4 border-slate-900 mb-8">
-                <div>
-                  {printDoc.type !== 'estimate' && (
-                    <p className="text-xl font-black text-blue-600 uppercase">
-                      Ref No: {String(printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
-                    </p>
-                  )}
-                  <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-1">
-                    Date: {String(printDoc.data?.date || (printDoc.data?.createdAt?.toDate ? printDoc.data.createdAt.toDate().toISOString().split('T')[0] : ''))}
-                  </p>
-                </div>
-                <div className="text-right">
-                  {printDoc.type === 'sale' ? (
-                    printDoc.data?.gst ? (
-                      <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">فاتورة ضريبية</h1><h2 className="text-sm font-black text-slate-500 uppercase tracking-widest mt-1">Tax Invoice</h2></>
-                    ) : (
-                      <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">فاتورة ضريبية مبسطة</h1><h2 className="text-sm font-black text-slate-500 uppercase tracking-widest mt-1">Simplified Tax Invoice</h2></>
-                    )
-                  ) : printDoc.type === 'quotation' ? (
-                    <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">عرض سعر</h1><h2 className="text-sm font-black text-slate-500 uppercase tracking-widest mt-1">Sales Quotation</h2></>
-                  ) : printDoc.type === 'purchase' ? (
-                    <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">امر شراء</h1><h2 className="text-sm font-black text-slate-500 uppercase tracking-widest mt-1">Purchase Order</h2></>
-                  ) : printDoc.type === 'collection' ? (
-                    <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">سند قبض</h1><h2 className="text-sm font-black text-slate-500 uppercase tracking-widest mt-1">Payment Receipt</h2></>
-                  ) : printDoc.type === 'estimate' ? (
-                    <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">تقدير السعر</h1><h2 className="text-sm font-black text-slate-500 uppercase tracking-widest mt-1">Price Estimate</h2></>
-                  ) : printDoc.type === 'ledger' ? (
-                    <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">كشف حساب</h1><h2 className="text-sm font-black text-slate-500 uppercase tracking-widest mt-1">Statement Of Account</h2></>
-                  ) : (
-                    <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">سند صرف</h1><h2 className="text-sm font-black text-slate-500 uppercase tracking-widest mt-1">Expense Voucher</h2></>
-                  )}
-                </div>
-              </div>
-
-              {/* --- 3. ISSUED BY & BILLED TO DETAILS --- */}
-              {printDoc.type !== 'estimate' && (
-                <div className="grid grid-cols-2 gap-12 mb-12">
-                  <div className="border-l-4 border-blue-600 pl-4">
-                    <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Issued By</h2>
-                    <p className="font-black text-sm uppercase text-slate-900">{settings?.companyName || 'My Custom ERP'}</p>
-                    <p className="text-xs font-bold text-slate-500 uppercase mt-1">Tax ID: {settings?.taxId || '310294817200003'}</p>
-                    <p className="text-xs font-bold text-slate-500 uppercase mt-1">{settings?.email || 'info@erp.com'} | {settings?.phone || '+966 50 000 0000'}</p>
-                    {settings?.address && <p className="text-xs font-bold text-slate-500 uppercase mt-1">{settings.address}</p>}
-                  </div>
-                  <div className="border-l-4 border-slate-900 pl-4">
-                    <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
-                      {printDoc.type === 'sale' || printDoc.type === 'quotation' ? 'Billed To Customer' : 
-                       printDoc.type === 'purchase' ? 'Supplier Details' : 
-                       printDoc.type === 'ledger' ? `${printDoc.data?.entityType} Details` :
-                       printDoc.type === 'collection' ? 'Received From' : 'Expense Account'}
-                    </h2>
-                    <p className="font-black text-sm uppercase text-slate-900">
-                      {String(printDoc.data?.customerName || printDoc.data?.supplierName || printDoc.data?.category || printDoc.data?.description || printDoc.data?.entity?.name || '')}
-                    </p>
-                    <p className="text-xs font-bold text-slate-500 uppercase mt-1">
-                      Customer VAT ID: {String(printDoc.data?.gst || 'N/A')}
-                    </p>
-                    <p className="text-xs font-bold text-slate-500 uppercase mt-1">
-                      Contact: {String(printDoc.data?.entity?.phone || '--')}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* --- 4. TABLES --- */}
-              {printDoc.type === 'ledger' ? (
-                <table className="w-full text-left border-collapse mb-12">
-                  <thead className="bg-slate-50 border-y-2 border-slate-900">
-                    <tr>
-                      <th className="py-4 px-2 text-slate-600"><span className="text-[12px] font-bold tracking-normal normal-case block">الرقم</span><span className="text-[9px] font-black uppercase tracking-widest mt-1 block">S.No</span></th>
-                      <th className="py-4 px-2 text-slate-600"><span className="text-[12px] font-bold tracking-normal normal-case block">وصف المنتج</span><span className="text-[9px] font-black uppercase tracking-widest mt-1 block">Product Description</span></th>
-                      <th className="py-4 px-2 text-slate-600 text-center"><span className="text-[12px] font-bold tracking-normal normal-case block">الكمية</span><span className="text-[9px] font-black uppercase tracking-widest mt-1 block">Qty</span></th>
-                      <th className="py-4 px-2 text-slate-600 text-right"><span className="text-[12px] font-bold tracking-normal normal-case block">السعر</span><span className="text-[9px] font-black uppercase tracking-widest mt-1 block">Unit Rate</span></th>
-                      <th className="py-4 px-2 text-slate-600 text-center"><span className="text-[12px] font-bold tracking-normal normal-case block">الضريبة %</span><span className="text-[9px] font-black uppercase tracking-widest mt-1 block">Tax %</span></th>
-                      <th className="py-4 px-2 text-slate-600 text-right"><span className="text-[12px] font-bold tracking-normal normal-case block">المجموع</span><span className="text-[9px] font-black uppercase tracking-widest mt-1 block">Line Total</span></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-xs font-bold uppercase text-slate-800">
-                    {printDoc.data?.rows?.map((r, idx) => (
-                      <tr key={idx}><td className="py-3 px-2">{r.date}</td><td className="py-3 px-2 text-blue-600">{r.ref}</td><td className="py-3 px-2">{r.desc}</td><td className="py-3 px-2 text-right">{r.debit > 0 ? formatCurrency(r.debit) : '-'}</td><td className="py-3 px-2 text-right">{r.credit > 0 ? formatCurrency(r.credit) : '-'}</td><td className="py-3 px-2 text-right font-black">{formatCurrency(r.balance)}</td></tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : printDoc.type === 'estimate' ? (
-                <>
-                  <table className="w-full text-left border-collapse mb-12">
-                    <thead className="bg-slate-50 border-y-2 border-slate-900">
-                      <tr>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">S.No</th>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">Description / Spec</th>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Qty</th>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Unit Total</th>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Line Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm font-bold uppercase text-slate-900">
-                      {printDoc.data?.items?.map((item, idx) => (
-                        <tr key={idx}>
-                          <td className="py-5 px-2 text-slate-400">{idx + 1}</td>
-                          <td className="py-5 px-2 text-slate-900">
-                            <div><span className="text-blue-600">[{item.category}]</span> {item.name}</div>
-                            <div className="text-xs text-slate-500 mt-1 font-bold whitespace-pre-wrap uppercase">{item.specs}</div>
-                            {item.desc && <div className="text-[10px] text-slate-400 mt-1 font-normal normal-case whitespace-pre-wrap uppercase">{item.desc}</div>}
-                          </td>
-                          <td className="py-5 px-2 text-center text-slate-700">{item.qty}</td>
-                          <td className="py-5 px-2 text-right text-slate-700">{formatCurrency(item.totalPrice / item.qty)}</td>
-                          <td className="py-5 px-2 text-right text-slate-900">{formatCurrency(item.totalPrice)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <div className="flex justify-end mb-16">
-                    <div className="w-80 space-y-3 bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                      <div className="border-t-2 border-slate-900 pt-4 flex justify-between text-xl font-black text-slate-900 uppercase"><span>Est. Total</span><span className="text-blue-600">{formatCurrency(printDoc.data?.grandTotal)}</span></div>
-                    </div>
-                  </div>
-                </>
-              ) : ['sale', 'purchase', 'quotation'].includes(printDoc.type) ? (
-                <>
-                  <table className="w-full text-left border-collapse mb-12">
-                    <thead className="bg-slate-50 border-y-2 border-slate-900">
-                      <tr>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">S.No <br/><span className="text-[8px] font-normal">الرقم</span></th>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">Product Description <br/><span className="text-[8px] font-normal">وصف المنتج</span></th>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Qty <br/><span className="text-[8px] font-normal">الكمية</span></th>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Unit Rate <br/><span className="text-[8px] font-normal">السعر</span></th>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Tax % <br/><span className="text-[8px] font-normal">ضريبة القيمة المضافة</span></th>
-                        <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Line Total <br/><span className="text-[8px] font-normal">المجموع</span></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm font-bold uppercase text-slate-900">
-                      {printDoc.data?.items?.map((item, idx) => (
-                        <tr key={idx}>
-                          <td className="py-5 px-2 text-slate-400">{idx + 1}</td>
-                          <td className="py-5 px-2 text-slate-900">
-                            <div className="uppercase">{String(item.name || '')}</div>
-                            {item.description && <div className="text-xs text-slate-500 mt-1 font-normal whitespace-pre-wrap uppercase">{item.description}</div>}
-                          </td>
-                          <td className="py-5 px-2 text-center text-slate-700">{String(item.qty || 0)}</td>
-                          <td className="py-5 px-2 text-right text-slate-700">{formatCurrency(item.rate)}</td>
-                          <td className="py-5 px-2 text-center text-slate-500">{String(item.tax || 0)}%</td>
-                          <td className="py-5 px-2 text-right text-slate-900">{formatCurrency(item.total)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  {/* 👉 QR Code & Totals Section Combined */}
-                  <div className="flex justify-between items-end mb-8 pt-4">
-                    {printDoc.type === 'sale' ? (
-                      <div className="flex flex-col items-start">
-                        <div className="p-2 bg-white border border-slate-200 rounded-xl shadow-sm mb-4">
-                          <QRCodeSVG 
-                            value={generateZatcaTLV(
-                              settings?.companyName || 'Oxad', 
-                              settings?.taxId || '', 
-                              printDoc.data?.date ? new Date(printDoc.data.date).toISOString() : new Date().toISOString(), 
-                              printDoc.data?.grandTotal || 0, 
-                              printDoc.data?.taxTotal || 0
-                            )} 
-                            size={105} 
-                          />
-                        </div>
-                        <div className="text-left border-l-2 border-slate-200 pl-3">
-                          <p className="text-[12px] font-black text-slate-500 tracking-normal normal-case leading-tight">فاتورة إلكترونية</p>
-                          <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-tight mt-1">ZATCA Compliant E-Invoice</p>
-                          <p className="text-[11px] font-bold text-slate-500 tracking-normal normal-case leading-tight mt-3">المملكة العربية السعودية</p>
-                          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1 leading-tight">Kingdom of Saudi Arabia</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div></div>
-                    )}
-
-                    <div className="w-80 space-y-4 bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                      <div className="flex justify-between items-center text-slate-500">
-                        <div className="flex flex-col items-start">
-                          <span className="text-[13px] font-bold tracking-normal normal-case">المجموع</span>
-                          <span className="text-[9px] font-black uppercase tracking-widest mt-0.5">Subtotal</span>
-                        </div>
-                        <span className="text-sm font-bold">{formatCurrency(printDoc.data?.subTotal)}</span>
-                      </div>
-                      <div className="flex justify-between items-center text-slate-500">
-                        <div className="flex flex-col items-start">
-                          <span className="text-[13px] font-bold tracking-normal normal-case">الضريبة</span>
-                          <span className="text-[9px] font-black uppercase tracking-widest mt-0.5">Total Tax (15%)</span>
-                        </div>
-                        <span className="text-sm font-bold">{formatCurrency(printDoc.data?.taxTotal)}</span>
-                      </div>
-                      {Number(printDoc.data?.discount) > 0 && (
-                        <div className="flex justify-between items-center text-rose-500">
-                          <div className="flex flex-col items-start">
-                            <span className="text-[13px] font-bold tracking-normal normal-case">الخصم</span>
-                            <span className="text-[9px] font-black uppercase tracking-widest mt-0.5">Discount</span>
-                          </div>
-                          <span className="text-sm font-bold">-{formatCurrency(printDoc.data?.discount)}</span>
-                        </div>
-                      )}
-                      <div className="border-t-2 border-slate-900 pt-4 flex justify-between items-center text-slate-900">
-                        <div className="flex flex-col items-start">
-                          <span className="text-[16px] font-black tracking-normal normal-case">الإجمالي</span>
-                          <span className="text-[10px] font-black uppercase tracking-widest mt-0.5">Grand Total</span>
-                        </div>
-                        <span className="text-xl font-black text-blue-600">{formatCurrency(printDoc.data?.grandTotal)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 mb-12">
-                      <div className="flex justify-between items-center mb-6 border-b border-slate-200 pb-6">
-                          <div>
-                              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Payment Method</p>
-                              <p className="text-lg font-black text-slate-800 uppercase">{String(printDoc.data?.method || 'N/A')}</p>
-                          </div>
-                          <div className="text-right">
-                              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Amount</p>
-                              <p className="text-3xl font-black text-blue-600">{formatCurrency(printDoc.data?.amount)}</p>
-                          </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-8">
-                          <div>
-                              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Executive / Handled By</p>
-                              <p className="font-bold text-sm text-slate-700 uppercase">{String(salesmen.find(s=>s.id === printDoc.data?.salesmanId)?.name || 'N/A')}</p>
-                          </div>
-                          <div>
-                              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Notes / Description</p>
-                              <p className="font-bold text-sm text-slate-700 uppercase">{String(printDoc.data?.description || printDoc.data?.ref || '--')}</p>
-                          </div>
-                      </div>
-                  </div>
+            {/* --- MOBILE RESPONSIVE SCROLL WRAPPER --- */}
+            <div className="w-full overflow-x-auto pb-20 custom-scrollbar flex justify-start md:justify-center">
+              <div className="px-4 md:px-0">
+                <div id="printable-area" className="w-[210mm] min-w-[210mm] shrink-0 mx-auto bg-white min-h-[297mm] p-[15mm] shadow-2xl relative font-sans text-slate-900 uppercase print:shadow-none print:w-full print:min-w-0 print:m-0" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
                   
-                  <div className="flex justify-between items-end mb-16 px-8 mt-32">
-                      <div className="w-48 border-t-2 border-slate-300 pt-2 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Executive Signature</div>
-                      <div className="w-48 border-t-2 border-slate-300 pt-2 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Authorized Stamp</div>
+                  {/* --- 1. PERFECTLY ALIGNED LETTERHEAD LOGO --- */}
+                  <div className="-mt-[9mm] mb-6 w-full flex justify-center">
+                    {settings?.printLogo || settings?.logo ? (
+                      <img 
+                        src={settings?.printLogo || settings.logo} 
+                        className="w-full max-h-36 object-contain mx-auto" 
+                        alt="Company Header"
+                      />
+                    ) : (
+                      <div className="pt-4 text-center">
+                        <h2 className="font-black text-3xl uppercase tracking-tight text-slate-900">
+                          {settings?.companyName || 'My Custom ERP'}
+                        </h2>
+                      </div>
+                    )}
                   </div>
-                </>
-              )}
 
-              <div className="absolute bottom-[15mm] left-[15mm] right-[15mm] border-t border-slate-200 pt-4 flex justify-between text-[8px] font-black uppercase text-slate-400 tracking-widest">
-                  <span>System Generated Document</span>
-                  <span>Powered by {settings?.companyName || 'Cloud ERP'}</span>
+                  {/* --- 2. INVOICE TITLE & DETAILS --- */}
+                  <div className="flex justify-between items-end pb-4 border-b-4 border-slate-900 mb-8">
+                    <div>
+                      {printDoc.type !== 'estimate' && (
+                        <p className="text-xl font-black text-blue-600 uppercase">
+                          Ref No: {String(printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
+                        </p>
+                      )}
+                      <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-1">
+                        Date: {String(printDoc.data?.date || (printDoc.data?.createdAt?.toDate ? printDoc.data.createdAt.toDate().toISOString().split('T')[0] : ''))}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      {printDoc.type === 'sale' ? (
+                        printDoc.data?.gst ? (
+                          <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">فاتورة ضريبية</h1><h2 className="text-sm font-black text-slate-500 uppercase tracking-widest mt-1">Tax Invoice</h2></>
+                        ) : (
+                          <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">فاتورة ضريبية مبسطة</h1><h2 className="text-sm font-black text-slate-500 uppercase tracking-widest mt-1">Simplified Tax Invoice</h2></>
+                        )
+                      ) : printDoc.type === 'quotation' ? (
+                        <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">عرض سعر</h1><h2 className="text-sm font-black text-slate-500 uppercase tracking-widest mt-1">Sales Quotation</h2></>
+                      ) : printDoc.type === 'purchase' ? (
+                        <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">امر شراء</h1><h2 className="text-sm font-black text-slate-500 uppercase tracking-widest mt-1">Purchase Order</h2></>
+                      ) : printDoc.type === 'collection' ? (
+                        <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">سند قبض</h1><h2 className="text-sm font-black text-slate-500 uppercase tracking-widest mt-1">Payment Receipt</h2></>
+                      ) : printDoc.type === 'estimate' ? (
+                        <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">تقدير السعر</h1><h2 className="text-sm font-black text-slate-500 uppercase tracking-widest mt-1">Price Estimate</h2></>
+                      ) : printDoc.type === 'ledger' ? (
+                        <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">كشف حساب</h1><h2 className="text-sm font-black text-slate-500 uppercase tracking-widest mt-1">Statement Of Account</h2></>
+                      ) : (
+                        <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">سند صرف</h1><h2 className="text-sm font-black text-slate-500 uppercase tracking-widest mt-1">Expense Voucher</h2></>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* --- 3. ISSUED BY & BILLED TO DETAILS --- */}
+                  {printDoc.type !== 'estimate' && (
+                    <div className="grid grid-cols-2 gap-12 mb-12">
+                      <div className="border-l-4 border-blue-600 pl-4">
+                        <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Issued By</h2>
+                        <p className="font-black text-sm uppercase text-slate-900">{settings?.companyName || 'My Custom ERP'}</p>
+                        <p className="text-xs font-bold text-slate-500 uppercase mt-1">Tax ID: {settings?.taxId || '310294817200003'}</p>
+                        <p className="text-xs font-bold text-slate-500 uppercase mt-1">{settings?.email || 'info@erp.com'} | {settings?.phone || '+966 50 000 0000'}</p>
+                        {settings?.address && <p className="text-xs font-bold text-slate-500 uppercase mt-1">{settings.address}</p>}
+                      </div>
+                      <div className="border-l-4 border-slate-900 pl-4">
+                        <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
+                          {printDoc.type === 'sale' || printDoc.type === 'quotation' ? 'Billed To Customer' : 
+                          printDoc.type === 'purchase' ? 'Supplier Details' : 
+                          printDoc.type === 'ledger' ? `${printDoc.data?.entityType} Details` :
+                          printDoc.type === 'collection' ? 'Received From' : 'Expense Account'}
+                        </h2>
+                        <p className="font-black text-sm uppercase text-slate-900">
+                          {String(printDoc.data?.customerName || printDoc.data?.supplierName || printDoc.data?.category || printDoc.data?.description || printDoc.data?.entity?.name || '')}
+                        </p>
+                        <p className="text-xs font-bold text-slate-500 uppercase mt-1">
+                          Customer VAT ID: {String(printDoc.data?.gst || 'N/A')}
+                        </p>
+                        <p className="text-xs font-bold text-slate-500 uppercase mt-1">
+                          Contact: {String(printDoc.data?.entity?.phone || '--')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* --- 4. TABLES --- */}
+                  {printDoc.type === 'ledger' ? (
+                    <table className="w-full text-left border-collapse mb-12">
+                      <thead className="bg-slate-50 border-y-2 border-slate-900">
+                        <tr>
+                          <th className="py-4 px-2 text-slate-600"><span className="text-[12px] font-bold tracking-normal normal-case block">الرقم</span><span className="text-[9px] font-black uppercase tracking-widest mt-1 block">S.No</span></th>
+                          <th className="py-4 px-2 text-slate-600"><span className="text-[12px] font-bold tracking-normal normal-case block">وصف المنتج</span><span className="text-[9px] font-black uppercase tracking-widest mt-1 block">Product Description</span></th>
+                          <th className="py-4 px-2 text-slate-600 text-center"><span className="text-[12px] font-bold tracking-normal normal-case block">الكمية</span><span className="text-[9px] font-black uppercase tracking-widest mt-1 block">Qty</span></th>
+                          <th className="py-4 px-2 text-slate-600 text-right"><span className="text-[12px] font-bold tracking-normal normal-case block">السعر</span><span className="text-[9px] font-black uppercase tracking-widest mt-1 block">Unit Rate</span></th>
+                          <th className="py-4 px-2 text-slate-600 text-center"><span className="text-[12px] font-bold tracking-normal normal-case block">الضريبة %</span><span className="text-[9px] font-black uppercase tracking-widest mt-1 block">Tax %</span></th>
+                          <th className="py-4 px-2 text-slate-600 text-right"><span className="text-[12px] font-bold tracking-normal normal-case block">المجموع</span><span className="text-[9px] font-black uppercase tracking-widest mt-1 block">Line Total</span></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs font-bold uppercase text-slate-800">
+                        {printDoc.data?.rows?.map((r, idx) => (
+                          <tr key={idx}><td className="py-3 px-2">{r.date}</td><td className="py-3 px-2 text-blue-600">{r.ref}</td><td className="py-3 px-2">{r.desc}</td><td className="py-3 px-2 text-right">{r.debit > 0 ? formatCurrency(r.debit) : '-'}</td><td className="py-3 px-2 text-right">{r.credit > 0 ? formatCurrency(r.credit) : '-'}</td><td className="py-3 px-2 text-right font-black">{formatCurrency(r.balance)}</td></tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : printDoc.type === 'estimate' ? (
+                    <>
+                      <table className="w-full text-left border-collapse mb-12">
+                        <thead className="bg-slate-50 border-y-2 border-slate-900">
+                          <tr>
+                            <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">S.No</th>
+                            <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">Description / Spec</th>
+                            <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Qty</th>
+                            <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Unit Total</th>
+                            <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Line Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-sm font-bold uppercase text-slate-900">
+                          {printDoc.data?.items?.map((item, idx) => (
+                            <tr key={idx}>
+                              <td className="py-5 px-2 text-slate-400">{idx + 1}</td>
+                              <td className="py-5 px-2 text-slate-900">
+                                <div><span className="text-blue-600">[{item.category}]</span> {item.name}</div>
+                                <div className="text-xs text-slate-500 mt-1 font-bold whitespace-pre-wrap uppercase">{item.specs}</div>
+                                {item.desc && <div className="text-[10px] text-slate-400 mt-1 font-normal normal-case whitespace-pre-wrap uppercase">{item.desc}</div>}
+                              </td>
+                              <td className="py-5 px-2 text-center text-slate-700">{item.qty}</td>
+                              <td className="py-5 px-2 text-right text-slate-700">{formatCurrency(item.totalPrice / item.qty)}</td>
+                              <td className="py-5 px-2 text-right text-slate-900">{formatCurrency(item.totalPrice)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="flex justify-end mb-16">
+                        <div className="w-80 space-y-3 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                          <div className="border-t-2 border-slate-900 pt-4 flex justify-between text-xl font-black text-slate-900 uppercase"><span>Est. Total</span><span className="text-blue-600">{formatCurrency(printDoc.data?.grandTotal)}</span></div>
+                        </div>
+                      </div>
+                    </>
+                  ) : ['sale', 'purchase', 'quotation'].includes(printDoc.type) ? (
+                    <>
+                      <table className="w-full text-left border-collapse mb-12">
+                        <thead className="bg-slate-50 border-y-2 border-slate-900">
+                          <tr>
+                            <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">S.No <br/><span className="text-[8px] font-normal">الرقم</span></th>
+                            <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">Product Description <br/><span className="text-[8px] font-normal">وصف المنتج</span></th>
+                            <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Qty <br/><span className="text-[8px] font-normal">الكمية</span></th>
+                            <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Unit Rate <br/><span className="text-[8px] font-normal">السعر</span></th>
+                            <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Tax % <br/><span className="text-[8px] font-normal">ضريبة القيمة المضافة</span></th>
+                            <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Line Total <br/><span className="text-[8px] font-normal">المجموع</span></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-sm font-bold uppercase text-slate-900">
+                          {printDoc.data?.items?.map((item, idx) => (
+                            <tr key={idx}>
+                              <td className="py-5 px-2 text-slate-400">{idx + 1}</td>
+                              <td className="py-5 px-2 text-slate-900">
+                                <div className="uppercase">{String(item.name || '')}</div>
+                                {item.description && <div className="text-xs text-slate-500 mt-1 font-normal whitespace-pre-wrap uppercase">{item.description}</div>}
+                              </td>
+                              <td className="py-5 px-2 text-center text-slate-700">{String(item.qty || 0)}</td>
+                              <td className="py-5 px-2 text-right text-slate-700">{formatCurrency(item.rate)}</td>
+                              <td className="py-5 px-2 text-center text-slate-500">{String(item.tax || 0)}%</td>
+                              <td className="py-5 px-2 text-right text-slate-900">{formatCurrency(item.total)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+
+                      {/* 👉 QR Code & Totals Section Combined */}
+                      <div className="flex justify-between items-end mb-8 pt-4">
+                        {printDoc.type === 'sale' ? (
+                          <div className="flex flex-col items-start">
+                            <div className="p-2 bg-white border border-slate-200 rounded-xl shadow-sm mb-4">
+                              <QRCodeSVG 
+                                value={generateZatcaTLV(
+                                  settings?.companyName || 'Oxad', 
+                                  settings?.taxId || '', 
+                                  printDoc.data?.date ? new Date(printDoc.data.date).toISOString() : new Date().toISOString(), 
+                                  printDoc.data?.grandTotal || 0, 
+                                  printDoc.data?.taxTotal || 0
+                                )} 
+                                size={105} 
+                              />
+                            </div>
+                            <div className="text-left border-l-2 border-slate-200 pl-3">
+                              <p className="text-[12px] font-black text-slate-500 tracking-normal normal-case leading-tight">فاتورة إلكترونية</p>
+                              <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-tight mt-1">ZATCA Compliant E-Invoice</p>
+                              <p className="text-[11px] font-bold text-slate-500 tracking-normal normal-case leading-tight mt-3">المملكة العربية السعودية</p>
+                              <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1 leading-tight">Kingdom of Saudi Arabia</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div></div>
+                        )}
+
+                        <div className="w-80 space-y-4 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                          <div className="flex justify-between items-center text-slate-500">
+                            <div className="flex flex-col items-start">
+                              <span className="text-[13px] font-bold tracking-normal normal-case">المجموع</span>
+                              <span className="text-[9px] font-black uppercase tracking-widest mt-0.5">Subtotal</span>
+                            </div>
+                            <span className="text-sm font-bold">{formatCurrency(printDoc.data?.subTotal)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-slate-500">
+                            <div className="flex flex-col items-start">
+                              <span className="text-[13px] font-bold tracking-normal normal-case">الضريبة</span>
+                              <span className="text-[9px] font-black uppercase tracking-widest mt-0.5">Total Tax (15%)</span>
+                            </div>
+                            <span className="text-sm font-bold">{formatCurrency(printDoc.data?.taxTotal)}</span>
+                          </div>
+                          {Number(printDoc.data?.discount) > 0 && (
+                            <div className="flex justify-between items-center text-rose-500">
+                              <div className="flex flex-col items-start">
+                                <span className="text-[13px] font-bold tracking-normal normal-case">الخصم</span>
+                                <span className="text-[9px] font-black uppercase tracking-widest mt-0.5">Discount</span>
+                              </div>
+                              <span className="text-sm font-bold">-{formatCurrency(printDoc.data?.discount)}</span>
+                            </div>
+                          )}
+                          <div className="border-t-2 border-slate-900 pt-4 flex justify-between items-center text-slate-900">
+                            <div className="flex flex-col items-start">
+                              <span className="text-[16px] font-black tracking-normal normal-case">الإجمالي</span>
+                              <span className="text-[10px] font-black uppercase tracking-widest mt-0.5">Grand Total</span>
+                            </div>
+                            <span className="text-xl font-black text-blue-600">{formatCurrency(printDoc.data?.grandTotal)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 mb-12">
+                          <div className="flex justify-between items-center mb-6 border-b border-slate-200 pb-6">
+                              <div>
+                                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Payment Method</p>
+                                  <p className="text-lg font-black text-slate-800 uppercase">{String(printDoc.data?.method || 'N/A')}</p>
+                              </div>
+                              <div className="text-right">
+                                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Amount</p>
+                                  <p className="text-3xl font-black text-blue-600">{formatCurrency(printDoc.data?.amount)}</p>
+                              </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-8">
+                              <div>
+                                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Executive / Handled By</p>
+                                  <p className="font-bold text-sm text-slate-700 uppercase">{String(salesmen.find(s=>s.id === printDoc.data?.salesmanId)?.name || 'N/A')}</p>
+                              </div>
+                              <div>
+                                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Notes / Description</p>
+                                  <p className="font-bold text-sm text-slate-700 uppercase">{String(printDoc.data?.description || printDoc.data?.ref || '--')}</p>
+                              </div>
+                          </div>
+                      </div>
+                      
+                      <div className="flex justify-between items-end mb-16 px-8 mt-32">
+                          <div className="w-48 border-t-2 border-slate-300 pt-2 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Executive Signature</div>
+                          <div className="w-48 border-t-2 border-slate-300 pt-2 text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Authorized Stamp</div>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="absolute bottom-[15mm] left-[15mm] right-[15mm] border-t border-slate-200 pt-4 flex justify-between text-[8px] font-black uppercase text-slate-400 tracking-widest">
+                      <span>System Generated Document</span>
+                      <span>Powered by {settings?.companyName || 'Cloud ERP'}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
