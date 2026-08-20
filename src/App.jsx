@@ -2787,7 +2787,7 @@ const handleSave = async (e) => {
                     triggerSystemPrint(filename.replace('.pdf', ''));
                   }
                 }} className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 flex items-center transition-all">
-                  <DownloadCloud size={18} className="mr-2"/> Generate PDF
+                  <DownloadCloud size={18} className="mr-2"/> PRINT
                 </button>
                 <button onClick={() => setPrintDoc({ isOpen: false, type: '', data: null })} className="p-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition-colors flex items-center justify-center"><X size={20}/></button>
               </div>
