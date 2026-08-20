@@ -3082,13 +3082,7 @@ const handleSave = async (e) => {
               </div>
 
                   {printDoc.type !== 'estimate' && (
-                    <p className="text-base font-black text-blue-600 uppercase mt-1">
-                      {String(printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
-                    </p>
-                  )}
-                </div>
-
-              </div>
+                   
              
                   {/* 👉 QR Code & Totals Section Combined (Arabic on Top, English on Bottom) */}
                   <div className="flex justify-between items-end mb-8 pt-4">
