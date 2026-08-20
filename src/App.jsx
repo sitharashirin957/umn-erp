@@ -961,8 +961,15 @@ const handleSave = async (e) => {
   };
 
   const handleSettingsSave = (e) => { e.preventDefault(); requestAdminAuth(async () => { if (!user) return; try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'profile'), cleanObject(settings), { merge: true }); setSettingsSuccess(true); setTimeout(() => setSettingsSuccess(false), 3000); } catch (err) { console.error(err); } }); };
-  const handleLogoUpload = (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => setSettings({ ...settings, logo: reader.result }); reader.readAsDataURL(file); } };
-
+  const handleImageUpload = (e, logoType) => { 
+    const file = e.target.files[0]; 
+    if (file) { 
+      const reader = new FileReader(); 
+      reader.onloadend = () => setSettings(prev => ({ ...prev, [logoType]: reader.result })); 
+      reader.readAsDataURL(file); 
+    } 
+  };
+  
   const executeDelete = async () => {
     if (!confirmDelete.id || !confirmDelete.type || !user) return;
     try {
