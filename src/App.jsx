@@ -2876,7 +2876,34 @@ const handleSave = async (e) => {
                     </tbody>
                   </table>
 
-                  <div className="flex justify-end mb-16">
+                  {/* 👉 QR Code & Totals Section Combined */}
+                  <div className="flex justify-between items-end mb-8 pt-4">
+                    
+                    {/* Left Side: QR Code & ZATCA Text */}
+                    {printDoc.type === 'sale' ? (
+                      <div className="flex flex-col items-start">
+                        <div className="p-2 bg-white border border-slate-200 rounded-xl shadow-sm mb-4">
+                          <QRCodeSVG 
+                            value={generateZatcaTLV(
+                              settings?.companyName || 'Oxad', 
+                              settings?.taxId || '', 
+                              printDoc.data?.date ? new Date(printDoc.data.date).toISOString() : new Date().toISOString(), 
+                              printDoc.data?.grandTotal || 0, 
+                              printDoc.data?.taxTotal || 0
+                            )} 
+                            size={80} 
+                          />
+                        </div>
+                        <div className="text-left border-l-2 border-slate-200 pl-3">
+                          <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-tight">ZATCA Compliant E-Invoice <br/> فاتورة إلكترونية</p>
+                                             
+                        </div>
+                      </div>
+                    ) : (
+                      <div></div> /* Empty div to push totals to the right for non-sale docs */
+                    )}
+
+                    {/* Right Side: Totals Box */}
                     <div className="w-80 space-y-3 bg-slate-50 p-6 rounded-2xl border border-slate-200">
                       <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
                         <span>Subtotal / المجموع</span>
@@ -2897,30 +2924,9 @@ const handleSave = async (e) => {
                         <span className="text-blue-600">{formatCurrency(printDoc.data?.grandTotal)}</span>
                       </div>
                     </div>
+
                   </div>
                   
-{/* 👉 പുതിയ ZATCA TLV QR Code Section (Bottom Left) ഇവിടെ പേസ്റ്റ് ചെയ്യുക */}
-                  {printDoc.type === 'sale' && (
-                    <div className="mt-12 flex items-center justify-between border-t-2 border-slate-200 pt-6">
-                      <div className="p-2 bg-white border border-slate-200 rounded-xl shadow-sm">
-                        <QRCodeSVG 
-                          value={generateZatcaTLV(
-                            settings?.companyName || 'Oxad', 
-                            settings?.taxId || '', 
-                            printDoc.data?.date ? new Date(printDoc.data.date).toISOString() : new Date().toISOString(), 
-                            printDoc.data?.grandTotal || 0, 
-                            printDoc.data?.taxTotal || 0
-                          )} 
-                          size={80} 
-                        />
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">ZATCA Compliant E-Invoice / فاتورة إلكترونية</p>
-                        <p className="text-[8px] font-bold text-slate-500 uppercase mt-1">Kingdom of Saudi Arabia / المملكة العربية السعودية</p>
-                      </div>
-                    </div>
-                  )}
-
                 </>
               ) : (
                 <>
