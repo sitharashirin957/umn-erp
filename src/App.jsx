@@ -199,6 +199,7 @@ const App = () => {
   const [collections, setCollections] = useState([]); const [expenses, setExpenses] = useState([]); const [salesmen, setSalesmen] = useState([]); const [crms, setCrms] = useState([]);
   const [crmDropdownOpen, setCrmDropdownOpen] = useState(null);
   const [tasks, setTasks] = useState([]);
+  const [invoiceChoiceModal, setInvoiceChoiceModal] = useState({ isOpen: false, saleData: null, customerEntity: null });
 
   // FIXED AGING LOGIC
   const buildAgingReport = (type = 'customer') => {
@@ -1224,13 +1225,30 @@ const handleSave = async (e) => {
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {dashboardAlerts.map(alert => (
-                        <div key={alert.id} className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-sm flex flex-col justify-between">
-                          <div>
-                            <p className="font-black text-xs uppercase tracking-wide">{alert.title}</p>
-                            <p className="text-[10px] font-bold opacity-80 mt-1 uppercase">{alert.desc}</p>
-                          </div>
-                        </div>
-                      ))}
+                    <div 
+                      key={alert.id} 
+                      onClick={() => {
+                        if (alert.type === 'payment') {
+                          const targetSale = sales.find(s => s.id === alert.id || s.invoiceNo === alert.desc.split(' ')[5]);
+                          if (targetSale) {
+                            const targetCustomer = customers.find(c => c.id === targetSale.customerId);
+                            setInvoiceChoiceModal({ isOpen: true, saleData: targetSale, customerEntity: targetCustomer });
+                          }
+                        } else if (alert.type === 'task') {
+                          const targetTask = tasks.find(t => t.id === alert.id);
+                          if (targetTask) {
+                            openModal('task', targetTask);
+                          }
+                        }
+                      }}
+                      className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-sm flex flex-col justify-between cursor-pointer hover:bg-white/20 transition-all"
+                    >
+                      <div>
+                        <p className="font-black text-xs uppercase tracking-wide">{alert.title} 🔍</p>
+                        <p className="text-[10px] font-bold opacity-80 mt-1 uppercase">{alert.desc}</p>
+                      </div>
+                    </div>
+                  ))}
                     </div>
                   </div>
                 )}
@@ -2440,7 +2458,59 @@ const handleSave = async (e) => {
                     </div>
                 </div>
             </div>
+
         )}
+
+        {/* --- INVOICE CHOICE MODAL --- */}
+        {invoiceChoiceModal.isOpen && (
+          <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4 transition-all">
+            <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl border border-slate-200 dark:border-slate-800 animate-fade-in-up">
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-4 text-2xl font-black shadow-inner">
+                  📊
+                </div>
+                <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-1 text-center">
+                  Choose Action
+                </h2>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6 text-center">
+                  Invoice: {invoiceChoiceModal.saleData?.invoiceNo}
+                </p>
+
+                <div className="w-full space-y-3">
+                  <button 
+                    onClick={() => {
+                      const sale = invoiceChoiceModal.saleData;
+                      setInvoiceChoiceModal({ isOpen: false, saleData: null, customerEntity: null });
+                      setPrintDoc({ isOpen: true, type: 'sale', data: sale });
+                    }}
+                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 transition-all"
+                  >
+                    📄 View Tax Invoice
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      const entity = invoiceChoiceModal.customerEntity;
+                      setInvoiceChoiceModal({ isOpen: false, saleData: null, customerEntity: null });
+                      if (entity) generateLedger('customer', entity);
+                    }}
+                    className="w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                  >
+                    📑 View Due Statement (Ledger)
+                  </button>
+                </div>
+
+                <button 
+                  onClick={() => setInvoiceChoiceModal({ isOpen: false, saleData: null, customerEntity: null })} 
+                  className="mt-6 text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-rose-500 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {/* --- ADMIN AUTH MODAL --- */}
         {adminAuth.isOpen && (
