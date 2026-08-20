@@ -3064,7 +3064,7 @@ const handleSave = async (e) => {
                       <div className="border-l-4 border-blue-600 pl-4">
                         <h2 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">Issued By</h2>
                         <p className="font-black text-sm uppercase text-slate-900">{settings?.companyName || 'My Custom ERP'}</p>
-                        <p className="text-xs font-bold text-slate-500 uppercase mt-1">Tax ID: {settings?.taxId || '310294817200003'}</p>
+                        <p className="text-xs font-bold text-slate-500 uppercase mt-1">Tax ID/TIN: {settings?.taxId || '310294817200003'}</p>
                         <p className="text-xs font-bold text-slate-500 uppercase mt-1">{settings?.email || 'info@erp.com'} | {settings?.phone || '+966 50 000 0000'}</p>
                         {settings?.address && <p className="text-xs font-bold text-slate-500 uppercase mt-1">{settings.address}</p>}
                       </div>
