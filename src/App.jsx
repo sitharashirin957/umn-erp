@@ -66,17 +66,16 @@ const COLORS = ['#10b981', '#3b82f6', '#94a3b8', '#f43f5e', '#eab308', '#8b5cf6'
 const AGING_COLORS = ['#38bdf8', '#fbbf24', '#34d399', '#a78bfa', '#fb923c', '#f43f5e'];
  
 
-const triggerSystemPrint = async (customFilename) => {
-  const element = document.getElementById('printable-area');
-  if (!element) return;
-  if (!window.html2pdf) {
-    await new Promise((resolve) => { const script = document.createElement('script'); script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'; script.onload = resolve; document.head.appendChild(script); });
-  }
-  const opt = { margin: 0, filename: customFilename ? `${customFilename}.pdf` : `Document_${new Date().getTime()}.pdf`, image: { type: 'jpeg', quality: 1 }, html2canvas: { scale: 2, useCORS: true, logging: false }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-  const noPrintElements = element.querySelectorAll('.no-print');
-  noPrintElements.forEach(el => el.style.display = 'none');
-  await window.html2pdf().set(opt).from(element).save();
-  noPrintElements.forEach(el => el.style.display = '');
+const triggerSystemPrint = (customFilename) => {
+  // ഫയലിന്റെ പേര് സെറ്റ് ചെയ്യാൻ
+  const originalTitle = document.title;
+  if (customFilename) document.title = customFilename;
+  
+  // ബ്രൗസറിന്റെ നേറ്റീവ് പ്രിന്റ് വിളിക്കുന്നു
+  window.print();
+  
+  // പ്രിന്റ് കഴിഞ്ഞാൽ പഴയ ടൈറ്റിൽ തിരികെ വെക്കുന്നു
+  document.title = originalTitle;
 };
 
 const exportToExcel = async (data, filename) => {
@@ -1022,7 +1021,21 @@ const handleSave = async (e) => {
           </div>
         )}
 
-        <style>{`.custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: ${isDarkMode ? '#334155' : '#cbd5e1'}; border-radius: 10px; } .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } .recharts-cartesian-axis-tick-value { font-weight: bold; font-size: 10px; fill: ${isDarkMode ? '#94a3b8' : '#64748b'}; }`}</style>
+        <style>{`
+          .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; } 
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: ${isDarkMode ? '#334155' : '#cbd5e1'}; border-radius: 10px; } 
+          .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } 
+          .recharts-cartesian-axis-tick-value { font-weight: bold; font-size: 10px; fill: ${isDarkMode ? '#94a3b8' : '#64748b'}; }
+          
+          /* 👉 Print Styles for Perfect Arabic PDF */
+          @media print {
+            body * { visibility: hidden; }
+            #printable-area, #printable-area * { visibility: visible; }
+            #printable-area { position: absolute; left: 0; top: 0; width: 100%; background-color: white !important; box-shadow: none !important; margin: 0 !important; }
+            .no-print { display: none !important; }
+            @page { margin: 0; }
+          }
+        `}</style>
 
         <aside onMouseEnter={() => setIsSidebarHovered(true)} onMouseLeave={() => setIsSidebarHovered(false)} className={`fixed inset-y-0 left-0 bg-white dark:bg-[#1e293b] flex flex-col z-[100] transition-all duration-300 ease-in-out border-r border-slate-200 dark:border-slate-800 shadow-sm ${isMobileMenuOpen ? 'translate-x-0 w-72 p-6' : '-translate-x-full lg:translate-x-0'} ${collapsed ? 'lg:w-24 lg:p-4' : 'lg:w-72 lg:p-6'}`}>
           <div className="mb-10 mt-2 flex justify-between items-center"><CompanyLogo collapsed={collapsed} settings={settings} /><button className="lg:hidden text-slate-400" onClick={() => setIsMobileMenuOpen(false)}><X size={24}/></button></div>
@@ -2746,14 +2759,14 @@ const handleSave = async (e) => {
                     <h2 className="font-black text-lg uppercase tracking-tight text-slate-900">{settings?.companyName || 'My Custom ERP'}</h2>
                 </div>
                 <div className="text-right">
-                  <h1 className="text-3xl font-black uppercase tracking-tighter text-slate-900 mb-1">
-  {printDoc.type === 'sale' ? (printDoc.data?.gst ? 'TAX INVOICE / فاتورة ضريبية' : 'SIMPLIFIED TAX INVOICE / فاتورة ضريبية مبسطة') : 
-   printDoc.type === 'quotation' ? 'SALES QUOTATION / عرض سعر' : 
-   printDoc.type === 'purchase' ? 'PURCHASE ORDER / امر شراء' : 
-   printDoc.type === 'collection' ? 'PAYMENT RECEIPT / سند قبض' : 
-   printDoc.type === 'estimate' ? 'PRICE ESTIMATE / تقدير السعر' : 
-   printDoc.type === 'ledger' ? 'STATEMENT OF ACCOUNT / كشف حساب' : 'EXPENSE VOUCHER / سند صرف'}
-</h1>
+                  <h1 className="text-3xl font-black text-slate-900 mb-1">
+                    {printDoc.type === 'sale' ? (printDoc.data?.gst ? <><span className="uppercase tracking-tighter">TAX INVOICE</span> <span className="tracking-normal normal-case">/ فاتورة ضريبية</span></> : <><span className="uppercase tracking-tighter">SIMPLIFIED TAX INVOICE</span> <span className="tracking-normal normal-case">/ فاتورة ضريبية مبسطة</span></>) : 
+                     printDoc.type === 'quotation' ? <><span className="uppercase tracking-tighter">SALES QUOTATION</span> <span className="tracking-normal normal-case">/ عرض سعر</span></> : 
+                     printDoc.type === 'purchase' ? <><span className="uppercase tracking-tighter">PURCHASE ORDER</span> <span className="tracking-normal normal-case">/ امر شراء</span></> : 
+                     printDoc.type === 'collection' ? <><span className="uppercase tracking-tighter">PAYMENT RECEIPT</span> <span className="tracking-normal normal-case">/ سند قبض</span></> : 
+                     printDoc.type === 'estimate' ? <><span className="uppercase tracking-tighter">PRICE ESTIMATE</span> <span className="tracking-normal normal-case">/ تقدير السعر</span></> : 
+                     printDoc.type === 'ledger' ? <><span className="uppercase tracking-tighter">STATEMENT OF ACCOUNT</span> <span className="tracking-normal normal-case">/ كشف حساب</span></> : <><span className="uppercase tracking-tighter">EXPENSE VOUCHER</span> <span className="tracking-normal normal-case">/ سند صرف</span></>}
+                  </h1>
                   {printDoc.type !== 'estimate' && (
                       <p className="text-lg font-black text-blue-600 uppercase">
                         {String(printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
