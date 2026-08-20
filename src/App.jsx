@@ -3001,7 +3001,7 @@ const handleSave = async (e) => {
               </div>
             </div>
 
-            <div id="printable-area" className="max-w-[210mm] mx-auto bg-white min-h-[297mm] p-[15mm] shadow-2xl relative font-sans text-slate-900 mb-20 uppercase print:shadow-none" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
+           <div id="printable-area" className="max-w-[210mm] mx-auto bg-white min-h-[297mm] p-[15mm] shadow-2xl relative font-sans text-slate-900 mb-20 uppercase print:shadow-none" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
               
               {/* --- PERFECT LETTERHEAD HEADER --- */}
               <div className="border-b-4 border-slate-900 pb-6 mb-8 flex justify-between items-center">
@@ -3083,6 +3083,7 @@ const handleSave = async (e) => {
                 </div>
 
               </div>
+             
                   {/* 👉 QR Code & Totals Section Combined (Arabic on Top, English on Bottom) */}
                   <div className="flex justify-between items-end mb-8 pt-4">
                     
