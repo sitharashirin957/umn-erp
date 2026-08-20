@@ -2758,21 +2758,21 @@ const handleSave = async (e) => {
                     {settings?.logo ? <img src={settings.logo} className="w-16 h-16 object-contain mb-2 rounded-xl" alt="Logo"/> : <div className="text-3xl font-black tracking-tighter mb-2 text-slate-900">C<span className="text-blue-500">E</span></div>}
                     <h2 className="font-black text-lg uppercase tracking-tight text-slate-900">{settings?.companyName || 'My Custom ERP'}</h2>
                 </div>
-                <div className="text-right">
-                  <h1 className="text-3xl font-black text-slate-900 mb-1">
-                    {printDoc.type === 'sale' ? (printDoc.data?.gst ? <><span className="uppercase tracking-tighter">TAX INVOICE</span> <span className="tracking-normal normal-case">/ فاتورة ضريبية</span></> : <><span className="uppercase tracking-tighter">SIMPLIFIED TAX INVOICE</span> <span className="tracking-normal normal-case">/ فاتورة ضريبية مبسطة</span></>) : 
-                     printDoc.type === 'quotation' ? <><span className="uppercase tracking-tighter">SALES QUOTATION</span> <span className="tracking-normal normal-case">/ عرض سعر</span></> : 
-                     printDoc.type === 'purchase' ? <><span className="uppercase tracking-tighter">PURCHASE ORDER</span> <span className="tracking-normal normal-case">/ امر شراء</span></> : 
-                     printDoc.type === 'collection' ? <><span className="uppercase tracking-tighter">PAYMENT RECEIPT</span> <span className="tracking-normal normal-case">/ سند قبض</span></> : 
-                     printDoc.type === 'estimate' ? <><span className="uppercase tracking-tighter">PRICE ESTIMATE</span> <span className="tracking-normal normal-case">/ تقدير السعر</span></> : 
-                     printDoc.type === 'ledger' ? <><span className="uppercase tracking-tighter">STATEMENT OF ACCOUNT</span> <span className="tracking-normal normal-case">/ كشف حساب</span></> : <><span className="uppercase tracking-tighter">EXPENSE VOUCHER</span> <span className="tracking-normal normal-case">/ سند صرف</span></>}
-                  </h1>
+                <div className="text-right flex flex-col items-end">
+                  {printDoc.type === 'sale' ? (printDoc.data?.gst ? <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">فاتورة ضريبية</h1><h2 className="text-lg font-black text-slate-500 uppercase tracking-widest mt-1">Tax Invoice</h2></> : <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">فاتورة ضريبية مبسطة</h1><h2 className="text-lg font-black text-slate-500 uppercase tracking-widest mt-1">Simplified Tax Invoice</h2></>) : 
+                   printDoc.type === 'quotation' ? <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">عرض سعر</h1><h2 className="text-lg font-black text-slate-500 uppercase tracking-widest mt-1">Sales Quotation</h2></> : 
+                   printDoc.type === 'purchase' ? <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">امر شراء</h1><h2 className="text-lg font-black text-slate-500 uppercase tracking-widest mt-1">Purchase Order</h2></> : 
+                   printDoc.type === 'collection' ? <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">سند قبض</h1><h2 className="text-lg font-black text-slate-500 uppercase tracking-widest mt-1">Payment Receipt</h2></> : 
+                   printDoc.type === 'estimate' ? <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">تقدير السعر</h1><h2 className="text-lg font-black text-slate-500 uppercase tracking-widest mt-1">Price Estimate</h2></> : 
+                   printDoc.type === 'ledger' ? <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">كشف حساب</h1><h2 className="text-lg font-black text-slate-500 uppercase tracking-widest mt-1">Statement Of Account</h2></> : 
+                   <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">سند صرف</h1><h2 className="text-lg font-black text-slate-500 uppercase tracking-widest mt-1">Expense Voucher</h2></>}
+                  
                   {printDoc.type !== 'estimate' && (
-                      <p className="text-lg font-black text-blue-600 uppercase">
+                      <p className="text-xl font-black text-blue-600 uppercase mt-2">
                         {String(printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
                       </p>
                   )}
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">
                     Date: {String(printDoc.data?.date || (printDoc.data?.createdAt?.toDate ? printDoc.data.createdAt.toDate().toISOString().split('T')[0] : ''))}
                   </p>
                 </div>
@@ -2813,12 +2813,30 @@ const handleSave = async (e) => {
                   <table className="w-full text-left border-collapse mb-12">
                   <thead className="bg-slate-50 border-y-2 border-slate-900">
                     <tr>
-                      <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">S.No <br/><span className="text-[8px] font-bold tracking-normal normal-case mt-1 block">الرقم</span></th>
-                      <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">Product Description <br/><span className="text-[8px] font-bold tracking-normal normal-case mt-1 block">وصف المنتج</span></th>
-                      <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Qty <br/><span className="text-[8px] font-bold tracking-normal normal-case mt-1 block">الكمية</span></th>
-                      <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Unit Rate <br/><span className="text-[8px] font-bold tracking-normal normal-case mt-1 block">السعر</span></th>
-                      <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Tax % <br/><span className="text-[8px] font-bold tracking-normal normal-case mt-1 block">ضريبة القيمة المضافة</span></th>
-                      <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Line Total <br/><span className="text-[8px] font-bold tracking-normal normal-case mt-1 block">المجموع</span></th>
+                      <th className="py-4 px-2 text-slate-600">
+                        <span className="text-[12px] font-bold tracking-normal normal-case block">الرقم</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest mt-1 block">S.No</span>
+                      </th>
+                      <th className="py-4 px-2 text-slate-600">
+                        <span className="text-[12px] font-bold tracking-normal normal-case block">وصف المنتج</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest mt-1 block">Product Description</span>
+                      </th>
+                      <th className="py-4 px-2 text-slate-600 text-center">
+                        <span className="text-[12px] font-bold tracking-normal normal-case block">الكمية</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest mt-1 block">Qty</span>
+                      </th>
+                      <th className="py-4 px-2 text-slate-600 text-right">
+                        <span className="text-[12px] font-bold tracking-normal normal-case block">السعر</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest mt-1 block">Unit Rate</span>
+                      </th>
+                      <th className="py-4 px-2 text-slate-600 text-center">
+                        <span className="text-[12px] font-bold tracking-normal normal-case block">الضريبة %</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest mt-1 block">Tax %</span>
+                      </th>
+                      <th className="py-4 px-2 text-slate-600 text-right">
+                        <span className="text-[12px] font-bold tracking-normal normal-case block">المجموع</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest mt-1 block">Line Total</span>
+                      </th>
                     </tr>
                   </thead>
                     <tbody className="divide-y divide-slate-100 text-xs font-bold uppercase text-slate-800">
@@ -2896,58 +2914,7 @@ const handleSave = async (e) => {
                     </tbody>
                   </table>
 
-                 {/* 👉 QR Code & Totals Section Combined */}
-                  <div className="flex justify-between items-end mb-8 pt-4">
-                    
-                    {/* Left Side: QR Code & ZATCA Text */}
-                    {printDoc.type === 'sale' ? (
-                      <div className="flex flex-col items-start">
-                        <div className="p-2 bg-white border border-slate-200 rounded-xl shadow-sm mb-4">
-                          <QRCodeSVG 
-                            value={generateZatcaTLV(
-                              settings?.companyName || 'Oxad', 
-                              settings?.taxId || '', 
-                              printDoc.data?.date ? new Date(printDoc.data.date).toISOString() : new Date().toISOString(), 
-                              printDoc.data?.grandTotal || 0, 
-                              printDoc.data?.taxTotal || 0
-                            )} 
-                            size={80} 
-                          />
-                        </div>
-                        <div className="text-left border-l-2 border-slate-200 pl-3">
-                          <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-tight">ZATCA Compliant E-Invoice</p>
-                          <p className="text-[11px] font-black text-slate-400 tracking-normal normal-case leading-tight mt-1">فاتورة إلكترونية</p>
-                          <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-2 leading-tight">Kingdom of Saudi Arabia</p>
-                          <p className="text-[10px] font-bold text-slate-500 tracking-normal normal-case leading-tight mt-1">المملكة العربية السعودية</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div></div>
-                    )}
-
-                    {/* Right Side: Totals Box */}
-                    <div className="w-80 space-y-3 bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                      <div className="flex justify-between text-xs font-bold text-slate-500">
-                        <span><span className="uppercase tracking-widest">Subtotal</span> / <span className="tracking-normal normal-case">المجموع</span></span>
-                        <span>{formatCurrency(printDoc.data?.subTotal)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs font-bold text-slate-500">
-                        <span><span className="uppercase tracking-widest">Total Tax (15%)</span> / <span className="tracking-normal normal-case">الضريبة</span></span>
-                        <span>{formatCurrency(printDoc.data?.taxTotal)}</span>
-                      </div>
-                      {Number(printDoc.data?.discount) > 0 && (
-                        <div className="flex justify-between text-xs font-bold text-rose-500">
-                          <span><span className="uppercase tracking-widest">Discount</span> / <span className="tracking-normal normal-case">الخصم</span></span>
-                          <span>-{formatCurrency(printDoc.data?.discount)}</span>
-                        </div>
-                      )}
-                      <div className="border-t-2 border-slate-900 pt-4 flex justify-between text-xl font-black text-slate-900">
-                        <span><span className="uppercase tracking-tight">Grand Total</span> / <span className="tracking-normal normal-case">الإجمالي</span></span>
-                        <span className="text-blue-600">{formatCurrency(printDoc.data?.grandTotal)}</span>
-                      </div>
-                    </div>
-
-                  </div>
+                   {/* 👉 QR Code & Totals Section Combined */}
                   
                 </>
               ) : (
