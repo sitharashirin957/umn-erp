@@ -715,7 +715,7 @@ const handleDuplicateItem = (type, item) => {
       if (!apiKey) { setAiError("API Key not found."); setIsGeneratingAI(false); return; }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       const businessData = getFullERPContext();
 
       const prompt = `
@@ -753,7 +753,7 @@ const handleDuplicateItem = (type, item) => {
     try {
       const apiKey = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY;
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
       const businessData = getFullERPContext();
       const historyContext = newChatHistory.map(m => `${m.role === 'user' ? 'User Question' : 'AI CFO Response'}: ${m.content}`).join('\n');
@@ -2020,44 +2020,71 @@ const handleSave = async (e) => {
                     </div>
 
                     {/* RIGHT COLUMN: FULL REPORT */}
-                    <div className="lg:col-span-7 bg-white dark:bg-[#1e293b] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col h-[700px] overflow-hidden relative">
-                        <div className="p-6 bg-slate-50/50 dark:bg-[#0f172a]/50 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <FileText size={18} className="text-indigo-500"/>
-                                <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-tight text-sm">Executive Summary Report</h3>
+                <div className="lg:col-span-7 bg-white dark:bg-[#1e293b] rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col h-[700px] overflow-hidden relative">
+                    <div className="p-6 bg-slate-50/50 dark:bg-[#0f172a]/50 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <FileText size={18} className="text-indigo-500"/>
+                            <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-tight text-sm">Executive Summary Report</h3>
+                        </div>
+                        {aiReport && (
+                            <div className="flex gap-2">
+                                <button onClick={handleCopyReport} className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 rounded-lg transition-colors" title="Copy Text"><Copy size={16}/></button>
+                                <button onClick={() => handleWhatsAppShare('sale', { customerName: 'Board of Directors', grandTotal: analytics.netProfit, invoiceNo: 'EXECUTIVE-REPORT' })} className="p-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-200 rounded-lg transition-colors" title="Share via WhatsApp"><MessageSquare size={16}/></button>
+                                <button onClick={handlePrintAIReport} className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 rounded-lg transition-colors" title="Download PDF"><Printer size={16}/></button>
                             </div>
-                            {aiReport && (
-                                <div className="flex gap-2">
-                                    <button onClick={handleCopyReport} className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-blue-600 rounded-lg transition-colors" title="Copy Text"><Copy size={16}/></button>
-                                    <button onClick={() => handleDuplicateItem(activeTab.slice(0, -1), item)} className="p-2 text-amber-500 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded-lg shrink-0" title="Duplicate"><Copy size={16}/></button>
-                                    <button onClick={handlePrintAIReport} className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 rounded-lg transition-colors" title="Download PDF"><Printer size={16}/></button>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-white dark:bg-[#0f172a] relative">
-                            {isGeneratingAI ? (
-                                <div className="h-full flex flex-col items-center justify-center space-y-4">
-                                    <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto"></div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Generating formal report...</p>
-                                </div>
-                            ) : aiReport ? (
-                                <div id="ai-report-content" className="relative">
-                                    <div className="absolute top-0 right-0 opacity-5 pointer-events-none"><Activity size={200} /></div>
-                                    {formatAITextToHTML(aiReport)}
-                                </div>
-                            ) : (
-                                <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-50">
-                                    <ClipboardList size={48} className="text-slate-400"/>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">No report generated yet.</p>
-                                </div>
-                            )}
-                        </div>
+                        )}
                     </div>
 
+                    <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-white dark:bg-[#0f172a] relative">
+                        {isGeneratingAI ? (
+                            <div className="h-full flex flex-col items-center justify-center space-y-4">
+                                <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto"></div>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Generating formal executive report...</p>
+                            </div>
+                        ) : aiReport ? (
+                            <div id="ai-report-content" className="relative p-6 bg-white text-slate-900 rounded-2xl shadow-sm border border-slate-100">
+                                <div className="flex justify-between items-center border-b-2 border-slate-900 pb-4 mb-6">
+                                    <div>
+                                        <h1 className="text-xl font-black uppercase text-slate-900">{settings?.companyName || 'Oxad BS Co.'}</h1>
+                                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Board of Directors - Executive Summary</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[9px] font-bold text-slate-500 uppercase">Date: {new Date().toISOString().split('T')[0]}</p>
+                                        <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Confidential Report</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-3 mb-6">
+                                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+                                        <p className="text-[8px] font-black uppercase text-slate-500">Total Sales</p>
+                                        <p className="text-xs font-black text-emerald-600 mt-1">{formatCurrency(analytics.totalSales)}</p>
+                                    </div>
+                                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+                                        <p className="text-[8px] font-black uppercase text-slate-500">Outstanding</p>
+                                        <p className="text-xs font-black text-amber-600 mt-1">{formatCurrency(analytics.outstandingReceivables)}</p>
+                                    </div>
+                                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+                                        <p className="text-[8px] font-black uppercase text-slate-500">Net Profit</p>
+                                        <p className="text-xs font-black text-blue-600 mt-1">{formatCurrency(analytics.netProfit)}</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    {formatAITextToHTML(aiReport)}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-50">
+                                <ClipboardList size={48} className="text-slate-400"/>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">No report generated yet.</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
-              </div>
-            )}
+
+            </div>
+          </div>
+        )}
 
             {/* --- COLLECTIONS AND EXPENSES VIEW --- */}
             {(activeTab === 'collections' || activeTab === 'expenses') && (
