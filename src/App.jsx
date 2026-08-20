@@ -3181,7 +3181,7 @@ const handleSave = async (e) => {
                               printDoc.data?.grandTotal || 0, 
                               printDoc.data?.taxTotal || 0
                             )} 
-                            size={120} 
+                            size={105} 
                           />
                         </div>
                         <div className="text-left border-l-2 border-slate-200 pl-3">
