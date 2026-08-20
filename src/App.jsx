@@ -200,7 +200,6 @@ const App = () => {
   const [crmDropdownOpen, setCrmDropdownOpen] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [invoiceChoiceModal, setInvoiceChoiceModal] = useState({ isOpen: false, saleData: null, customerEntity: null });
-  const [invoiceChoiceModal, setInvoiceChoiceModal] = useState({ isOpen: false, saleData: null, customerEntity: null });
 
   // FIXED AGING LOGIC
   const buildAgingReport = (type = 'customer') => {
