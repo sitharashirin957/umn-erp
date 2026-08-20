@@ -2886,7 +2886,7 @@ const handleSave = async (e) => {
                           <QRCodeSVG 
                             value={generateZatcaTLV(
                               settings?.companyName || 'Oxad', 
-                              settings?.taxId || '314932702200003', 
+                              settings?.taxId || '', 
                               printDoc.data?.date ? new Date(printDoc.data.date).toISOString() : new Date().toISOString(), 
                               printDoc.data?.grandTotal || 0, 
                               printDoc.data?.taxTotal || 0
