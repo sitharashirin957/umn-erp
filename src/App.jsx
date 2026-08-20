@@ -3003,7 +3003,7 @@ const handleSave = async (e) => {
 <div id="printable-area" className="max-w-[210mm] mx-auto bg-white min-h-[297mm] p-[15mm] shadow-2xl relative font-sans text-slate-900 mb-20 uppercase print:shadow-none" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
               <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8 mb-8">
                 <div className="w-64 text-slate-900">
-                {settings?.printLogo || settings?.logo ? <img src={settings?.printLogo || settings.logo} className="w-64 h-32 object-contain mb-2 rounded-2xl" alt="Company Logo"/> : <div className="text-3xl font-black tracking-tighter mb-2 text-slate-900">C<span className="text-blue-500">E</span></div>}
+                {settings?.printLogo || settings?.logo ? <img src={settings?.printLogo || settings.logo} className="w-128 h-64 object-contain mb-2 rounded-2xl" alt="Company Logo"/> : <div className="text-3xl font-black tracking-tighter mb-2 text-slate-900">C<span className="text-blue-500">E</span></div>}
                   <h2 className="font-black text-lg uppercase tracking-tight text-slate-900">{settings?.companyName || 'My Custom ERP'}</h2>
                 </div>
                 <div className="text-right flex flex-col items-end">
