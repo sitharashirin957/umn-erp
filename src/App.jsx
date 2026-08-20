@@ -1027,13 +1027,27 @@ const handleSave = async (e) => {
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } 
           .recharts-cartesian-axis-tick-value { font-weight: bold; font-size: 10px; fill: ${isDarkMode ? '#94a3b8' : '#64748b'}; }
           
-          /* 👉 Print Styles for Perfect Arabic PDF */
+          /* 👉 Print & PDF Styles for Perfect Single Page A4 */
           @media print {
             body * { visibility: hidden; }
             #printable-area, #printable-area * { visibility: visible; }
-            #printable-area { position: absolute; left: 0; top: 0; width: 100%; background-color: white !important; box-shadow: none !important; margin: 0 !important; }
+            #printable-area { 
+              position: absolute; 
+              left: 0; 
+              top: 0; 
+              width: 100%; 
+              background-color: white !important; 
+              box-shadow: none !important; 
+              margin: 0 !important; 
+              page-break-after: avoid;
+            }
             .no-print { display: none !important; }
-            @page { margin: 0; }
+            @page { size: A4; margin: 0; }
+          }
+
+          /* 👉 Mobile View Scaling fix */
+          @media screen and (max-width: 768px) {
+            #printable-area { transform: scale(0.85); transform-origin: top center; margin-bottom: -15%; }
           }
         `}</style>
 
