@@ -715,7 +715,7 @@ const handleDuplicateItem = (type, item) => {
       if (!apiKey) { setAiError("API Key not found."); setIsGeneratingAI(false); return; }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
       const businessData = getFullERPContext();
 
       const prompt = `
@@ -753,7 +753,7 @@ const handleDuplicateItem = (type, item) => {
     try {
       const apiKey = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY;
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
 
       const businessData = getFullERPContext();
       const historyContext = newChatHistory.map(m => `${m.role === 'user' ? 'User Question' : 'AI CFO Response'}: ${m.content}`).join('\n');
