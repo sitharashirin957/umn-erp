@@ -237,18 +237,15 @@ const App = () => {
   useEffect(() => { const root = window.document.documentElement; if (isDarkMode) { root.classList.add('dark'); localStorage.setItem('erp_theme', 'dark'); } else { root.classList.remove('dark'); localStorage.setItem('erp_theme', 'light'); } }, [isDarkMode]);
   const toggleDarkMode = () => setIsDarkMode((prev) => !prev);
 
-    const handleWhatsAppShare = (docType, data) => {
+    const handleWhatsAppShare = async (docType, data) => {
     const compName = settings?.companyName || 'Oxad BS Co.';
     
-    // ഫോൺ നമ്പർ കണ്ടെത്തുന്നു (Sales, Quotes, Collections, Aging എല്ലാറ്റിൽ നിന്നും)
     const targetEntity = customers.find(c => c.id === data.customerId) || 
                          suppliers.find(s => s.id === data.supplierId) || 
                          customers.find(c => c.name === data.customerName || c.name === data.name) || 
                          suppliers.find(s => s.name === data.supplierName || s.name === data.name);
 
     let rawPhone = data.phone || data.entity?.phone || targetEntity?.phone || '';
-    
-    // സൗദി/ഇന്റർനാഷണൽ നമ്പർ ഫോർമാറ്റ് കറക്റ്റ് ചെയ്യുന്നു (05... ആണെങ്കിൽ 9665... ആക്കുന്നു)
     let cleanPhone = rawPhone.replace(/[^0-9]/g, '');
     if (cleanPhone.startsWith('05')) {
       cleanPhone = '966' + cleanPhone.slice(1);
@@ -259,35 +256,47 @@ const App = () => {
     const clientName = data.customerName || data.name || data.supplierName || data.entity?.name || 'Valued Client';
     let message = '';
 
-    // 1. Sales Invoice
     if (docType === 'sale') {
       const refNo = data.invoiceNo || 'INV';
       const totalAmt = formatCurrency(data.grandTotal || 0);
-      message = `*${compName}* - *Tax Invoice*\n\nHello *${clientName}*,\nYour Tax Invoice *${refNo}* has been generated.\n\n*Total Amount:* ${totalAmt}\n*Date:* ${data.date || 'Today'}\n\nKindly review and arrange the payment. Thank you!`;
-    } 
-    // 2. Sales Quotation
-    else if (docType === 'quotation') {
+      message = `*${compName}* - *Tax Invoice*\n\nHello *${clientName}*,\nYour Tax Invoice *${refNo}* has been generated.\n\n*Total Amount:* ${totalAmt}\n*Date:* ${data.date || 'Today'}\n\nKindly review and settle the payment. Thank you!`;
+    } else if (docType === 'quotation') {
       const refNo = data.quotationNo || 'QUOTE';
       const totalAmt = formatCurrency(data.grandTotal || 0);
-      message = `*${compName}* - *Price Quotation*\n\nHello *${clientName}*,\nThank you for reaching out to us. Here is your quotation *${refNo}*.\n\n*Quoted Amount:* ${totalAmt}\n*Date:* ${data.date || 'Today'}\n\nPlease let us know if you would like to proceed. Thank you!`;
-    } 
-    // 3. Payment Collection / Receipt Voucher
-    else if (docType === 'collection') {
+      message = `*${compName}* - *Price Quotation*\n\nHello *${clientName}*,\nHere is your quotation *${refNo}*.\n\n*Quoted Amount:* ${totalAmt}\n*Date:* ${data.date || 'Today'}\n\nPlease let us know your feedback. Thank you!`;
+    } else if (docType === 'collection') {
       const refNo = data.ref || 'RECEIPT';
       const paidAmt = formatCurrency(data.amount || 0);
-      message = `*${compName}* - *Payment Receipt*\n\nHello *${clientName}*,\nWe have successfully received your payment of *${paidAmt}* (Ref: ${refNo}).\n\n*Payment Method:* ${data.method || 'Cash'}\n*Date:* ${data.date || 'Today'}\n\nThank you for doing business with us!`;
-    } 
-    // 4. Customer / Supplier Aging (Statement / Payment Reminder)
-    else if (docType === 'customer' || docType === 'customer_aging' || docType === 'supplier_aging') {
+      message = `*${compName}* - *Payment Receipt*\n\nHello *${clientName}*,\nWe have successfully received your payment of *${paidAmt}* (Ref: ${refNo}).\n\nThank you for your business!`;
+    } else {
       const dueAmt = formatCurrency(data.totalDue || data.grandTotal || data.amount || 0);
-      message = `*${compName}* - *Outstanding Balance Reminder*\n\nHello *${clientName}*,\nThis is a gentle reminder regarding your outstanding pending balance of *${dueAmt}*.\n\nKindly arrange the settlement at your earliest convenience.\n\nThank you for your cooperation!`;
-    }
-    // 5. General Statement / Estimate
-    else {
-      const totalAmt = formatCurrency(data.grandTotal || data.amount || 0);
-      message = `*${compName}* - *Document Details*\n\nHello *${clientName}*,\nPlease find the details regarding your account (${docType.toUpperCase()}).\n\n*Total Amount:* ${totalAmt}\n\nThank you!`;
+      message = `*${compName}* - *Statement Reminder*\n\nHello *${clientName}*,\nThis is a gentle reminder regarding your balance of *${dueAmt}*.\n\nThank you!`;
     }
 
+    // മൊബൈലിൽ PDF ഫയൽ ഒപ്പം ഷെയർ ചെയ്യാൻ സാധ്യമാണെങ്കിൽ (Web Share API)
+    if (navigator.canShare && navigator.share) {
+      try {
+        // പ്രിന്റ് പ്രിവ്യൂ അല്ലെങ്കിൽ എലമെന്റിൽ നിന്ന് PDF ജനറേറ്റ് ചെയ്യാൻ ശ്രമിക്കുന്നു
+        const element = document.getElementById('printable-area');
+        if (element && window.html2pdf) {
+          const pdfBlob = await window.html2pdf().from(element).outputPdf('blob');
+          const file = new File([pdfBlob], `${docType.toUpperCase()}_${data.invoiceNo || data.quotationNo || 'DOC'}.pdf`, { type: 'application/pdf' });
+          
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: `${compName} Document`,
+              text: message,
+              files: [file],
+            });
+            return;
+          }
+        }
+      } catch (err) {
+        console.log("Share API fallback to URL:", err);
+      }
+    }
+
+    // ഫോൺ സപ്പോർട്ട് ചെയ്തില്ലെങ്കിൽ അല്ലെങ്കിൽ ഡെസ്ക്ടോപ്പ് ആണെങ്കിൽ WhatsApp URL വഴി മെസ്സേജ് അയക്കുന്നു
     const url = cleanPhone 
       ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
       : `https://wa.me/?text=${encodeURIComponent(message)}`;
