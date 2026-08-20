@@ -2745,9 +2745,33 @@ const handleSave = async (e) => {
               <div className="flex space-x-3">
                 <button onClick={() => handleWhatsAppShare(printDoc.type, printDoc.data)} className="px-6 py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-600/30 hover:scale-95 flex items-center transition-all">WhatsApp</button>
                 <button onClick={() => handleEmailShare(printDoc.type, printDoc.data)} className="px-6 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/30 hover:scale-95 flex items-center transition-all">Email</button>
-                <button onClick={() => {
+                <button onClick={async () => {
                   const refNo = printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.ref || printDoc.data?.entity?.name || 'DOC';
-                  triggerSystemPrint(`${settings?.companyName || 'MY'}_${String(printDoc.type).toUpperCase()}_${refNo}`);
+                  const filename = `${settings?.companyName || 'MY'}_${String(printDoc.type).toUpperCase()}_${refNo}.pdf`;
+                  
+                  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                  
+                  if (isMobile) {
+                    if (!window.html2pdf) {
+                      await new Promise((resolve) => { 
+                        const script = document.createElement('script'); 
+                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'; 
+                        script.onload = resolve; 
+                        document.head.appendChild(script); 
+                      });
+                    }
+                    const element = document.getElementById('printable-area');
+                    const opt = { 
+                      margin: 5, 
+                      filename: filename, 
+                      image: { type: 'jpeg', quality: 0.98 }, 
+                      html2canvas: { scale: 2, useCORS: true, letterRendering: true }, 
+                      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } 
+                    };
+                    window.html2pdf().set(opt).from(element).save();
+                  } else {
+                    triggerSystemPrint(filename.replace('.pdf', ''));
+                  }
                 }} className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 flex items-center transition-all">
                   <DownloadCloud size={18} className="mr-2"/> Generate PDF
                 </button>
