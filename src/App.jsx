@@ -2886,12 +2886,12 @@ const handleSave = async (e) => {
                           <QRCodeSVG 
                             value={generateZatcaTLV(
                               settings?.companyName || 'Oxad', 
-                              settings?.taxId || '', 
+                              settings?.taxId || '314932702200003', 
                               printDoc.data?.date ? new Date(printDoc.data.date).toISOString() : new Date().toISOString(), 
                               printDoc.data?.grandTotal || 0, 
                               printDoc.data?.taxTotal || 0
                             )} 
-                            size={80} 
+                            size={90} 
                           />
                         </div>
                         <div className="text-left border-l-2 border-slate-200 pl-3">
@@ -2900,7 +2900,9 @@ const handleSave = async (e) => {
                         </div>
                       </div>
                     ) : (
-                      <div></div> /* Empty div to push totals to the right for non-sale docs */
+                      <div>
+
+                      </div> /* Empty div to push totals to the right for non-sale docs */
                     )}
 
                     {/* Right Side: Totals Box */}
