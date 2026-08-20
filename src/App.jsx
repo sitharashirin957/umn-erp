@@ -3000,13 +3000,91 @@ const handleSave = async (e) => {
                 <button onClick={() => setPrintDoc({ isOpen: false, type: '', data: null })} className="p-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition-colors flex items-center justify-center"><X size={20}/></button>
               </div>
             </div>
+
 <div id="printable-area" className="max-w-[210mm] mx-auto bg-white min-h-[297mm] p-[15mm] shadow-2xl relative font-sans text-slate-900 mb-20 uppercase print:shadow-none" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
-              <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8 mb-8">
-                <div className="w-64 text-slate-900">
-                {settings?.printLogo || settings?.logo ? <img src={settings?.printLogo || settings.logo} className="w-128 h-64 object-contain mb-2 rounded-2xl" alt="Company Logo"/> : <div className="text-3xl font-black tracking-tighter mb-2 text-slate-900">C<span className="text-blue-500">E</span></div>}
-                  <h2 className="font-black text-lg uppercase tracking-tight text-slate-900">{settings?.companyName || 'My Custom ERP'}</h2>
+              
+              {/* --- FULL-WIDTH HEADER DESIGN (LOGO ON TOP, DETAILS BELOW) --- */}
+              <div className="border-b-4 border-slate-900 pb-6 mb-8">
+                {/* Top Row: Full Header Logo & Company Name */}
+                <div className="mb-4">
+                  {settings?.printLogo || settings?.logo ? (
+                    <img 
+                      src={settings?.printLogo || settings.logo} 
+                      className="max-h-24 w-auto object-contain rounded-xl" 
+                      alt="Company Logo"
+                    />
+                  ) : (
+                    <div className="text-3xl font-black tracking-tighter text-slate-900">
+                      C<span className="text-blue-500">E</span>
+                    </div>
+                  )}
+                  <h2 className="font-black text-xl uppercase tracking-tight text-slate-900 mt-2">
+                    {settings?.companyName || 'My Custom ERP'}
+                  </h2>
                 </div>
-                <div className="text-right flex flex-col items-end">
+
+                {/* Bottom Row: Invoice Title, Number & Date cleanly arranged */}
+                <div className="flex justify-between items-end pt-4 border-t border-slate-100">
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                      Date: {String(printDoc.data?.date || (printDoc.data?.createdAt?.toDate ? printDoc.data.createdAt.toDate().toISOString().split('T')[0] : ''))}
+                    </p>
+                    {printDoc.type !== 'estimate' && (
+                      <p className="text-lg font-black text-blue-600 uppercase mt-1">
+                        Ref / No: {String(printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="text-right">
+                    {printDoc.type === 'sale' ? (
+                      printDoc.data?.gst ? (
+                        <>
+                          <h1 className="text-2xl font-black text-slate-900 tracking-normal normal-case leading-tight">فاتورة ضريبية</h1>
+                          <h2 className="text-sm font-black text-slate-500 uppercase tracking-widest">Tax Invoice</h2>
+                        </>
+                      ) : (
+                        <>
+                          <h1 className="text-2xl font-black text-slate-900 tracking-normal normal-case leading-tight">فاتورة ضريبية مبسطة</h1>
+                          <h2 className="text-sm font-black text-slate-500 uppercase tracking-widest">Simplified Tax Invoice</h2>
+                        </>
+                      )
+                    ) : printDoc.type === 'quotation' ? (
+                      <>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-normal normal-case leading-tight">عرض سعر</h1>
+                        <h2 className="text-sm font-black text-slate-500 uppercase tracking-widest">Sales Quotation</h2>
+                      </>
+                    ) : printDoc.type === 'purchase' ? (
+                      <>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-normal normal-case leading-tight">امر شراء</h1>
+                        <h2 className="text-sm font-black text-slate-500 uppercase tracking-widest">Purchase Order</h2>
+                      </>
+                    ) : printDoc.type === 'collection' ? (
+                      <>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-normal normal-case leading-tight">سند قبض</h1>
+                        <h2 className="text-sm font-black text-slate-500 uppercase tracking-widest">Payment Receipt</h2>
+                      </>
+                    ) : printDoc.type === 'estimate' ? (
+                      <>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-normal normal-case leading-tight">تقدير السعر</h1>
+                        <h2 className="text-sm font-black text-slate-500 uppercase tracking-widest">Price Estimate</h2>
+                      </>
+                    ) : printDoc.type === 'ledger' ? (
+                      <>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-normal normal-case leading-tight">كشف حساب</h1>
+                        <h2 className="text-sm font-black text-slate-500 uppercase tracking-widest">Statement Of Account</h2>
+                      </>
+                    ) : (
+                      <>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-normal normal-case leading-tight">سند صرف</h1>
+                        <h2 className="text-sm font-black text-slate-500 uppercase tracking-widest">Expense Voucher</h2>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            
+            <div className="text-right flex flex-col items-end">
                   {printDoc.type === 'sale' ? (printDoc.data?.gst ? <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">فاتورة ضريبية</h1><h2 className="text-lg font-black text-slate-500 uppercase tracking-widest mt-1">Tax Invoice</h2></> : <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">فاتورة ضريبية مبسطة</h1><h2 className="text-lg font-black text-slate-500 uppercase tracking-widest mt-1">Simplified Tax Invoice</h2></>) : 
                    printDoc.type === 'quotation' ? <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">عرض سعر</h1><h2 className="text-lg font-black text-slate-500 uppercase tracking-widest mt-1">Sales Quotation</h2></> : 
                    printDoc.type === 'purchase' ? <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">امر شراء</h1><h2 className="text-lg font-black text-slate-500 uppercase tracking-widest mt-1">Purchase Order</h2></> : 
