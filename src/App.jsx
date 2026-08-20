@@ -3003,24 +3003,23 @@ const handleSave = async (e) => {
 
             <div id="printable-area" className="max-w-[210mm] mx-auto bg-white min-h-[297mm] p-[15mm] shadow-2xl relative font-sans text-slate-900 mb-20 uppercase print:shadow-none" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
               
-              {/* --- 1. FULL WIDTH LETTERHEAD LOGO (EDGE-TO-EDGE A4) --- */}
-              <div className="-mx-[15mm] -mt-[15mm] mb-6">
+              {/* --- 1. PERFECTLY ALIGNED LETTERHEAD LOGO --- */}
+              <div className="-mt-[9mm] mb-6 w-full flex justify-center">
                 {settings?.printLogo || settings?.logo ? (
                   <img 
                     src={settings?.printLogo || settings.logo} 
-                    className="w-full h-auto block" 
-                    style={{ minWidth: '210mm' }}
+                    className="w-full max-h-36 object-contain mx-auto" 
                     alt="Company Header"
                   />
                 ) : (
-                  <div className="pt-8 text-center">
+                  <div className="pt-4 text-center">
                     <h2 className="font-black text-3xl uppercase tracking-tight text-slate-900">
                       {settings?.companyName || 'My Custom ERP'}
                     </h2>
                   </div>
                 )}
               </div>
-
+              
               {/* --- 2. INVOICE TITLE & DETAILS --- */}
               <div className="flex justify-between items-end pb-4 border-b-4 border-slate-900 mb-8">
                 <div>
