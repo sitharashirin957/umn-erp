@@ -149,6 +149,31 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 }
 
+   // 👉 ZATCA TLV Encoder for QR Code
+const generateZatcaTLV = (sellerName, vatNo, timestamp, total, vatTotal) => {
+  const getTLVBuffer = (tag, value) => {
+    const valueBytes = new TextEncoder().encode(value);
+    const lengthByte = new Uint8Array([valueBytes.length]);
+    const tagByte = new Uint8Array([tag]);
+    const buffer = new Uint8Array(tagByte.length + lengthByte.length + valueBytes.length);
+    buffer.set(tagByte, 0); buffer.set(lengthByte, tagByte.length); buffer.set(valueBytes, tagByte.length + lengthByte.length);
+    return buffer;
+  };
+  const tlv1 = getTLVBuffer(1, sellerName);
+  const tlv2 = getTLVBuffer(2, vatNo);
+  const tlv3 = getTLVBuffer(3, timestamp);
+  const tlv4 = getTLVBuffer(4, String(total));
+  const tlv5 = getTLVBuffer(5, String(vatTotal));
+  const totalLength = tlv1.length + tlv2.length + tlv3.length + tlv4.length + tlv5.length;
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  [tlv1, tlv2, tlv3, tlv4, tlv5].forEach(buf => { result.set(buf, offset); offset += buf.length; });
+  let binary = '';
+  const bytes = new Uint8Array(result);
+  for (let i = 0; i < bytes.byteLength; i++) { binary += String.fromCharCode(bytes[i]); }
+  return btoa(binary);
+};
+
 const App = () => {
    const handleToggleTaskComplete = async (taskId, currentStatus) => {
     if (!user) return;
@@ -2740,21 +2765,7 @@ const handleSave = async (e) => {
                 </div>
               </div>
 
-              {/* 👉 QR Code Section (പ്രിന്റ് പേജിന്റെ ഏറ്റവും താഴെ ഫൂട്ടർ ഭാഗത്ത് നൽകേണ്ട കോഡ്) */}
-              {printDoc.type === 'sale' && (
-                <div className="mt-12 flex items-center justify-between border-t-2 border-slate-200 pt-6">
-                  <div>
-                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">ZATCA Compliant E-Invoice</p>
-                    <p className="text-[8px] font-bold text-slate-500 uppercase mt-1">Kingdom of Saudi Arabia</p>
-                  </div>
-                  <div className="p-2 bg-white border border-slate-200 rounded-xl shadow-sm">
-                    <QRCodeSVG 
-                      value={`Seller: ${settings?.companyName || 'Oxad'}, VAT: ${settings?.taxId || ''}, Date: ${printDoc.data?.date || ''}, Total: ${printDoc.data?.grandTotal || 0}, VAT: ${printDoc.data?.taxTotal || 0}`} 
-                      size={80} 
-                    />
-                  </div>
-                </div>
-              )}
+              
 
               {printDoc.type !== 'estimate' && (
                   <div className="grid grid-cols-2 gap-12 mb-12">
@@ -2887,6 +2898,29 @@ const handleSave = async (e) => {
                       </div>
                     </div>
                   </div>
+                  
+{/* 👉 പുതിയ ZATCA TLV QR Code Section (Bottom Left) ഇവിടെ പേസ്റ്റ് ചെയ്യുക */}
+                  {printDoc.type === 'sale' && (
+                    <div className="mt-12 flex items-center justify-between border-t-2 border-slate-200 pt-6">
+                      <div className="p-2 bg-white border border-slate-200 rounded-xl shadow-sm">
+                        <QRCodeSVG 
+                          value={generateZatcaTLV(
+                            settings?.companyName || 'Oxad', 
+                            settings?.taxId || '', 
+                            printDoc.data?.date ? new Date(printDoc.data.date).toISOString() : new Date().toISOString(), 
+                            printDoc.data?.grandTotal || 0, 
+                            printDoc.data?.taxTotal || 0
+                          )} 
+                          size={80} 
+                        />
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">ZATCA Compliant E-Invoice / فاتورة إلكترونية</p>
+                        <p className="text-[8px] font-bold text-slate-500 uppercase mt-1">Kingdom of Saudi Arabia / المملكة العربية السعودية</p>
+                      </div>
+                    </div>
+                  )}
+
                 </>
               ) : (
                 <>
