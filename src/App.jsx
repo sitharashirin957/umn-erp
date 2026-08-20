@@ -3006,12 +3006,12 @@ const handleSave = async (e) => {
               {/* --- PERFECT LETTERHEAD HEADER --- */}
               <div className="border-b-4 border-slate-900 pb-6 mb-8 flex justify-between items-center">
                 
-                {/* Left Side: Big Logo & Company Name */}
+                {/* Left Side: Big Print Logo & Company Name */}
                 <div className="flex items-center space-x-4">
                   {settings?.printLogo || settings?.logo ? (
                     <img 
                       src={settings?.printLogo || settings.logo} 
-                      className="h-24 w-auto object-contain rounded-xl" 
+                      className="h-20 w-auto object-contain rounded-xl" 
                       alt="Company Logo"
                     />
                   ) : (
