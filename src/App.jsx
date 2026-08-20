@@ -2811,9 +2811,16 @@ const handleSave = async (e) => {
 
               {printDoc.type === 'ledger' ? (
                   <table className="w-full text-left border-collapse mb-12">
-                    <thead className="bg-slate-50 border-y-2 border-slate-900">
-                      <tr><th className="py-4 px-2 text-[10px] font-black uppercase text-slate-600">Date</th><th className="py-4 px-2 text-[10px] font-black uppercase text-slate-600">Ref</th><th className="py-4 px-2 text-[10px] font-black uppercase text-slate-600">Description</th><th className="py-4 px-2 text-[10px] font-black uppercase text-slate-600 text-right">Debit</th><th className="py-4 px-2 text-[10px] font-black uppercase text-slate-600 text-right">Credit</th><th className="py-4 px-2 text-[10px] font-black uppercase text-slate-600 text-right">Balance</th></tr>
-                    </thead>
+                  <thead className="bg-slate-50 border-y-2 border-slate-900">
+                    <tr>
+                      <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">S.No <br/><span className="text-[8px] font-bold tracking-normal normal-case mt-1 block">الرقم</span></th>
+                      <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">Product Description <br/><span className="text-[8px] font-bold tracking-normal normal-case mt-1 block">وصف المنتج</span></th>
+                      <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Qty <br/><span className="text-[8px] font-bold tracking-normal normal-case mt-1 block">الكمية</span></th>
+                      <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Unit Rate <br/><span className="text-[8px] font-bold tracking-normal normal-case mt-1 block">السعر</span></th>
+                      <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-center">Tax % <br/><span className="text-[8px] font-bold tracking-normal normal-case mt-1 block">ضريبة القيمة المضافة</span></th>
+                      <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-600 text-right">Line Total <br/><span className="text-[8px] font-bold tracking-normal normal-case mt-1 block">المجموع</span></th>
+                    </tr>
+                  </thead>
                     <tbody className="divide-y divide-slate-100 text-xs font-bold uppercase text-slate-800">
                       {printDoc.data?.rows?.map((r, idx) => (
                         <tr key={idx}><td className="py-3 px-2">{r.date}</td><td className="py-3 px-2 text-blue-600">{r.ref}</td><td className="py-3 px-2">{r.desc}</td><td className="py-3 px-2 text-right">{r.debit > 0 ? formatCurrency(r.debit) : '-'}</td><td className="py-3 px-2 text-right">{r.credit > 0 ? formatCurrency(r.credit) : '-'}</td><td className="py-3 px-2 text-right font-black">{formatCurrency(r.balance)}</td></tr>
@@ -2889,7 +2896,7 @@ const handleSave = async (e) => {
                     </tbody>
                   </table>
 
-                  {/* 👉 QR Code & Totals Section Combined */}
+                 {/* 👉 QR Code & Totals Section Combined */}
                   <div className="flex justify-between items-end mb-8 pt-4">
                     
                     {/* Left Side: QR Code & ZATCA Text */}
@@ -2904,38 +2911,38 @@ const handleSave = async (e) => {
                               printDoc.data?.grandTotal || 0, 
                               printDoc.data?.taxTotal || 0
                             )} 
-                            size={90} 
+                            size={80} 
                           />
                         </div>
                         <div className="text-left border-l-2 border-slate-200 pl-3">
-                          <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-tight">ZATCA Compliant E-Invoice <br/> فاتورة إلكترونية</p>
-                                             
+                          <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-tight">ZATCA Compliant E-Invoice</p>
+                          <p className="text-[11px] font-black text-slate-400 tracking-normal normal-case leading-tight mt-1">فاتورة إلكترونية</p>
+                          <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-2 leading-tight">Kingdom of Saudi Arabia</p>
+                          <p className="text-[10px] font-bold text-slate-500 tracking-normal normal-case leading-tight mt-1">المملكة العربية السعودية</p>
                         </div>
                       </div>
                     ) : (
-                      <div>
-
-                      </div> /* Empty div to push totals to the right for non-sale docs */
+                      <div></div>
                     )}
 
                     {/* Right Side: Totals Box */}
                     <div className="w-80 space-y-3 bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                      <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
-                        <span>Subtotal / المجموع</span>
+                      <div className="flex justify-between text-xs font-bold text-slate-500">
+                        <span><span className="uppercase tracking-widest">Subtotal</span> / <span className="tracking-normal normal-case">المجموع</span></span>
                         <span>{formatCurrency(printDoc.data?.subTotal)}</span>
                       </div>
-                      <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
-                        <span>Total Tax (15%) / الضريبة</span>
+                      <div className="flex justify-between text-xs font-bold text-slate-500">
+                        <span><span className="uppercase tracking-widest">Total Tax (15%)</span> / <span className="tracking-normal normal-case">الضريبة</span></span>
                         <span>{formatCurrency(printDoc.data?.taxTotal)}</span>
                       </div>
                       {Number(printDoc.data?.discount) > 0 && (
-                        <div className="flex justify-between text-xs font-bold text-rose-500 uppercase tracking-widest">
-                          <span>Discount / الخصم</span>
+                        <div className="flex justify-between text-xs font-bold text-rose-500">
+                          <span><span className="uppercase tracking-widest">Discount</span> / <span className="tracking-normal normal-case">الخصم</span></span>
                           <span>-{formatCurrency(printDoc.data?.discount)}</span>
                         </div>
                       )}
-                      <div className="border-t-2 border-slate-900 pt-4 flex justify-between text-xl font-black text-slate-900 uppercase">
-                        <span>Grand Total / الإجمالي</span>
+                      <div className="border-t-2 border-slate-900 pt-4 flex justify-between text-xl font-black text-slate-900">
+                        <span><span className="uppercase tracking-tight">Grand Total</span> / <span className="tracking-normal normal-case">الإجمالي</span></span>
                         <span className="text-blue-600">{formatCurrency(printDoc.data?.grandTotal)}</span>
                       </div>
                     </div>
