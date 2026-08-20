@@ -223,7 +223,16 @@ const App = () => {
   const [estimatorItems, setEstimatorItems] = useState([]); const [showEstimatorDB, setShowEstimatorDB] = useState(false); const [estimateCart, setEstimateCart] = useState([]);
   const [calcForm, setCalcForm] = useState({ category: '', itemId: '', desc: '', width: '', height: '', thickness: '', minutes: '', qty: 1, matrixSize: '', matrixThick: '', isCustomMatrix: false });
   const [manualEstimateTotal, setManualEstimateTotal] = useState(''); const [estimatorPushModal, setEstimatorPushModal] = useState({ isOpen: false, type: '', customerId: '' });
-  const [settings, setSettings] = useState({ companyName: '', taxId: '', phone: '', email: '', address: '', logo: '' }); const [settingsSuccess, setSettingsSuccess] = useState(false);
+  const [settings, setSettings] = useState({ 
+    companyName: '', 
+    taxId: '', 
+    phone: '', 
+    email: '', 
+    address: '', 
+    logo: '',        // 👉 ആപ്പിനും സൈഡ്‌ബാറിനുമുള്ള ലോഗോ
+    printLogo: ''    // 👉 ഇൻവോയ്സിനും ലെറ്റർഹെഡിനുമുള്ള പ്രിന്റ് ലോഗോ
+  }); 
+  const [settingsSuccess, setSettingsSuccess] = useState(false);
   const [modalState, setModalState] = useState({ isOpen: false, type: null, data: null }); const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, type: '', id: null, title: '' });
   const [printDoc, setPrintDoc] = useState({ isOpen: false, type: '', data: null }); const [formData, setFormData] = useState({}); const [invoiceItems, setInvoiceItems] = useState([]);
   const [dbError, setDbError] = useState(false); const collapsed = isDesktop && !isSidebarHovered;
@@ -2417,7 +2426,7 @@ const handleSave = async (e) => {
               </div>
             )}
 
-            {/* --- SETTINGS VIEW --- */}
+{/* --- SETTINGS VIEW --- */}
             {activeTab === 'settings' && (
               <div className="max-w-3xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
                 <div className="bg-white dark:bg-[#1e293b] p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
@@ -2425,7 +2434,7 @@ const handleSave = async (e) => {
                     <Settings size={28} className="text-blue-500"/>
                     <div>
                       <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Company Profile</h2>
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Manage your business details and logo</p>
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Manage your business details and logos</p>
                     </div>
                   </div>
                   {settingsSuccess && <div className="mb-6 p-4 bg-emerald-100 text-emerald-700 rounded-xl text-xs font-black uppercase tracking-widest text-center">Settings Saved Successfully</div>}
@@ -2443,14 +2452,17 @@ const handleSave = async (e) => {
                         <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Phone Number</label>
                         <input className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={settings.phone || ''} onChange={e => setSettings({...settings, phone: e.target.value})} />
                       </div>
+
+                      {/* NEW DUAL LOGO UPLOAD SECTION */}
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Email Address</label>
-                        <input type="email" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={settings.email || ''} onChange={e => setSettings({...settings, email: e.target.value})} />
+                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">App / Sidebar Logo</label>
+                        <input type="file" accept="image/*" className="w-full p-3 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none text-slate-500 focus:ring-2 ring-blue-500/20 text-xs" onChange={(e) => handleImageUpload(e, 'logo')} />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Company Logo</label>
-                        <input type="file" accept="image/*" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20 text-xs" onChange={handleLogoUpload} />
+                        <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Print / Invoice Logo</label>
+                        <input type="file" accept="image/*" className="w-full p-3 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none text-slate-500 focus:ring-2 ring-indigo-500/20 text-xs" onChange={(e) => handleImageUpload(e, 'printLogo')} />
                       </div>
+
                       <div className="space-y-2 md:col-span-2">
                         <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Address / Location</label>
                         <textarea rows="3" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20 resize-y" value={settings.address || ''} onChange={e => setSettings({...settings, address: e.target.value})}></textarea>
@@ -2984,8 +2996,8 @@ const handleSave = async (e) => {
 <div id="printable-area" className="max-w-[210mm] mx-auto bg-white min-h-[297mm] p-[15mm] shadow-2xl relative font-sans text-slate-900 mb-20 uppercase print:shadow-none" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
               <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8 mb-8">
                 <div className="w-64 text-slate-900">
-                    {settings?.logo ? <img src={settings.logo} className="w-16 h-16 object-contain mb-2 rounded-xl" alt="Logo"/> : <div className="text-3xl font-black tracking-tighter mb-2 text-slate-900">C<span className="text-blue-500">E</span></div>}
-                    <h2 className="font-black text-lg uppercase tracking-tight text-slate-900">{settings?.companyName || 'My Custom ERP'}</h2>
+                {settings?.printLogo || settings?.logo ? <img src={settings?.printLogo || settings.logo} className="w-24 h-24 object-contain mb-2 rounded-2xl" alt="Company Logo"/> : <div className="text-3xl font-black tracking-tighter mb-2 text-slate-900">C<span className="text-blue-500">E</span></div>}
+                  <h2 className="font-black text-lg uppercase tracking-tight text-slate-900">{settings?.companyName || 'My Custom ERP'}</h2>
                 </div>
                 <div className="text-right flex flex-col items-end">
                   {printDoc.type === 'sale' ? (printDoc.data?.gst ? <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">فاتورة ضريبية</h1><h2 className="text-lg font-black text-slate-500 uppercase tracking-widest mt-1">Tax Invoice</h2></> : <><h1 className="text-3xl font-black text-slate-900 tracking-normal normal-case leading-tight">فاتورة ضريبية مبسطة</h1><h2 className="text-lg font-black text-slate-500 uppercase tracking-widest mt-1">Simplified Tax Invoice</h2></>) : 
