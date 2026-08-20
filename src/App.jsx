@@ -2749,7 +2749,22 @@ const handleSave = async (e) => {
                   const refNo = printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.ref || printDoc.data?.entity?.name || 'DOC';
                   triggerSystemPrint(`${settings?.companyName || 'MY'}_${String(printDoc.type).toUpperCase()}_${refNo}`);
                 }} className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 flex items-center transition-all"><DownloadCloud size={18} className="mr-2"/> Generate PDF</button>
-                <button onClick={() => setPrintDoc({ isOpen: false, type: '', data: null })} className="p-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition-colors"><X size={20}/></button>
+                <button onClick={() => {
+                const refNo = printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.ref || printDoc.data?.entity?.name || 'DOC';
+                const filename = `${settings?.companyName || 'MY'}_${String(printDoc.type).toUpperCase()}_${refNo}.pdf`;
+                
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                
+                if (isMobile && window.html2pdf) {
+                  const element = document.getElementById('printable-area');
+                  const opt = { margin: 5, filename: filename, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+                  window.html2pdf().set(opt).from(element).save();
+                } else {
+                  triggerSystemPrint(filename.replace('.pdf', ''));
+                }
+              }} className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 flex items-center transition-all">
+                <DownloadCloud size={18} className="mr-2"/> Generate PDF
+              </button>
               </div>
             </div>
 <div id="printable-area" className="max-w-[210mm] mx-auto bg-white min-h-[297mm] p-[15mm] shadow-2xl relative font-sans text-slate-900 mb-20 uppercase print:shadow-none" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
@@ -2914,10 +2929,74 @@ const handleSave = async (e) => {
                     </tbody>
                   </table>
 
-                   {/* 👉 QR Code & Totals Section Combined */}
+                  {/* 👉 QR Code & Totals Section Combined (Arabic on Top, English on Bottom) */}
+                  <div className="flex justify-between items-end mb-8 pt-4">
+                    
+                    {/* Left Side: QR Code & ZATCA Text */}
+                    {printDoc.type === 'sale' ? (
+                      <div className="flex flex-col items-start">
+                        <div className="p-2 bg-white border border-slate-200 rounded-xl shadow-sm mb-4">
+                          <QRCodeSVG 
+                            value={generateZatcaTLV(
+                              settings?.companyName || 'Oxad', 
+                              settings?.taxId || '', 
+                              printDoc.data?.date ? new Date(printDoc.data.date).toISOString() : new Date().toISOString(), 
+                              printDoc.data?.grandTotal || 0, 
+                              printDoc.data?.taxTotal || 0
+                            )} 
+                            size={80} 
+                          />
+                        </div>
+                        <div className="text-left border-l-2 border-slate-200 pl-3">
+                          <p className="text-[12px] font-black text-slate-500 tracking-normal normal-case leading-tight">فاتورة إلكترونية</p>
+                          <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest leading-tight mt-1">ZATCA Compliant E-Invoice</p>
+                          <p className="text-[11px] font-bold text-slate-500 tracking-normal normal-case leading-tight mt-3">المملكة العربية السعودية</p>
+                          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1 leading-tight">Kingdom of Saudi Arabia</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div></div>
+                    )}
+
+                    {/* Right Side: Totals Box */}
+                    <div className="w-80 space-y-4 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                      <div className="flex justify-between items-center text-slate-500">
+                        <div className="flex flex-col items-start">
+                          <span className="text-[13px] font-bold tracking-normal normal-case">المجموع</span>
+                          <span className="text-[9px] font-black uppercase tracking-widest mt-0.5">Subtotal</span>
+                        </div>
+                        <span className="text-sm font-bold">{formatCurrency(printDoc.data?.subTotal)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-slate-500">
+                        <div className="flex flex-col items-start">
+                          <span className="text-[13px] font-bold tracking-normal normal-case">الضريبة</span>
+                          <span className="text-[9px] font-black uppercase tracking-widest mt-0.5">Total Tax (15%)</span>
+                        </div>
+                        <span className="text-sm font-bold">{formatCurrency(printDoc.data?.taxTotal)}</span>
+                      </div>
+                      {Number(printDoc.data?.discount) > 0 && (
+                        <div className="flex justify-between items-center text-rose-500">
+                          <div className="flex flex-col items-start">
+                            <span className="text-[13px] font-bold tracking-normal normal-case">الخصم</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest mt-0.5">Discount</span>
+                          </div>
+                          <span className="text-sm font-bold">-{formatCurrency(printDoc.data?.discount)}</span>
+                        </div>
+                      )}
+                      <div className="border-t-2 border-slate-900 pt-4 flex justify-between items-center text-slate-900">
+                        <div className="flex flex-col items-start">
+                          <span className="text-[16px] font-black tracking-normal normal-case">الإجمالي</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest mt-0.5">Grand Total</span>
+                        </div>
+                        <span className="text-xl font-black text-blue-600">{formatCurrency(printDoc.data?.grandTotal)}</span>
+                      </div>
+                    </div>
+
+                  </div>
                   
                 </>
               ) : (
+                
                 <>
                   <div className="bg-slate-50 p-8 rounded-2xl border border-slate-200 mb-12">
                       <div className="flex justify-between items-center mb-6 border-b border-slate-200 pb-6">
