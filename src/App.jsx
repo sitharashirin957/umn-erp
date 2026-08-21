@@ -3027,19 +3027,12 @@ const handleSave = async (e) => {
                   <div className="flex justify-between items-end pb-4 border-b-4 border-slate-900 mb-8">
                     <div>
                       {printDoc.type !== 'estimate' && (
-                        <p className="text-xl font-black text-blue-600 uppercase">
+                        <p className="text-xl font-black text-blue-600 uppercase mb-1">
                           Ref No: {String(printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
                         </p>
                       )}
-                      <div className="flex justify-between items-end pb-4 border-b-4 border-slate-900 mb-8">
-                    <div>
-                      {printDoc.type !== 'estimate' && (
-                        <p className="text-xl font-black text-blue-600 uppercase">
-                          Ref No: {String(printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
-                        </p>
-                      )}
+                      
                       {(() => {
-                        // 1. Get Proper Date Object
                         let docDate = new Date();
                         if (printDoc.data?.createdAt?.toDate) {
                           docDate = printDoc.data.createdAt.toDate();
@@ -3047,20 +3040,16 @@ const handleSave = async (e) => {
                           docDate = new Date(printDoc.data.date);
                         }
 
-                        // 2. Format to DD-MM-YYYY
                         const day = String(docDate.getDate()).padStart(2, '0');
                         const month = String(docDate.getMonth() + 1).padStart(2, '0');
                         const year = docDate.getFullYear();
                         const formattedDate = `${day}-${month}-${year}`;
 
-                        // 3. Format Time (hh:mm AM/PM)
                         const formattedTime = docDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-
-                        // 4. Format Hijri Date in Arabic
                         const hijriDate = docDate.toLocaleDateString('ar-SA-u-ca-islamic', { year: 'numeric', month: 'long', day: 'numeric' });
 
                         return (
-                          <div className="flex flex-col gap-1 mt-2">
+                          <div className="flex flex-col gap-1 mt-1">
                             <p className="text-sm font-bold text-slate-500 tracking-widest uppercase flex items-center">
                               Date: <span className="text-slate-800 ml-1 mr-2">{formattedDate}</span> | <span className="text-[10px] ml-2">{formattedTime}</span>
                             </p>
@@ -3070,9 +3059,8 @@ const handleSave = async (e) => {
                           </div>
                         );
                       })()}
-                      
                     </div>
-                    </div>
+                    
                     <div className="text-right">
                       {printDoc.type === 'sale' ? (
                         printDoc.data?.gst ? (
