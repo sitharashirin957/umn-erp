@@ -3031,9 +3031,17 @@ const handleSave = async (e) => {
                           Ref No: {String(printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
                         </p>
                       )}
+                      <div className="flex justify-between items-end pb-4 border-b-4 border-slate-900 mb-8">
+                    <div>
+                      {printDoc.type !== 'estimate' && (
+                        <p className="text-xl font-black text-blue-600 uppercase">
+                          Ref No: {String(printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
+                        </p>
+                      )}
                       <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-1">
                         Date: {String(printDoc.data?.date || (printDoc.data?.createdAt?.toDate ? printDoc.data.createdAt.toDate().toISOString().split('T')[0] : ''))}
                       </p>
+                    </div>
                     </div>
                     <div className="text-right">
                       {printDoc.type === 'sale' ? (
