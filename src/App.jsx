@@ -3038,9 +3038,39 @@ const handleSave = async (e) => {
                           Ref No: {String(printDoc.data?.invoiceNo || printDoc.data?.quotationNo || printDoc.data?.id?.slice(0, 8) || printDoc.data?.entity?.name || '')}
                         </p>
                       )}
-                      <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-1">
-                        Date: {String(printDoc.data?.date || (printDoc.data?.createdAt?.toDate ? printDoc.data.createdAt.toDate().toISOString().split('T')[0] : ''))}
-                      </p>
+                      {(() => {
+                        // 1. Get Proper Date Object
+                        let docDate = new Date();
+                        if (printDoc.data?.createdAt?.toDate) {
+                          docDate = printDoc.data.createdAt.toDate();
+                        } else if (printDoc.data?.date) {
+                          docDate = new Date(printDoc.data.date);
+                        }
+
+                        // 2. Format to DD-MM-YYYY
+                        const day = String(docDate.getDate()).padStart(2, '0');
+                        const month = String(docDate.getMonth() + 1).padStart(2, '0');
+                        const year = docDate.getFullYear();
+                        const formattedDate = `${day}-${month}-${year}`;
+
+                        // 3. Format Time (hh:mm AM/PM)
+                        const formattedTime = docDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+                        // 4. Format Hijri Date in Arabic
+                        const hijriDate = docDate.toLocaleDateString('ar-SA-u-ca-islamic', { year: 'numeric', month: 'long', day: 'numeric' });
+
+                        return (
+                          <div className="flex flex-col gap-1 mt-2">
+                            <p className="text-sm font-bold text-slate-500 tracking-widest uppercase flex items-center">
+                              Date: <span className="text-slate-800 ml-1 mr-2">{formattedDate}</span> | <span className="text-[10px] ml-2">{formattedTime}</span>
+                            </p>
+                            <p className="text-xs font-bold text-slate-600 tracking-wider" dir="rtl">
+                              التاريخ: <span className="font-normal">{hijriDate}</span>
+                            </p>
+                          </div>
+                        );
+                      })()}
+                      
                     </div>
                     </div>
                     <div className="text-right">
