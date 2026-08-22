@@ -1222,7 +1222,7 @@ const handleSave = async (e) => {
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-white/20 rounded-xl"><Sparkles size={20} className="text-cyan-300 animate-spin"/></div>
                 <div>
-                  <p className="text-[10px] font-black upperDcase tracking-widest opacity-80">Voice Assistant Action</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Voice Assistant Action</p>
                   <p className="text-sm font-black uppercase tracking-wide">{voiceActionPrompt.label}</p>
                 </div>
               </div>
@@ -2721,85 +2721,6 @@ const handleSave = async (e) => {
                     )}
                   </div>
                 )}
-{['sale', 'purchase', 'expense', 'collection', 'crm', 'quotation'].includes(modalState.type) && (
-                  <div className="p-6 bg-slate-50 dark:bg-[#0f172a] rounded-3xl border border-slate-200 dark:border-slate-800 mb-6 shadow-inner dark:shadow-none">
-                     
-                     <div className="flex justify-between items-center mb-3">
-                         <label className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">
-                             {modalState.type === 'purchase' || modalState.type === 'expense' ? 'Select Supplier / Entity *' : 'Select Customer / Entity *'}
-                         </label>
-                         <button 
-                             type="button" 
-                             onClick={() => openModal(modalState.type === 'purchase' || modalState.type === 'expense' ? 'supplier' : 'customer')} 
-                             className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all flex items-center shadow-sm"
-                             title="Add New Entity"
-                         >
-                             <Plus size={12} className="mr-1"/> Add New
-                         </button>
-                     </div>
-
-                     <select required className="w-full p-4 bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 font-black text-slate-800 dark:text-white uppercase focus:ring-2 ring-blue-500/20 shadow-sm" 
-                           value={formData.customerId || formData.supplierId || formData.partyName || ''} 
-                           onChange={e => {
-                               if(modalState.type === 'sale' || modalState.type === 'collection' || modalState.type === 'crm' || modalState.type === 'quotation') {
-                                 const entity = customers.find(c => c.id === e.target.value);
-                                 if(entity) setFormData({...formData, customerId: entity.id, customerName: entity.name, partyName: entity.name});
-                               } else if (modalState.type === 'purchase') {
-                                 const entity = suppliers.find(s => s.id === e.target.value);
-                                 if(entity) setFormData({...formData, supplierId: entity.id, supplierName: entity.name, partyName: entity.name});
-                               } else {
-                                 setFormData({...formData, partyName: e.target.value});
-                               }
-                           }}>
-                       <option value="">Choose Existing Entity...</option>
-                       {(['sale', 'collection', 'crm', 'quotation'].includes(modalState.type) ? customers : suppliers).map(c => <option key={c.id} value={c.id}>{String(c.name)}</option>)}
-                     </select>
-
-                     {modalState.type === 'sale' && formData.customerId && !formData.linkedQuoteId && (
-                         <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-2">Smart Link to CRM Job (Optional)</label>
-                            <select className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-800 dark:text-white uppercase text-xs focus:ring-2 ring-indigo-500/20" 
-                                    value={formData.linkedJobId || ''} 
-                                    onChange={e => setFormData({...formData, linkedJobId: e.target.value})}>
-                                <option value="">No Link (Independent Invoice)</option>
-                                {crms.filter(c => c.customerId === formData.customerId).map(job => (
-                                    <option key={job.id} value={job.id}>{job.jobId} - {job.items && job.items[0] ? job.items[0].name.slice(0,40) : '--'}...</option>
-                                ))}
-                            </select>
-                         </div>
-                     )}
-                  </div>
-                )}
-                            onChange={e => {
-                               if(modalState.type === 'sale' || modalState.type === 'collection' || modalState.type === 'crm' || modalState.type === 'quotation') {
-                                 const entity = customers.find(c => c.id === e.target.value);
-                                 if(entity) setFormData({...formData, customerId: entity.id, customerName: entity.name, partyName: entity.name});
-                               } else if (modalState.type === 'purchase') {
-                                 const entity = suppliers.find(s => s.id === e.target.value);
-                                 if(entity) setFormData({...formData, supplierId: entity.id, supplierName: entity.name, partyName: entity.name});
-                               } else {
-                                 setFormData({...formData, partyName: e.target.value});
-                               }
-                            }}>
-                       <option value="">Choose Existing Entity...</option>
-                       {(['sale', 'collection', 'crm', 'quotation'].includes(modalState.type) ? customers : suppliers).map(c => <option key={c.id} value={c.id}>{String(c.name)}</option>)}
-                     </select>
-
-                     {modalState.type === 'sale' && formData.customerId && !formData.linkedQuoteId && (
-                         <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-2">Smart Link to CRM Job (Optional)</label>
-                            <select className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-800 dark:text-white uppercase text-xs focus:ring-2 ring-indigo-500/20" 
-                                    value={formData.linkedJobId || ''} 
-                                    onChange={e => setFormData({...formData, linkedJobId: e.target.value})}>
-                                <option value="">No Link (Independent Invoice)</option>
-                                {crms.filter(c => c.customerId === formData.customerId).map(job => (
-                                    <option key={job.id} value={job.id}>{job.jobId} - {job.items && job.items[0] ? job.items[0].name.slice(0,40) : '--'}...</option>
-                                ))}
-                            </select>
-                         </div>
-                     )}
-                  </div>
-                )}
 
                 {modalState.type === 'crm' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2819,17 +2740,17 @@ const handleSave = async (e) => {
                 )}
 
                 {modalState.type === 'task' && (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-2 md:col-span-2">
-          <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Reminder / Task Title *</label>
-          <input required placeholder="E.g., Trade License Expiry" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})} />
-        </div>
-        <div className="space-y-2 md:col-span-2">
-          <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Expiry / Due Date *</label>
-          <input type="date" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.dueDate || ''} onChange={e => setFormData({...formData, dueDate: e.target.value})} />
-        </div>
-      </div>
-    )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Reminder / Task Title *</label>
+                      <input required placeholder="E.g., Trade License Expiry" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})} />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Expiry / Due Date *</label>
+                      <input type="date" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.dueDate || ''} onChange={e => setFormData({...formData, dueDate: e.target.value})} />
+                    </div>
+                  </div>
+                )}
                 
                 {(modalState.type === 'customer' || modalState.type === 'supplier' || modalState.type === 'salesman') && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2873,7 +2794,7 @@ const handleSave = async (e) => {
                     )}
                     <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Ref / Linked Invoice Notes</label><input className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase" value={formData.ref || formData.description || ''} onChange={e => setFormData({...formData, [modalState.type === 'collection' ? 'ref' : 'description']: e.target.value})} /></div>
                     
-                    {/* പുതിയതായി ചേർത്ത ബിൽ / ഫോട്ടോ അപ്‌ലോഡ് ഫീൽഡ് */}
+                    {/* Receipt Upload Field */}
                     <div className="space-y-2 md:col-span-2">
                       <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Upload Receipt / Bill Image</label>
                       <input 
@@ -2901,9 +2822,40 @@ const handleSave = async (e) => {
                   </div>
                 )}
 
+                {/* --- ENTITY SELECTION --- */}
+                {['sale', 'purchase', 'expense', 'collection', 'crm', 'quotation'].includes(modalState.type) && (
+                  <div className="p-6 bg-slate-50 dark:bg-[#0f172a] rounded-3xl border border-slate-200 dark:border-slate-800 mb-6 shadow-inner dark:shadow-none">
+                     <div className="flex justify-between items-center mb-3">
+                         <label className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                             {modalState.type === 'purchase' || modalState.type === 'expense' ? 'Select Supplier / Entity *' : 'Select Customer / Entity *'}
+                         </label>
+                         <button type="button" onClick={() => openModal(modalState.type === 'purchase' || modalState.type === 'expense' ? 'supplier' : 'customer')} className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all flex items-center shadow-sm" title="Add New Entity">
+                             <Plus size={12} className="mr-1"/> Add New
+                         </button>
+                     </div>
+
+                     <select required className="w-full p-4 bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 font-black text-slate-800 dark:text-white uppercase focus:ring-2 ring-blue-500/20 shadow-sm" value={formData.customerId || formData.supplierId || formData.partyName || ''} onChange={(e) => { const val = e.target.value; if (['sale', 'collection', 'crm', 'quotation'].includes(modalState.type)) { const ent = customers.find(c => c.id === val); if (ent) setFormData({...formData, customerId: ent.id, customerName: ent.name, partyName: ent.name}); } else if (modalState.type === 'purchase') { const ent = suppliers.find(s => s.id === val); if (ent) setFormData({...formData, supplierId: ent.id, supplierName: ent.name, partyName: ent.name}); } else { setFormData({...formData, partyName: val}); } }}>
+                       <option value="">Choose Existing Entity...</option>
+                       {['sale', 'collection', 'crm', 'quotation'].includes(modalState.type) ? customers.map(c => <option key={c.id} value={c.id}>{String(c.name)}</option>) : suppliers.map(s => <option key={s.id} value={s.id}>{String(s.name)}</option>)}
+                     </select>
+
+                     {modalState.type === 'sale' && formData.customerId && !formData.linkedQuoteId && (
+                         <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-2">Smart Link to CRM Job (Optional)</label>
+                            <select className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-800 dark:text-white uppercase text-xs focus:ring-2 ring-indigo-500/20" value={formData.linkedJobId || ''} onChange={(e) => setFormData({...formData, linkedJobId: e.target.value})}>
+                                <option value="">No Link (Independent Invoice)</option>
+                                {crms.filter(c => c.customerId === formData.customerId).map(job => (
+                                    <option key={job.id} value={job.id}>{job.jobId} - {job.items && job.items[0] ? job.items[0].name.slice(0,40) : '--'}...</option>
+                                ))}
+                            </select>
+                         </div>
+                     )}
+                  </div>
+                )}
+
+                {/* --- ITEMS SECTION --- */}
                 {['sale', 'purchase', 'crm', 'quotation'].includes(modalState.type) && (
-                 
-                 <div className="space-y-6">
+                  <div className="space-y-6">
                     {modalState.type !== 'crm' && (
                         <div className="space-y-2">
                           <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Sales Executive *</label>
@@ -2938,12 +2890,7 @@ const handleSave = async (e) => {
                                             <option value="">Select Product...</option>
                                             {products.map(p => <option key={p.id} value={p.id}>{String(p.name)}</option>)}
                                         </select>
-                                        <button 
-                                            type="button" 
-                                            onClick={() => openModal('product')} 
-                                            className="p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 rounded-xl transition-all shrink-0" 
-                                            title="Add New Product to Inventory"
-                                        >
+                                        <button type="button" onClick={() => openModal('product')} className="p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 rounded-xl transition-all shrink-0" title="Add New Product to Inventory">
                                             <Plus size={16} />
                                         </button>
                                     </div>
@@ -2980,6 +2927,7 @@ const handleSave = async (e) => {
                   </div>
                 )}
 
+                {/* --- SUBMIT BUTTONS --- */}
                 <div className="pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-end space-x-4">
                   <button type="button" onClick={closeModal} disabled={isSubmitting} className="px-8 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Cancel</button>
                   <button type="submit" disabled={isSubmitting} className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
@@ -2990,7 +2938,7 @@ const handleSave = async (e) => {
             </div>
           </div>
         )}
-                
+
         {/* --- LEDGER MODAL --- */}
         {modalState.isOpen && modalState.type === 'ledger' && (
           <div className="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4 overflow-y-auto no-print">
