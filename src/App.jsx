@@ -1124,41 +1124,51 @@ const handleSave = async (e) => {
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } 
           .recharts-cartesian-axis-tick-value { font-weight: bold; font-size: 10px; fill: ${isDarkMode ? '#94a3b8' : '#64748b'}; }
           
-          /* 👉 Print & PDF Styles for Multi-Page Tables & Perfect Pagination */
+          /* 👉 Perfect Print & PDF Styles */
           @media print {
-            html, body { height: auto !important; overflow: visible !important; background: white !important; }
+            html, body { height: 100% !important; overflow: hidden !important; background: white !important; }
             body * { visibility: hidden; }
             
-            /* Reset modal wrapper so it doesn't clip content */
             .print-overlay {
-               position: absolute !important;
+               position: fixed !important;
                left: 0; top: 0;
-               width: 100% !important;
-               height: auto !important;
-               overflow: visible !important;
-               background: transparent !important;
+               width: 100vw !important;
+               height: 100vh !important;
+               overflow: hidden !important;
+               background: white !important;
+               z-index: 999999;
             }
 
             #printable-area, #printable-area * { visibility: visible; }
             
             #printable-area { 
-              position: relative !important; 
-              left: 0; top: 0;
-              width: 100% !important; 
+              position: absolute !important; 
+              left: 50% !important;
+              top: 0 !important;
+              transform: translateX(-50%) !important;
+              width: 210mm !important; 
+              max-height: 297mm !important;
               background-color: white !important; 
               box-shadow: none !important; 
               margin: 0 !important; 
-              padding: 0 !important;
-              min-height: auto !important;
+              padding: 10mm !important;
+              overflow: hidden !important;
             }
 
-            /* Fix Table Pagination */
+            /* Footer alignment fix inside printable area */
+            #printable-area .absolute.bottom-\[15mm\] {
+              position: absolute !important;
+              bottom: 10mm !important;
+              left: 15mm !important;
+              right: 15mm !important;
+            }
+
             table { page-break-inside: auto; }
             tr { page-break-inside: avoid; page-break-after: auto; }
             thead { display: table-header-group; }
             
             .no-print { display: none !important; }
-            @page { size: A4 portrait; margin: 15mm 10mm; }
+            @page { size: A4 portrait; margin: 0; }
           }
 
           /* 👉 Mobile View Scaling fix */
