@@ -2871,11 +2871,23 @@ const handleSave = async (e) => {
                             
                             <div className="w-full md:w-[25%] flex flex-col gap-2">
                                 {modalState.type !== 'crm' && (
-                                    {modalState.type !== 'crm' && (
-                                <div className="flex items-center gap-2">
-                                    <select className="flex-1 p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white uppercase text-xs" value={item.productId || ''} onChange={(e) => handleItemChange(idx, 'productId', e.target.value)}>
-                                        <option value="">Select Product...</option>{products.map(p => <option key={p.id} value={p.id}>{String(p.name)}</option>)}
-                                    </select>
+                                    <div className="flex items-center gap-2">
+                                        <select className="flex-1 p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white uppercase text-xs" value={item.productId || ''} onChange={(e) => handleItemChange(idx, 'productId', e.target.value)}>
+                                            <option value="">Select Product...</option>
+                                            {products.map(p => <option key={p.id} value={p.id}>{String(p.name)}</option>)}
+                                        </select>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => openModal('product')} 
+                                            className="p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 rounded-xl transition-all shrink-0" 
+                                            title="Add New Product to Inventory"
+                                        >
+                                            <Plus size={16} />
+                                        </button>
+                                    </div>
+                                )}
+                                <input type="text" placeholder="Custom Item Name" required className="w-full p-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white text-xs placeholder:text-slate-400 uppercase" value={item.name || ''} onChange={(e) => handleItemChange(idx, 'name', e.target.value)} />
+                            </div>
                                     <button 
                                         type="button" 
                                         onClick={() => openModal('product')} 
