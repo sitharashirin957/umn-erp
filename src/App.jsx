@@ -2721,12 +2721,55 @@ const handleSave = async (e) => {
                     )}
                   </div>
                 )}
-
-                {['sale', 'purchase', 'expense', 'collection', 'crm', 'quotation'].includes(modalState.type) && (
+{['sale', 'purchase', 'expense', 'collection', 'crm', 'quotation'].includes(modalState.type) && (
                   <div className="p-6 bg-slate-50 dark:bg-[#0f172a] rounded-3xl border border-slate-200 dark:border-slate-800 mb-6 shadow-inner dark:shadow-none">
-                     <label className="block text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 mb-3">Select Entity / Customer *</label>
+                     
+                     <div className="flex justify-between items-center mb-3">
+                         <label className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                             {modalState.type === 'purchase' || modalState.type === 'expense' ? 'Select Supplier / Entity *' : 'Select Customer / Entity *'}
+                         </label>
+                         <button 
+                             type="button" 
+                             onClick={() => openModal(modalState.type === 'purchase' || modalState.type === 'expense' ? 'supplier' : 'customer')} 
+                             className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all flex items-center shadow-sm"
+                             title="Add New Entity"
+                         >
+                             <Plus size={12} className="mr-1"/> Add New
+                         </button>
+                     </div>
+
                      <select required className="w-full p-4 bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 font-black text-slate-800 dark:text-white uppercase focus:ring-2 ring-blue-500/20 shadow-sm" 
-                            value={formData.customerId || formData.supplierId || formData.partyName || ''} 
+                           value={formData.customerId || formData.supplierId || formData.partyName || ''} 
+                           onChange={e => {
+                               if(modalState.type === 'sale' || modalState.type === 'collection' || modalState.type === 'crm' || modalState.type === 'quotation') {
+                                 const entity = customers.find(c => c.id === e.target.value);
+                                 if(entity) setFormData({...formData, customerId: entity.id, customerName: entity.name, partyName: entity.name});
+                               } else if (modalState.type === 'purchase') {
+                                 const entity = suppliers.find(s => s.id === e.target.value);
+                                 if(entity) setFormData({...formData, supplierId: entity.id, supplierName: entity.name, partyName: entity.name});
+                               } else {
+                                 setFormData({...formData, partyName: e.target.value});
+                               }
+                           }}>
+                       <option value="">Choose Existing Entity...</option>
+                       {(['sale', 'collection', 'crm', 'quotation'].includes(modalState.type) ? customers : suppliers).map(c => <option key={c.id} value={c.id}>{String(c.name)}</option>)}
+                     </select>
+
+                     {modalState.type === 'sale' && formData.customerId && !formData.linkedQuoteId && (
+                         <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-2">Smart Link to CRM Job (Optional)</label>
+                            <select className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-800 dark:text-white uppercase text-xs focus:ring-2 ring-indigo-500/20" 
+                                    value={formData.linkedJobId || ''} 
+                                    onChange={e => setFormData({...formData, linkedJobId: e.target.value})}>
+                                <option value="">No Link (Independent Invoice)</option>
+                                {crms.filter(c => c.customerId === formData.customerId).map(job => (
+                                    <option key={job.id} value={job.id}>{job.jobId} - {job.items && job.items[0] ? job.items[0].name.slice(0,40) : '--'}...</option>
+                                ))}
+                            </select>
+                         </div>
+                     )}
+                  </div>
+                )}
                             onChange={e => {
                                if(modalState.type === 'sale' || modalState.type === 'collection' || modalState.type === 'crm' || modalState.type === 'quotation') {
                                  const entity = customers.find(c => c.id === e.target.value);
