@@ -2834,7 +2834,18 @@ const handleSave = async (e) => {
                          </button>
                      </div>
 
-                     <select required className="w-full p-4 bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 font-black text-slate-800 dark:text-white uppercase focus:ring-2 ring-blue-500/20 shadow-sm" value={formData.customerId || formData.supplierId || formData.partyName || ''} onChange={(e) => { const val = e.target.value; if (['sale', 'collection', 'crm', 'quotation'].includes(modalState.type)) { const ent = customers.find(c => c.id === val); if (ent) setFormData({...formData, customerId: ent.id, customerName: ent.name, partyName: ent.name}); } else if (modalState.type === 'purchase') { const ent = suppliers.find(s => s.id === val); if (ent) setFormData({...formData, supplierId: ent.id, supplierName: ent.name, partyName: ent.name}); } else { setFormData({...formData, partyName: val}); } }}>
+                     <select required className="w-full p-4 bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 font-black text-slate-800 dark:text-white uppercase focus:ring-2 ring-blue-500/20 shadow-sm" value={formData.customerId || formData.supplierId || formData.partyName || ''} onChange={(e) => { 
+                       const val = e.target.value; 
+                       if (['sale', 'collection', 'crm', 'quotation'].includes(modalState.type)) { 
+                         const ent = customers.find(c => c.id === val); 
+                         if (ent) setFormData({...formData, customerId: ent.id, customerName: ent.name, partyName: ent.name}); 
+                       } else if (['purchase', 'expense'].includes(modalState.type)) { 
+                         const ent = suppliers.find(s => s.id === val); 
+                         if (ent) setFormData({...formData, supplierId: ent.id, supplierName: ent.name, partyName: ent.name}); 
+                       } else { 
+                         setFormData({...formData, partyName: val}); 
+                       } 
+                     }}>
                        <option value="">Choose Existing Entity...</option>
                        {['sale', 'collection', 'crm', 'quotation'].includes(modalState.type) ? customers.map(c => <option key={c.id} value={c.id}>{String(c.name)}</option>) : suppliers.map(s => <option key={s.id} value={s.id}>{String(s.name)}</option>)}
                      </select>
