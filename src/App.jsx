@@ -1124,22 +1124,41 @@ const handleSave = async (e) => {
           .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } 
           .recharts-cartesian-axis-tick-value { font-weight: bold; font-size: 10px; fill: ${isDarkMode ? '#94a3b8' : '#64748b'}; }
           
-          /* 👉 Print & PDF Styles for Perfect Single Page A4 */
+          /* 👉 Print & PDF Styles for Multi-Page Tables & Perfect Pagination */
           @media print {
+            html, body { height: auto !important; overflow: visible !important; background: white !important; }
             body * { visibility: hidden; }
+            
+            /* Reset modal wrapper so it doesn't clip content */
+            .print-overlay {
+               position: absolute !important;
+               left: 0; top: 0;
+               width: 100% !important;
+               height: auto !important;
+               overflow: visible !important;
+               background: transparent !important;
+            }
+
             #printable-area, #printable-area * { visibility: visible; }
+            
             #printable-area { 
-              position: absolute; 
-              left: 0; 
-              top: 0; 
-              width: 100%; 
+              position: relative !important; 
+              left: 0; top: 0;
+              width: 100% !important; 
               background-color: white !important; 
               box-shadow: none !important; 
               margin: 0 !important; 
-              page-break-after: avoid;
+              padding: 0 !important;
+              min-height: auto !important;
             }
+
+            /* Fix Table Pagination */
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            thead { display: table-header-group; }
+            
             .no-print { display: none !important; }
-            @page { size: A4; margin: 0; }
+            @page { size: A4 portrait; margin: 15mm 10mm; }
           }
 
           /* 👉 Mobile View Scaling fix */
