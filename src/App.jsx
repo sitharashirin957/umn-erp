@@ -2673,6 +2673,128 @@ const handleSave = async (e) => {
                     </div>
                 )}
 
+                {/* --- ENTITY SELECTION (MOVED TO TOP) --- */}
+                {['sale', 'purchase', 'expense', 'collection', 'crm', 'quotation'].includes(modalState.type) && (
+                  <div className="p-6 bg-slate-50 dark:bg-[#0f172a] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-inner dark:shadow-none">
+                     <div className="flex justify-between items-center mb-3">
+                         <label className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                             {modalState.type === 'purchase' || modalState.type === 'expense' ? 'Select Supplier / Entity *' : 'Select Customer / Entity *'}
+                         </label>
+                         <button type="button" onClick={() => openModal(modalState.type === 'purchase' || modalState.type === 'expense' ? 'supplier' : 'customer')} className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all flex items-center shadow-sm" title="Add New Entity">
+                             <Plus size={12} className="mr-1"/> Add New
+                         </button>
+                     </div>
+
+                     <select required className="w-full p-4 bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 font-black text-slate-800 dark:text-white uppercase focus:ring-2 ring-blue-500/20 shadow-sm" value={formData.customerId || formData.supplierId || formData.partyName || ''} onChange={(e) => { const val = e.target.value; if (['sale', 'collection', 'crm', 'quotation'].includes(modalState.type)) { const ent = customers.find(c => c.id === val); if (ent) setFormData({...formData, customerId: ent.id, customerName: ent.name, partyName: ent.name}); } else if (['purchase', 'expense'].includes(modalState.type)) { const ent = suppliers.find(s => s.id === val); if (ent) setFormData({...formData, supplierId: ent.id, supplierName: ent.name, partyName: ent.name}); } else { setFormData({...formData, partyName: val}); } }}>
+                       <option value="">Choose Existing Entity...</option>
+                       {['sale', 'collection', 'crm', 'quotation'].includes(modalState.type) ? customers.map(c => <option key={c.id} value={c.id}>{String(c.name)}</option>) : suppliers.map(s => <option key={s.id} value={s.id}>{String(s.name)}</option>)}
+                     </select>
+
+                     {modalState.type === 'sale' && formData.customerId && !formData.linkedQuoteId && (
+                         <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-2">Smart Link to CRM Job (Optional)</label>
+                            <select className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-800 dark:text-white uppercase text-xs focus:ring-2 ring-indigo-500/20" value={formData.linkedJobId || ''} onChange={(e) => setFormData({...formData, linkedJobId: e.target.value})}>
+                                <option value="">No Link (Independent Invoice)</option>
+                                {crms.filter(c => c.customerId === formData.customerId).map(job => (
+                                    <option key={job.id} value={job.id}>{job.jobId} - {job.items && job.items[0] ? job.items[0].name.slice(0,40) : '--'}...</option>
+                                ))}
+                            </select>
+                         </div>
+                     )}
+                  </div>
+                )}
+
+                {/* --- COLLECTION & EXPENSE FIELDS --- */}
+                {['collection', 'expense'].includes(modalState.type) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Amount (SAR) *</label><input type="number" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-xl text-slate-800 dark:text-white" value={formData.amount || ''} onChange={e => setFormData({...formData, amount: e.target.value})} /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Date *</label><input type="date" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-500 dark:text-slate-300 uppercase" value={formData.date || new Date().toISOString().split('T')[0]} onChange={e => setFormData({...formData, date: e.target.value})} /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Sales Executive *</label>
+                      <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-800 dark:text-white uppercase" value={formData.salesmanId || ''} onChange={e => setFormData({...formData, salesmanId: e.target.value})}>
+                        <option value="">Select Staff...</option>{salesmen.map(s => <option key={s.id} value={s.id}>{String(s.name)}</option>)}
+                      </select>
+                    </div>
+                    {modalState.type === 'collection' && (
+                      <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Method</label>
+                        <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-800 dark:text-white uppercase" value={formData.method || ''} onChange={e => setFormData({...formData, method: e.target.value})}><option>Cash</option><option>Bank Transfer</option><option>Cheque</option><option>Card</option></select>
+                      </div>
+                    )}
+                    <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Ref / Linked Invoice Notes</label><input className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase" value={formData.ref || formData.description || ''} onChange={e => setFormData({...formData, [modalState.type === 'collection' ? 'ref' : 'description']: e.target.value})} /></div>
+                    
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Upload Receipt / Bill Image</label>
+                      <input type="file" accept="image/*" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white text-xs" onChange={(e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => { setFormData({...formData, receiptImage: reader.result}); }; reader.readAsDataURL(file); } }} />
+                      {formData.receiptImage && (
+                        <div className="mt-2 flex items-center gap-3">
+                          <img src={formData.receiptImage} alt="Receipt Preview" className="w-16 h-16 object-cover rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm" />
+                          <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Receipt Attached Successfully ✓</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* --- CRM FIELDS --- */}
+                {modalState.type === 'crm' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Date *</label><input type="date" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.date || new Date().toISOString().split('T')[0]} onChange={e => setFormData({...formData, date: e.target.value})} /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Client Type *</label>
+                      <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-800 dark:text-white uppercase" value={formData.clientType || 'Direct Client'} onChange={e => setFormData({...formData, clientType: e.target.value})}>
+                        <option value="Direct Client">Direct Client</option>
+                        <option value="Agency">Agency</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Sales Executive *</label>
+                      <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase" value={formData.salesmanId || ''} onChange={e => setFormData({...formData, salesmanId: e.target.value})}>
+                        <option value="">Select Exec...</option>{salesmen.map(s => <option key={s.id} value={s.id}>{String(s.name)}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* --- TASK FIELDS --- */}
+                {modalState.type === 'task' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Reminder / Task Title *</label>
+                      <input required placeholder="E.g., Trade License Expiry" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})} />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Expiry / Due Date *</label>
+                      <input type="date" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.dueDate || ''} onChange={e => setFormData({...formData, dueDate: e.target.value})} />
+                    </div>
+                  </div>
+                )}
+                
+                {/* --- CUSTOMER / SUPPLIER / SALESMAN FIELDS --- */}
+                {(modalState.type === 'customer' || modalState.type === 'supplier' || modalState.type === 'salesman') && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Full Name *</label><input required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Phone</label><input className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.phone || ''} onChange={e => setFormData({...formData, phone: e.target.value})} /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Email</label><input type="email" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} /></div>
+                    {(modalState.type === 'customer' || modalState.type === 'supplier') && (
+                      <>
+                        <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">GST/Tax ID</label><input className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20 uppercase" value={formData.gst || ''} onChange={e => setFormData({...formData, gst: e.target.value})} /></div>
+                        <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Opening Balance</label><input type="number" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.openingBalance || ''} onChange={e => setFormData({...formData, openingBalance: e.target.value})} /></div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* --- PRODUCT FIELDS --- */}
+                {modalState.type === 'product' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Product Name *</label><input required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Category</label><input className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20 uppercase" value={formData.category || ''} onChange={e => setFormData({...formData, category: e.target.value})} /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Current Stock *</label><input type="number" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.stock || ''} onChange={e => setFormData({...formData, stock: e.target.value})} /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Cost Price (Purchase) *</label><input type="number" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.purchasePrice || ''} onChange={e => setFormData({...formData, purchasePrice: e.target.value})} /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Selling Price *</label><input type="number" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.sellingPrice || ''} onChange={e => setFormData({...formData, sellingPrice: e.target.value})} /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Tax (%)</label><input type="number" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.tax || ''} onChange={e => setFormData({...formData, tax: e.target.value})} /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Minimum Stock Alert</label><input type="number" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.minStock || ''} onChange={e => setFormData({...formData, minStock: e.target.value})} /></div>
+                  </div>
+                )}
+
+                {/* --- ESTIMATOR ITEM FIELDS --- */}
                 {modalState.type === 'estimatorItem' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2 md:col-span-2">
@@ -2741,149 +2863,7 @@ const handleSave = async (e) => {
                   </div>
                 )}
 
-                {modalState.type === 'crm' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Date *</label><input type="date" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.date || new Date().toISOString().split('T')[0]} onChange={e => setFormData({...formData, date: e.target.value})} /></div>
-                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Client Type *</label>
-                      <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-800 dark:text-white uppercase" value={formData.clientType || 'Direct Client'} onChange={e => setFormData({...formData, clientType: e.target.value})}>
-                        <option value="Direct Client">Direct Client</option>
-                        <option value="Agency">Agency</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Sales Executive *</label>
-                      <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase" value={formData.salesmanId || ''} onChange={e => setFormData({...formData, salesmanId: e.target.value})}>
-                        <option value="">Select Exec...</option>{salesmen.map(s => <option key={s.id} value={s.id}>{String(s.name)}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                {modalState.type === 'task' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2 md:col-span-2">
-                      <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Reminder / Task Title *</label>
-                      <input required placeholder="E.g., Trade License Expiry" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})} />
-                    </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Expiry / Due Date *</label>
-                      <input type="date" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.dueDate || ''} onChange={e => setFormData({...formData, dueDate: e.target.value})} />
-                    </div>
-                  </div>
-                )}
-                
-                {(modalState.type === 'customer' || modalState.type === 'supplier' || modalState.type === 'salesman') && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Full Name *</label><input required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} /></div>
-                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Phone</label><input className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.phone || ''} onChange={e => setFormData({...formData, phone: e.target.value})} /></div>
-                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Email</label><input type="email" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} /></div>
-                    {(modalState.type === 'customer' || modalState.type === 'supplier') && (
-                      <>
-                        <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">GST/Tax ID</label><input className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20 uppercase" value={formData.gst || ''} onChange={e => setFormData({...formData, gst: e.target.value})} /></div>
-                        <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Opening Balance</label><input type="number" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.openingBalance || ''} onChange={e => setFormData({...formData, openingBalance: e.target.value})} /></div>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {modalState.type === 'product' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Product Name *</label><input required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase focus:ring-2 ring-blue-500/20" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} /></div>
-                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Category</label><input className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20 uppercase" value={formData.category || ''} onChange={e => setFormData({...formData, category: e.target.value})} /></div>
-                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Current Stock *</label><input type="number" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.stock || ''} onChange={e => setFormData({...formData, stock: e.target.value})} /></div>
-                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Cost Price (Purchase) *</label><input type="number" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.purchasePrice || ''} onChange={e => setFormData({...formData, purchasePrice: e.target.value})} /></div>
-                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Selling Price *</label><input type="number" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.sellingPrice || ''} onChange={e => setFormData({...formData, sellingPrice: e.target.value})} /></div>
-                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Tax (%)</label><input type="number" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.tax || ''} onChange={e => setFormData({...formData, tax: e.target.value})} /></div>
-                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Minimum Stock Alert</label><input type="number" className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white focus:ring-2 ring-blue-500/20" value={formData.minStock || ''} onChange={e => setFormData({...formData, minStock: e.target.value})} /></div>
-                  </div>
-                )}
-
-                {['collection', 'expense'].includes(modalState.type) && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Amount (SAR) *</label><input type="number" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-black text-xl text-slate-800 dark:text-white" value={formData.amount || ''} onChange={e => setFormData({...formData, amount: e.target.value})} /></div>
-                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Date *</label><input type="date" required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-500 dark:text-slate-300 uppercase" value={formData.date || new Date().toISOString().split('T')[0]} onChange={e => setFormData({...formData, date: e.target.value})} /></div>
-                    <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Sales Executive *</label>
-                      <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-800 dark:text-white uppercase" value={formData.salesmanId || ''} onChange={e => setFormData({...formData, salesmanId: e.target.value})}>
-                        <option value="">Select Staff...</option>{salesmen.map(s => <option key={s.id} value={s.id}>{String(s.name)}</option>)}
-                      </select>
-                    </div>
-                    {modalState.type === 'collection' && (
-                      <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Method</label>
-                        <select required className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-800 dark:text-white uppercase" value={formData.method || ''} onChange={e => setFormData({...formData, method: e.target.value})}><option>Cash</option><option>Bank Transfer</option><option>Cheque</option><option>Card</option></select>
-                      </div>
-                    )}
-                    <div className="space-y-2 md:col-span-2"><label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Ref / Linked Invoice Notes</label><input className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white uppercase" value={formData.ref || formData.description || ''} onChange={e => setFormData({...formData, [modalState.type === 'collection' ? 'ref' : 'description']: e.target.value})} /></div>
-                    
-                    {/* Receipt Upload Field */}
-                    <div className="space-y-2 md:col-span-2">
-                      <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Upload Receipt / Bill Image</label>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        className="w-full p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border-none font-bold text-slate-900 dark:text-white text-xs" 
-                        onChange={(e) => {
-                          const file = e.target.files[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setFormData({...formData, receiptImage: reader.result});
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }} 
-                      />
-                      {formData.receiptImage && (
-                        <div className="mt-2 flex items-center gap-3">
-                          <img src={formData.receiptImage} alt="Receipt Preview" className="w-16 h-16 object-cover rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm" />
-                          <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Receipt Attached Successfully ✓</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* --- ENTITY SELECTION --- */}
-                {['sale', 'purchase', 'expense', 'collection', 'crm', 'quotation'].includes(modalState.type) && (
-                  <div className="p-6 bg-slate-50 dark:bg-[#0f172a] rounded-3xl border border-slate-200 dark:border-slate-800 mb-6 shadow-inner dark:shadow-none">
-                     <div className="flex justify-between items-center mb-3">
-                         <label className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">
-                             {modalState.type === 'purchase' || modalState.type === 'expense' ? 'Select Supplier / Entity *' : 'Select Customer / Entity *'}
-                         </label>
-                         <button type="button" onClick={() => openModal(modalState.type === 'purchase' || modalState.type === 'expense' ? 'supplier' : 'customer')} className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all flex items-center shadow-sm" title="Add New Entity">
-                             <Plus size={12} className="mr-1"/> Add New
-                         </button>
-                     </div>
-
-                     <select required className="w-full p-4 bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-200 dark:border-slate-700 font-black text-slate-800 dark:text-white uppercase focus:ring-2 ring-blue-500/20 shadow-sm" value={formData.customerId || formData.supplierId || formData.partyName || ''} onChange={(e) => { 
-                       const val = e.target.value; 
-                       if (['sale', 'collection', 'crm', 'quotation'].includes(modalState.type)) { 
-                         const ent = customers.find(c => c.id === val); 
-                         if (ent) setFormData({...formData, customerId: ent.id, customerName: ent.name, partyName: ent.name}); 
-                       } else if (['purchase', 'expense'].includes(modalState.type)) { 
-                         const ent = suppliers.find(s => s.id === val); 
-                         if (ent) setFormData({...formData, supplierId: ent.id, supplierName: ent.name, partyName: ent.name}); 
-                       } else { 
-                         setFormData({...formData, partyName: val}); 
-                       } 
-                     }}>
-                       <option value="">Choose Existing Entity...</option>
-                       {['sale', 'collection', 'crm', 'quotation'].includes(modalState.type) ? customers.map(c => <option key={c.id} value={c.id}>{String(c.name)}</option>) : suppliers.map(s => <option key={s.id} value={s.id}>{String(s.name)}</option>)}
-                     </select>
-
-                     {modalState.type === 'sale' && formData.customerId && !formData.linkedQuoteId && (
-                         <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-2">Smart Link to CRM Job (Optional)</label>
-                            <select className="w-full p-3 bg-white dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-800 dark:text-white uppercase text-xs focus:ring-2 ring-indigo-500/20" value={formData.linkedJobId || ''} onChange={(e) => setFormData({...formData, linkedJobId: e.target.value})}>
-                                <option value="">No Link (Independent Invoice)</option>
-                                {crms.filter(c => c.customerId === formData.customerId).map(job => (
-                                    <option key={job.id} value={job.id}>{job.jobId} - {job.items && job.items[0] ? job.items[0].name.slice(0,40) : '--'}...</option>
-                                ))}
-                            </select>
-                         </div>
-                     )}
-                  </div>
-                )}
-
-                {/* --- ITEMS SECTION --- */}
+                {/* --- ITEMS SECTION (Sale, Purchase, CRM, Quotation) --- */}
                 {['sale', 'purchase', 'crm', 'quotation'].includes(modalState.type) && (
                   <div className="space-y-6">
                     {modalState.type !== 'crm' && (
@@ -2920,7 +2900,12 @@ const handleSave = async (e) => {
                                             <option value="">Select Product...</option>
                                             {products.map(p => <option key={p.id} value={p.id}>{String(p.name)}</option>)}
                                         </select>
-                                        <button type="button" onClick={() => openModal('product')} className="p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 rounded-xl transition-all shrink-0" title="Add New Product to Inventory">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => openModal('product')} 
+                                            className="p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 rounded-xl transition-all shrink-0" 
+                                            title="Add New Product to Inventory"
+                                        >
                                             <Plus size={16} />
                                         </button>
                                     </div>
