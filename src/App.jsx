@@ -2295,7 +2295,7 @@ const handleSave = async (e) => {
   </div>
 )}
 
-{/* --- CUSTOMERS AND SUPPLIERS VIEW --- */}
+   {/* --- CUSTOMERS AND SUPPLIERS VIEW --- */}
 {(activeTab === 'customers' || activeTab === 'suppliers') && (
   <div className="max-w-7xl mx-auto w-full space-y-6 animate-fade-in-up flex-1">
     <div className="flex justify-between items-center bg-white dark:bg-[#1e293b] p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex-wrap gap-4">
@@ -2330,21 +2330,37 @@ const handleSave = async (e) => {
 
       <button onClick={() => openModal(activeTab.slice(0, -1))} className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/30 flex items-center hover:scale-95 transition-all"><Plus size={16} className="mr-2"/> Add {activeTab.slice(0, -1)}</button>
     </div>
-    {renderTable(['Entity Name', 'Contact Info', 'Tax / GST', 'Opening Bal.', 'Status'], (activeTab === 'customers' ? customers : suppliers).filter(c => safeSearch(c.name, searchTerm) || safeSearch(c.phone, searchTerm) || safeSearch(c.email, searchTerm) || safeSearch(c.gst, searchTerm)), activeTab,
-      (item) => (
-        <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-          <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.name || '')}</td>
-          <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400"><div><Phone size={12} className="inline mr-2 opacity-70"/>{String(item.phone || 'N/A')}</div><div className="mt-1"><Mail size={12} className="inline mr-2 opacity-70"/>{String(item.email || 'N/A')}</div></td>
-          <td className="px-6 py-4 font-bold text-xs uppercase text-slate-700 dark:text-slate-300">{String(item.gst || 'UNREGISTERED')}</td>
-          <td className="px-6 py-4 font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(item.openingBalance)}</td>
-          <td className="px-6 py-4"><span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-200 dark:border-emerald-500/30">Active</span></td>
-          <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
-            <button onClick={() => generateLedger(activeTab.slice(0, -1), item)} className="p-2 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg" title="View Ledger"><BookOpen size={16}/></button>
-            <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg"><Edit3 size={16}/></button>
-            <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, String(item.name))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
-          </td>
-        </tr>
-      )
+    
+    {renderTable(['Entity Name', 'Contact Info', 'Tax / GST', 'Opening Bal.', 'Current Bal.', 'Status'], (activeTab === 'customers' ? customers : suppliers).filter(c => safeSearch(c.name, searchTerm) || safeSearch(c.phone, searchTerm) || safeSearch(c.email, searchTerm) || safeSearch(c.gst, searchTerm)), activeTab,
+      (item) => {
+        let currentBal = Number(item.openingBalance || 0);
+        
+        if (activeTab === 'customers') {
+            const totSales = sales.filter(s => s.customerId === item.id).reduce((acc, curr) => acc + (Number(curr.grandTotal) || 0), 0);
+            const totColls = collections.filter(c => c.customerId === item.id).reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+            currentBal = currentBal + totSales - totColls;
+        } else {
+            const totPurchases = purchases.filter(p => p.supplierId === item.id).reduce((acc, curr) => acc + (Number(curr.grandTotal) || 0), 0);
+            const totExps = expenses.filter(e => e.partyName === item.name || e.supplierName === item.name).reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+            currentBal = currentBal + totPurchases - totExps;
+        }
+
+        return (
+          <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+            <td className="px-6 py-4 font-black uppercase text-slate-800 dark:text-white">{String(item.name || '')}</td>
+            <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400"><div><Phone size={12} className="inline mr-2 opacity-70"/>{String(item.phone || 'N/A')}</div><div className="mt-1"><Mail size={12} className="inline mr-2 opacity-70"/>{String(item.email || 'N/A')}</div></td>
+            <td className="px-6 py-4 font-bold text-xs uppercase text-slate-700 dark:text-slate-300">{String(item.gst || 'UNREGISTERED')}</td>
+            <td className="px-6 py-4 font-black text-slate-400 dark:text-slate-500">{formatCurrency(item.openingBalance)}</td>
+            <td className="px-6 py-4 font-black text-blue-600 dark:text-blue-400">{formatCurrency(currentBal)}</td>
+            <td className="px-6 py-4"><span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-200 dark:border-emerald-500/30">Active</span></td>
+            <td className="px-6 py-4 text-right space-x-2 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
+              <button onClick={() => generateLedger(activeTab.slice(0, -1), item)} className="p-2 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg" title="View Ledger"><BookOpen size={16}/></button>
+              <button onClick={() => openModal(activeTab.slice(0, -1), item)} className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg"><Edit3 size={16}/></button>
+              <button onClick={() => triggerDelete(activeTab.slice(0, -1), item.id, String(item.name))} className="p-2 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"><Trash2 size={16}/></button>
+            </td>
+          </tr>
+        );
+      }
     )}
   </div>
 )}
