@@ -3786,7 +3786,8 @@ const handleSave = async (e) => {
 
       </div> {/* <-- ഇതാണ് Flex കണ്ടെയ്നർ ക്ലോസ് ചെയ്യുന്നത് --> */}
 
-        {viewReceiptModal.isOpen && (
+        {/* --- View Receipt Modal --- */}
+{viewReceiptModal.isOpen && (
   <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[9999] flex items-center justify-center p-3 sm:p-6" onClick={() => setViewReceiptModal({ isOpen: false, image: null })}>
     <div className="bg-white dark:bg-[#1e293b] p-4 sm:p-6 rounded-[2.5rem] max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
       
