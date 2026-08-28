@@ -235,6 +235,7 @@ const App = () => {
   
   const [unreadTeamCount, setUnreadTeamCount] = useState(0);
   const prevMsgCount = useRef(0);
+  const typingTimeoutRef = useRef(null);
 
  // --- 🌟 Firebase Cloud Messaging (FCM) Setup ---
   useEffect(() => {
@@ -346,6 +347,18 @@ const App = () => {
     setNewTeamMessage(val);
     const lastWord = val.split(' ').pop();
     if (lastWord.startsWith('@')) { setMentionSearch(lastWord.slice(1).toLowerCase()); } else { setMentionSearch(null); }
+
+    // --- Typing Indicator Logic ---
+    if (activeUserSession) {
+      const sessionId = activeUserSession.id || activeUserSession.name;
+      const presenceRef = doc(db, 'artifacts', appId, 'public', 'data', 'presence', sessionId);
+      setDoc(presenceRef, { isTyping: true, userName: activeUserSession.name }, { merge: true }).catch(e=>console.log(e));
+
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        setDoc(presenceRef, { isTyping: false }, { merge: true }).catch(e=>console.log(e));
+      }, 1500);
+    }
   };
 
   const insertMention = (name) => {
@@ -364,11 +377,14 @@ const App = () => {
     setNewTeamMessage('');
     setMentionSearch(null);
 
+    const sessionId = activeUserSession.id || activeUserSession.name;
+    setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'presence', sessionId), { isTyping: false }, { merge: true });
+
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'team_chats'), {
         text: messageToSend,
         senderName: activeUserSession.name,
-        senderId: activeUserSession.id || activeUserSession.name,
+        senderId: sessionId,
         timestamp: serverTimestamp(),
         type: 'text'
       });
@@ -3723,23 +3739,30 @@ const handleSave = async (e) => {
         </div>
       )}
 
-        {/* --- FLO{/* --- FLOATING TEAM CHAT HUB UI --- */}
-      <div className="fixed bottom-44 right-5 sm:bottom-32 sm:right-8 z-[99998] flex flex-col items-end no-print pointer-events-auto">
+      {/* --- FLOATING TEAM CHAT HUB UI (UPGRADED NATIVE MOBILE & WHATSAPP DATES & TYPING) --- */}
+      <div className={`fixed z-[99998] transition-all duration-300 origin-bottom-right flex flex-col no-print pointer-events-auto ${
+          isTeamChatOpen 
+            ? 'inset-0 sm:inset-auto sm:bottom-32 sm:right-8 sm:w-[380px] sm:h-[600px] scale-100 opacity-100' 
+            : 'bottom-44 right-5 sm:bottom-32 sm:right-8 sm:w-[380px] h-0 scale-0 opacity-0 pointer-events-none'
+        }`}>
         
-        <div className={`mb-4 w-[320px] sm:w-[380px] bg-white/90 dark:bg-[#1e293b]/90 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-[2rem] shadow-2xl overflow-visible transition-all duration-300 origin-bottom-right flex flex-col relative ${isTeamChatOpen ? 'scale-100 opacity-100 h-[500px]' : 'scale-0 opacity-0 h-0 pointer-events-none'}`}>
+        <div className="w-full h-full bg-slate-50 dark:bg-[#0f172a] sm:bg-white/95 sm:dark:bg-[#1e293b]/95 sm:backdrop-blur-xl sm:border border-slate-200 dark:border-slate-700 sm:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col relative">
           
-          <div className="p-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex justify-between items-center shadow-md rounded-t-[2rem] shrink-0">
-            <div>
-              <h3 className="font-black uppercase tracking-widest text-sm flex items-center"><MessageSquare size={16} className="mr-2"/> OXAD Team-Hub</h3>
-              <p className="text-[9px] font-bold opacity-80 uppercase tracking-widest mt-0.5">Live Collaboration</p>
+          <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex justify-between items-center shadow-md sm:rounded-t-[2rem] shrink-0 pt-12 sm:pt-4">
+            <div className="flex items-center gap-3">
+              <button onClick={() => setIsTeamChatOpen(false)} className="sm:hidden p-2 -ml-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"><ArrowRightCircle size={20} className="rotate-180"/></button>
+              <div>
+                <h3 className="font-black uppercase tracking-widest text-sm flex items-center"><MessageSquare size={16} className="mr-2"/> OXAD Team-Hub</h3>
+                <p className="text-[9px] font-bold opacity-80 uppercase tracking-widest mt-0.5">Live Collaboration</p>
+              </div>
             </div>
-            <button onClick={() => setIsTeamChatOpen(false)} className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"><X size={16}/></button>
+            <button onClick={() => setIsTeamChatOpen(false)} className="hidden sm:block p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"><X size={16}/></button>
           </div>
           
           <div 
             ref={chatContainerRef}
             onScroll={handleChatScroll}
-            className="flex-1 p-4 overflow-y-auto custom-scrollbar flex flex-col space-y-4 bg-slate-50/50 dark:bg-[#0f172a]/50 relative"
+            className="flex-1 p-4 overflow-y-auto custom-scrollbar flex flex-col space-y-4 bg-slate-100 sm:bg-transparent dark:bg-[#0b1120] sm:dark:bg-transparent relative pb-24"
           >
             {teamMessages.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-slate-400 opacity-50">
@@ -3750,106 +3773,130 @@ const handleSave = async (e) => {
               teamMessages
                 .slice()
                 .sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0))
-                .map((msg) => {
+                .map((msg, index, array) => {
                   const isMe = msg.senderName === activeUserSession?.name;
                   const isUserOnline = onlineUsers[msg.senderId]?.isOnline;
+                  
+                  const msgDate = msg.timestamp?.toDate ? msg.timestamp.toDate() : new Date();
+                  const prevMsg = array[index - 1];
+                  const prevDate = prevMsg?.timestamp?.toDate ? prevMsg.timestamp.toDate() : null;
+                  const showDateBadge = !prevDate || msgDate.toDateString() !== prevDate.toDateString();
+
+                  const formatChatDate = (date) => {
+                    const today = new Date();
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    if (date.toDateString() === today.toDateString()) return 'Today';
+                    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+                    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                  };
 
                   return (
-                    <div key={msg.id} className={`flex flex-col max-w-[85%] animate-fade-in-up group ${isMe ? 'self-end items-end' : 'self-start items-start'}`}>
-                      <div className="flex items-center gap-1.5 mb-1 mx-1">
-                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{isMe ? 'You' : msg.senderName}</span>
-                        {/* Real-time Green Light Online Status */}
-                        {!isMe && isUserOnline && (
-                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_5px_#10b981]" title="Online Now"></span>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        {isMe && !msg.isDeleted && (
-                          <button onClick={() => handleDeleteMessage(msg.id)} className="opacity-0 group-hover:opacity-100 p-1.5 text-rose-500 bg-rose-50 dark:bg-rose-900/30 rounded-full transition-all" title="Delete Message">
-                            <Trash2 size={12} />
-                          </button>
-                        )}
-                        <div className={`p-2 sm:p-3 rounded-2xl text-xs font-bold shadow-sm relative flex flex-col ${
-                            msg.isDeleted ? 'bg-slate-100 dark:bg-slate-800/50 text-slate-400 italic border border-slate-200 dark:border-slate-700 rounded-xl' 
-                              : isMe ? 'bg-indigo-600 text-white rounded-tr-sm' 
-                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-tl-sm'
-                          }`}>
-                          
-                          {msg.isDeleted ? (
-                            <span className="flex items-center text-[10px] sm:text-xs"><Trash2 size={12} className="mr-1 opacity-50"/> 🚫 This message was deleted</span>
-                          ) : msg.type === 'audio' ? (
-                            <audio controls src={msg.audioData} className="w-48 h-8 scale-90 origin-left" />
-                          ) : (
-                            formatChatText(msg.text)
-                          )}
+                    <React.Fragment key={msg.id}>
+                      {showDateBadge && (
+                        <div className="flex justify-center my-4 sticky top-2 z-10">
+                          <span className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md text-slate-500 dark:text-slate-400 text-[9px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
+                            {formatChatDate(msgDate)}
+                          </span>
+                        </div>
+                      )}
 
-                          <div className={`text-[7px] font-black mt-1.5 self-end tracking-widest ${isMe && !msg.isDeleted ? 'text-indigo-200' : 'text-slate-400'}`}>
-                            {msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Sending...'}
+                      <div className={`flex flex-col max-w-[85%] animate-fade-in-up group ${isMe ? 'self-end items-end' : 'self-start items-start'}`}>
+                        <div className="flex items-center gap-1.5 mb-1 mx-1 mt-1">
+                          <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{isMe ? 'You' : msg.senderName}</span>
+                          {!isMe && isUserOnline && <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_5px_#10b981]" title="Online Now"></span>}
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          {isMe && !msg.isDeleted && (
+                            <button onClick={() => handleDeleteMessage(msg.id)} className="opacity-0 group-hover:opacity-100 p-1.5 text-rose-500 bg-rose-50 dark:bg-rose-900/30 rounded-full transition-all" title="Delete Message"><Trash2 size={12} /></button>
+                          )}
+                          <div className={`p-3 sm:p-3.5 rounded-[1.2rem] text-[13px] font-bold shadow-sm relative flex flex-col leading-relaxed ${
+                              msg.isDeleted ? 'bg-slate-200 dark:bg-slate-800/50 text-slate-500 italic border border-slate-300 dark:border-slate-700 rounded-xl' 
+                                : isMe ? 'bg-indigo-600 text-white rounded-tr-sm' 
+                                : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-tl-sm'
+                            }`}>
+                            
+                            {msg.isDeleted ? (
+                              <span className="flex items-center text-[10px]"><Trash2 size={12} className="mr-1 opacity-50"/> 🚫 This message was deleted</span>
+                            ) : msg.type === 'audio' ? (
+                              <audio controls src={msg.audioData} className="w-48 sm:w-56 h-8 scale-90 origin-left" />
+                            ) : (
+                              formatChatText(msg.text)
+                            )}
+
+                            <div className={`text-[8px] font-black mt-2 self-end tracking-widest ${isMe && !msg.isDeleted ? 'text-indigo-200' : 'text-slate-400'}`}>
+                              {msg.timestamp?.toDate ? msg.timestamp.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Sending...'}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </React.Fragment>
                   );
                 })
             )}
+
+            {/* --- Typing Indicator Animation --- */}
+            {Object.values(onlineUsers).some(u => u.isTyping && u.userName !== activeUserSession?.name) && (
+              <div className="flex justify-start animate-fade-in-up mt-2 mb-2">
+                <div className="bg-white dark:bg-slate-800 p-3 sm:p-4 rounded-2xl rounded-tl-sm shadow-sm flex flex-col border border-slate-200 dark:border-slate-700">
+                  <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-2">
+                    {Object.values(onlineUsers).find(u => u.isTyping && u.userName !== activeUserSession?.name)?.userName} is typing...
+                  </span>
+                  <div className="flex items-center gap-1.5 h-2 ml-1">
+                    <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></div>
+                    <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }}></div>
+                    <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div ref={teamChatEndRef} />
           </div>
 
-          {/* WhatsApp Style Floating "Scroll to Bottom / Unread" Tab */}
           {showScrollBottom && (
-            <button 
-              onClick={scrollToBottom}
-              className="absolute bottom-[80px] right-6 w-10 h-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-xl flex items-center justify-center text-slate-500 hover:text-indigo-600 transition-all z-50 animate-fade-in-up"
-            >
+            <button onClick={scrollToBottom} className="absolute bottom-[80px] right-6 w-10 h-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-xl flex items-center justify-center text-slate-500 hover:text-indigo-600 transition-all z-50 animate-fade-in-up">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
-              {unreadTeamCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 text-white text-[9px] font-black flex items-center justify-center rounded-full animate-bounce shadow-md">
-                  {unreadTeamCount}
-                </span>
-              )}
+              {unreadTeamCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 text-white text-[9px] font-black flex items-center justify-center rounded-full animate-bounce shadow-md">{unreadTeamCount}</span>}
             </button>
           )}
 
-          <div className="relative border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-[#1e293b] rounded-b-[2rem] shrink-0 z-40">
+          <div className="absolute bottom-0 left-0 w-full border-t border-slate-200 dark:border-slate-800 bg-slate-50 sm:bg-white dark:bg-[#1e293b] sm:rounded-b-[2rem] z-40 pb-safe">
             {mentionSearch !== null && (
               <div className="absolute bottom-full left-0 w-full bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shadow-lg max-h-40 overflow-y-auto">
                 <div className="p-2 text-[9px] font-black uppercase text-slate-400 bg-slate-50 dark:bg-slate-900">Select Team Member</div>
                 {[{id: 'admin', name: 'System Admin'}, ...salesmen].filter(c => c.name.toLowerCase().includes(mentionSearch)).map(member => (
-                    <button key={member.id} type="button" onClick={() => insertMention(member.name)} className="w-full text-left p-3 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 text-xs font-bold text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700/50 transition-colors uppercase">
-                      @{member.name}
-                    </button>
+                    <button key={member.id} type="button" onClick={() => insertMention(member.name)} className="w-full text-left p-3 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 text-xs font-bold text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700/50 transition-colors uppercase">@{member.name}</button>
                 ))}
               </div>
             )}
 
-            <form onSubmit={handleSendTeamMessage} className="p-3 flex items-center gap-2">
-              <input type="text" placeholder="Type @ to mention..." className="flex-1 bg-slate-50 dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-xs font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 ring-indigo-500/20" value={newTeamMessage} onChange={handleChatInputChange} disabled={isRecordingNote} />
+            <form onSubmit={handleSendTeamMessage} className="p-3 sm:p-4 flex items-center gap-2 mb-4 sm:mb-0">
+              <input type="text" placeholder="Type @ to mention..." className="flex-1 bg-white sm:bg-slate-50 dark:bg-[#0f172a] border border-slate-300 sm:border-slate-200 dark:border-slate-700 rounded-full sm:rounded-xl px-5 py-3.5 text-xs font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 ring-indigo-500/20 shadow-sm" value={newTeamMessage} onChange={handleChatInputChange} disabled={isRecordingNote} />
               
               {newTeamMessage.trim() ? (
-                <button type="button" onClick={handleSendTeamMessage} onTouchEnd={(e) => { e.preventDefault(); handleSendTeamMessage(); }} className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-500/30 shrink-0">
-                  <ArrowRightCircle size={18} />
-                </button>
+                <button type="button" onClick={handleSendTeamMessage} className="p-3.5 bg-indigo-600 text-white rounded-full sm:rounded-xl hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-500/30 shrink-0"><ArrowRightCircle size={20} /></button>
               ) : (
-                <button type="button" onPointerDown={startRecordingNote} onPointerUp={stopRecordingNote} onPointerCancel={stopRecordingNote} onPointerLeave={stopRecordingNote} className={`p-3 rounded-xl transition-all shadow-md shrink-0 flex items-center justify-center select-none outline-none ${isRecordingNote ? 'bg-rose-500 text-white animate-pulse shadow-rose-500/30 scale-110' : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-500/30'}`} title="Hold to Record Audio" style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'none' }}>
-                  {isRecordingNote ? <div className="w-4 h-4 bg-white rounded-sm animate-ping"></div> : <Mic size={18} />}
+                <button type="button" onPointerDown={startRecordingNote} onPointerUp={stopRecordingNote} onPointerCancel={stopRecordingNote} onPointerLeave={stopRecordingNote} className={`p-3.5 rounded-full sm:rounded-xl transition-all shadow-md shrink-0 flex items-center justify-center select-none outline-none ${isRecordingNote ? 'bg-rose-500 text-white animate-pulse shadow-rose-500/30 scale-110' : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-500/30'}`} title="Hold to Record Audio" style={{ touchAction: 'none' }}>
+                  {isRecordingNote ? <div className="w-4 h-4 bg-white rounded-sm animate-ping"></div> : <Mic size={20} />}
                 </button>
               )}
             </form>
           </div>
         </div>
+      </div>
 
-        {/* Floating Chat Trigger Button with Badge */}
-        <button onClick={() => setIsTeamChatOpen(!isTeamChatOpen)} className="w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 hover:shadow-indigo-500/20 relative" title="Team Chat">
+      {/* Floating Chat Trigger Button with Badge */}
+      {!isTeamChatOpen && (
+        <button onClick={() => setIsTeamChatOpen(true)} className="fixed bottom-24 right-5 sm:bottom-32 sm:right-8 z-[99997] w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 hover:shadow-indigo-500/20" title="Team Chat">
           <MessageSquare size={24} className="sm:w-7 sm:h-7" />
-          {unreadTeamCount > 0 && !isTeamChatOpen && (
-            <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800 animate-bounce shadow-md">
-              {unreadTeamCount}
-            </span>
+          {unreadTeamCount > 0 && (
+            <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800 animate-bounce shadow-md">{unreadTeamCount}</span>
           )}
           <span className="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping z-[-1]"></span>
         </button>
-      </div>
+      )}
       
       {/* Floating Voice Assistant Button (Responsive for PC & Mobile) */}
       <div className="fixed bottom-24 right-5 sm:bottom-8 sm:right-8 z-[99999] flex items-center gap-3 no-print pointer-events-auto">
