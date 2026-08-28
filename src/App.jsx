@@ -3836,9 +3836,12 @@ const handleSave = async (e) => {
                 })
             )}
 
-            {/* --- Typing Indicator Animation --- */}
+            {/* --- Typing Indicator Animation with Auto-Scroll --- */}
             {Object.values(onlineUsers).some(u => u.isTyping && u.userName !== activeUserSession?.name) && (
-              <div className="flex justify-start animate-fade-in-up mt-2 mb-2">
+              <div 
+                className="flex justify-start animate-fade-in-up mt-2 mb-2"
+                ref={(el) => { if (el && !showScrollBottom) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }}
+              >
                 <div className="bg-white dark:bg-slate-800 p-3 sm:p-4 rounded-2xl rounded-tl-sm shadow-sm flex flex-col border border-slate-200 dark:border-slate-700">
                   <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-2">
                     {Object.values(onlineUsers).find(u => u.isTyping && u.userName !== activeUserSession?.name)?.userName} is typing...
@@ -3889,7 +3892,7 @@ const handleSave = async (e) => {
 
       {/* Floating Chat Trigger Button with Badge */}
       {!isTeamChatOpen && (
-        <button onClick={() => setIsTeamChatOpen(true)} className="fixed bottom-24 right-5 sm:bottom-32 sm:right-8 z-[99997] w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 hover:shadow-indigo-500/20" title="Team Chat">
+        <button onClick={() => setIsTeamChatOpen(true)} className="fixed bottom-28 right-5 sm:bottom-32 sm:right-8 z-[99997] w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 hover:shadow-indigo-500/20 relative" title="Team Chat">
           <MessageSquare size={24} className="sm:w-7 sm:h-7" />
           {unreadTeamCount > 0 && (
             <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800 animate-bounce shadow-md">{unreadTeamCount}</span>
@@ -3899,7 +3902,7 @@ const handleSave = async (e) => {
       )}
       
       {/* Floating Voice Assistant Button (Responsive for PC & Mobile) */}
-      <div className="fixed bottom-24 right-5 sm:bottom-8 sm:right-8 z-[99999] flex items-center gap-3 no-print pointer-events-auto">
+      <div className={`fixed right-5 sm:right-8 z-[99999] flex items-center gap-3 no-print transition-all duration-300 ${isTeamChatOpen ? 'scale-0 opacity-0 pointer-events-none' : 'bottom-6 sm:bottom-8 scale-100 opacity-100 pointer-events-auto'}`}>
         {isListening && (
           <div className="hidden sm:flex px-4 py-2 bg-rose-600 text-white rounded-full shadow-2xl items-center gap-2 animate-pulse text-xs font-black uppercase tracking-widest">
             <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
