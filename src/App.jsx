@@ -3934,7 +3934,14 @@ const handleSave = async (e) => {
             )}
 
             <form onSubmit={handleSendTeamMessage} className="p-3 sm:p-4 flex items-center gap-2 mb-4 sm:mb-0">
-              <input type="text" placeholder="Type @ to mention..." className="flex-1 bg-white sm:bg-slate-50 dark:bg-[#0f172a] border border-slate-300 sm:border-slate-200 dark:border-slate-700 rounded-full sm:rounded-xl px-5 py-3.5 text-xs font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 ring-indigo-500/20 shadow-sm" value={newTeamMessage} onChange={handleChatInputChange} disabled={isRecordingNote} />
+              <input 
+  type="text" 
+  placeholder="Type @ to mention..." 
+  className="flex-1 bg-white sm:bg-slate-50 dark:bg-[#0f172a] border border-slate-300 sm:border-slate-200 dark:border-slate-700 rounded-full sm:rounded-xl px-5 py-3.5 text-base sm:text-xs font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 ring-indigo-500/20 shadow-sm" 
+  value={newTeamMessage} 
+  onChange={handleChatInputChange} 
+  disabled={isRecordingNote} 
+>
               
               {/* ഫോട്ടോ അപ്‌ലോഡ് ചെയ്യാനുള്ള അറ്റാച്ച്മെന്റ് ബട്ടൺ */}
               <label className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-indigo-600 rounded-xl cursor-pointer transition-colors shrink-0" title="Attach Image">
