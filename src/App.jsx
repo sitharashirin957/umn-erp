@@ -404,6 +404,11 @@ const App = () => {
 
   // ചാറ്റിൽ ഫോട്ടോ അപ്‌ലോഡ് ചെയ്ത് അയക്കാനുള്ള ഫംഗ്ഷൻ
   const handleSendImageMessage = async (e) => {
+    // മൊബൈൽ കീബോർഡ് ഓട്ടോമാറ്റിക് ആയി ഹൈഡ് ചെയ്യാൻ
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     const file = e.target.files[0];
     if (!file || !activeUserSession) return;
 
@@ -3783,17 +3788,31 @@ const handleSave = async (e) => {
 
       {/* --- View Receipt Modal --- */}
       {viewReceiptModal.isOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1e293b] p-6 rounded-[2.5rem] max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center animate-fade-in-up">
-            <div className="flex justify-between items-center w-full mb-4">
-              <h3 className="font-black uppercase text-sm text-slate-800 dark:text-white tracking-tight">Attached Receipt Preview</h3>
-              <button onClick={() => setViewReceiptModal({ isOpen: false, image: null })} className="p-2 text-slate-400 hover:text-slate-600 rounded-full font-bold">✕</button>
-            </div>
-            <img src={viewReceiptModal.image} alt="Full Receipt" className="w-full max-h-[60vh] object-contain rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner bg-slate-50 dark:bg-black/20" />
-            <button onClick={() => setViewReceiptModal({ isOpen: false, image: null })} className="mt-6 w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg hover:scale-95 transition-all">Close Preview</button>
-          </div>
-        </div>
-      )}
+  <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[9999] flex items-center justify-center p-2 sm:p-4" onClick={() => setViewReceiptModal({ isOpen: false, image: null })}>
+    <div className="bg-white dark:bg-[#1e293b] p-4 sm:p-6 rounded-[2.5rem] max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+      
+      <div className="flex justify-between items-center w-full mb-3 shrink-0">
+        <h3 className="font-black uppercase text-sm text-slate-800 dark:text-white tracking-tight">Attached Receipt Preview</h3>
+        <button onClick={() => setViewReceiptModal({ isOpen: false, image: null })} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <X size={20} />
+        </button>
+      </div>
+
+      <div className="relative w-full flex-1 overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-slate-900 rounded-2xl min-h-[250px] max-h-[65vh]">
+        <img 
+          src={viewReceiptModal.image} 
+          alt="Full Receipt" 
+          className="w-full h-full object-contain rounded-xl" 
+        />
+      </div>
+
+      <button onClick={() => setViewReceiptModal({ isOpen: false, image: null })} className="mt-4 w-full py-3 bg-slate-900 dark:bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors shrink-0 text-xs uppercase tracking-wider">
+        Close Preview
+      </button>
+
+    </div>
+  </div>
+)}
 
       {/* --- FLOATING TEAM CHAT HUB UI (UPGRADED NATIVE MOBILE & WHATSAPP DATES & TYPING) --- */}
       <div className={`fixed z-[99998] transition-all duration-300 origin-bottom-right flex flex-col no-print pointer-events-auto ${
