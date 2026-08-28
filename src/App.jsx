@@ -3878,7 +3878,14 @@ const handleSave = async (e) => {
                             ) : msg.type === 'audio' ? (
                               <audio controls src={msg.audioData} className="w-48 sm:w-56 h-8 scale-90 origin-left" />
                             ) : msg.type === 'image' ? (
-                              <img src={msg.imageData} alt="Shared" className="w-48 sm:w-64 max-h-60 object-cover rounded-xl cursor-pointer hover:opacity-95 transition-opacity" onClick={() => setViewReceiptModal({ isOpen: true, image: msg.imageData })} />
+                              <div className="flex justify-center my-2 w-full">
+                                <img 
+                                  src={msg.imageData} 
+                                  alt="Shared" 
+                                  className="max-w-[70%] max-h-60 object-contain rounded-xl cursor-pointer hover:opacity-95 transition-opacity shadow-md border border-slate-200" 
+                                  onClick={() => setViewReceiptModal({ isOpen: true, image: msg.imageData })} 
+                                />
+                              </div>
                             ) : (
                               formatChatText(msg.text)
                             )}
@@ -3934,29 +3941,31 @@ const handleSave = async (e) => {
             )}
 
             <form onSubmit={handleSendTeamMessage} className="p-3 sm:p-4 flex items-center gap-2 mb-4 sm:mb-0">
-              <input 
-  type="text" 
-  placeholder="Type @ to mention..." 
-  className="flex-1 bg-white sm:bg-slate-50 dark:bg-[#0f172a] border border-slate-300 sm:border-slate-200 dark:border-slate-700 rounded-full sm:rounded-xl px-5 py-3.5 text-base sm:text-xs font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 ring-indigo-500/20 shadow-sm" 
-  value={newTeamMessage} 
-  onChange={handleChatInputChange} 
-  disabled={isRecordingNote} 
->
-              
-              {/* ഫോട്ടോ അപ്‌ലോഡ് ചെയ്യാനുള്ള അറ്റാച്ച്മെന്റ് ബട്ടൺ */}
-              <label className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-indigo-600 rounded-xl cursor-pointer transition-colors shrink-0" title="Attach Image">
-                <ImageIcon size={18} />
-                <input type="file" accept="image/*" className="hidden" onChange={handleSendImageMessage} />
-              </label>
+                <input 
+                  type="text" 
+                  placeholder="Type @ to mention..." 
+                  className="flex-1 bg-white sm:bg-slate-50 dark:bg-[#0f172a] border border-slate-300 sm:border-slate-200 dark:border-slate-700 rounded-full sm:rounded-xl px-5 py-3.5 text-base sm:text-xs font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 ring-indigo-500/20 shadow-sm" 
+                  value={newTeamMessage} 
+                  onChange={handleChatInputChange} 
+                  disabled={isRecordingNote} 
+                />
+                
+                {/* ഫോട്ടോ അപ്‌ലോഡ് ചെയ്യാനുള്ള അറ്റാച്ച്മെന്റ് ബട്ടൺ */}
+                <label className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-indigo-600 rounded-xl cursor-pointer transition-colors shrink-0" title="Attach Image">
+                  <ImageIcon size={18} />
+                  <input type="file" accept="image/*" className="hidden" onChange={handleSendImageMessage} />
+                </label>
 
-              {newTeamMessage.trim() ? (
-                <button type="button" onClick={handleSendTeamMessage} className="p-3.5 bg-indigo-600 text-white rounded-full sm:rounded-xl hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-500/30 shrink-0"><ArrowRightCircle size={20} /></button>
-              ) : (
-                <button type="button" onPointerDown={startRecordingNote} onPointerUp={stopRecordingNote} onPointerCancel={stopRecordingNote} onPointerLeave={stopRecordingNote} className={`p-3.5 rounded-full sm:rounded-xl transition-all shadow-md shrink-0 flex items-center justify-center select-none outline-none ${isRecordingNote ? 'bg-rose-500 text-white animate-pulse shadow-rose-500/30 scale-110' : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-500/30'}`} title="Hold to Record Audio" style={{ touchAction: 'none' }}>
-                  {isRecordingNote ? <div className="w-4 h-4 bg-white rounded-sm animate-ping"></div> : <Mic size={20} />}
-                </button>
-              )}
-            </form>
+                {newTeamMessage.trim() ? (
+                  <button type="button" onClick={handleSendTeamMessage} className="p-3.5 bg-indigo-600 text-white rounded-full sm:rounded-xl shadow-md hover:bg-indigo-700 transition-colors shrink-0">
+                    <Send size={18} />
+                  </button>
+                ) : (
+                  <button type="button" onPointerDown={startRecordingNote} onPointerUp={stopRecordingNote} onPointerCancel={stopRecordingNote} className={`p-3.5 rounded-full sm:rounded-xl shadow-md transition-colors shrink-0 flex items-center justify-center ${isRecordingNote ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>
+                    {isRecordingNote ? <div className="w-4 h-4 bg-white rounded-sm animate-ping"></div> : <Mic size={18} />}
+                  </button>
+                )}
+              </form>
           </div>
         </div>
       </div>
