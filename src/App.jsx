@@ -3786,10 +3786,9 @@ const handleSave = async (e) => {
 
       </div> {/* <-- ഇതാണ് Flex കണ്ടെയ്നർ ക്ലോസ് ചെയ്യുന്നത് --> */}
 
-      {/* --- View Receipt Modal --- */}
-      {viewReceiptModal.isOpen && (
-  <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[9999] flex items-center justify-center p-2 sm:p-4" onClick={() => setViewReceiptModal({ isOpen: false, image: null })}>
-    <div className="bg-white dark:bg-[#1e293b] p-4 sm:p-6 rounded-[2.5rem] max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+        {viewReceiptModal.isOpen && (
+  <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[9999] flex items-center justify-center p-3 sm:p-6" onClick={() => setViewReceiptModal({ isOpen: false, image: null })}>
+    <div className="bg-white dark:bg-[#1e293b] p-4 sm:p-6 rounded-[2.5rem] max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
       
       <div className="flex justify-between items-center w-full mb-3 shrink-0">
         <h3 className="font-black uppercase text-sm text-slate-800 dark:text-white tracking-tight">Attached Receipt Preview</h3>
@@ -3798,11 +3797,11 @@ const handleSave = async (e) => {
         </button>
       </div>
 
-      <div className="relative w-full flex-1 overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-slate-900 rounded-2xl min-h-[250px] max-h-[65vh]">
+      <div className="relative w-full flex-1 overflow-hidden flex items-center justify-center bg-slate-100 dark:bg-slate-900 rounded-2xl min-h-[220px]">
         <img 
           src={viewReceiptModal.image} 
           alt="Full Receipt" 
-          className="w-full h-full object-contain rounded-xl" 
+          className="w-auto h-auto max-w-full max-h-[70vh] object-contain rounded-xl" 
         />
       </div>
 
