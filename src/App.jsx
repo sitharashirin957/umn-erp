@@ -222,37 +222,40 @@ const App = () => {
   const [teamMessages, setTeamMessages] = useState([]);
   const [isTeamChatOpen, setIsTeamChatOpen] = useState(false);
   const [newTeamMessage, setNewTeamMessage] = useState('');
+  
   // 1. ആപ്പ് ഓപ്പൺ ചെയ്യുമ്പോൾ പെർമിഷൻ ചോദിക്കാൻ
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, []);
+      useEffect(() => {
+        if ('Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission();
+        }
+      }, []);
 
-  // 2. പുതിയ മെസ്സേജ് വരുമ്പോൾ കോയിൻ സൗണ്ടും നോട്ടിഫിക്കേഷനും ട്രിഗർ ചെയ്യാൻ
-  useEffect(() => {
-    if (teamMessages.length > 0 && activeUserSession) {
-      const latestMsg = teamMessages[teamMessages.length - 1];
-      const isMe = latestMsg.senderName === activeUserSession.name;
-      const msgTime = latestMsg.timestamp?.toDate ? latestMsg.timestamp.toDate().getTime() : Date.now();
-      const now = Date.now();
-      
-      if (!isMe && (now - msgTime < 5000)) {
-        const audio = new Audio('/coin.mp3');
-        audio.play().catch(e => console.log("Audio play blocked by browser"));
+      // 2. പുതിയ മെസ്സേജ് വരുമ്പോൾ സൗണ്ടും നോട്ടിഫിക്കേഷനും നൽകാൻ (Updated)
+      useEffect(() => {
+        if (teamMessages.length > 0 && activeUserSession) {
+          const latestMsg = teamMessages[teamMessages.length - 1];
+          const isMe = latestMsg.senderName === activeUserSession.name;
+          const msgTime = latestMsg.timestamp?.toDate ? latestMsg.timestamp.toDate().getTime() : Date.now();
+          const now = Date.now();
+          
+          if (!isMe && (now - msgTime < 5000)) {
+            const audio = new Audio('/coin.mp3');
+            audio.play().catch(e => console.log("Audio play blocked by browser"));
 
-        if ('Notification' in window && Notification.permission === 'granted') {
-          if (document.hidden || !isTeamChatOpen) {
-            new Notification(`New message from ${latestMsg.senderName}`, {
-              body: latestMsg.type === 'audio' ? '🎤 Voice message' : latestMsg.text,
-              icon: '/vite.svg' 
-            });
+            if ('Notification' in window) {
+              if (Notification.permission === 'granted') {
+                new Notification(`New message from ${latestMsg.senderName}`, {
+                  body: latestMsg.type === 'image' ? '📷 Photo' : latestMsg.type === 'audio' ? '🎤 Voice message' : latestMsg.text,
+                  icon: '/vite.svg' 
+                });
+              } else if (Notification.permission === 'default') {
+                Notification.requestPermission();
+              }
+            }
           }
         }
-      }
-    }
-  }, [teamMessages, activeUserSession, isTeamChatOpen]);
-  
+      }, [teamMessages, activeUserSession]);
+
   const teamChatEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
@@ -399,6 +402,29 @@ const App = () => {
     setMentionSearch(null);
   };
 
+  // ചാറ്റിൽ ഫോട്ടോ അപ്‌ലോഡ് ചെയ്ത് അയക്കാനുള്ള ഫംഗ്ഷൻ
+  const handleSendImageMessage = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !activeUserSession) return;
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onloadend = async () => {
+      try {
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'team_chats'), {
+          imageData: reader.result,
+          senderName: activeUserSession.name,
+          senderId: activeUserSession.id || activeUserSession.name,
+          timestamp: serverTimestamp(),
+          type: 'image',
+          text: 'Shared an image'
+        });
+        scrollToBottom();
+      } catch (err) { console.error("Image Send Error", err); }
+    };
+    e.target.value = '';
+  };
+  
   const handleSendTeamMessage = async (e) => {
     if (e && e.preventDefault) e.preventDefault(); 
     if (!newTeamMessage.trim() || !activeUserSession) return;
@@ -3851,6 +3877,8 @@ const handleSave = async (e) => {
                               <span className="flex items-center text-[10px]"><Trash2 size={12} className="mr-1 opacity-50"/> 🚫 This message was deleted</span>
                             ) : msg.type === 'audio' ? (
                               <audio controls src={msg.audioData} className="w-48 sm:w-56 h-8 scale-90 origin-left" />
+                            ) : msg.type === 'image' ? (
+                              <img src={msg.imageData} alt="Shared" className="w-48 sm:w-64 max-h-60 object-cover rounded-xl cursor-pointer hover:opacity-95 transition-opacity" onClick={() => setViewReceiptModal({ isOpen: true, image: msg.imageData })} />
                             ) : (
                               formatChatText(msg.text)
                             )}
@@ -3908,6 +3936,12 @@ const handleSave = async (e) => {
             <form onSubmit={handleSendTeamMessage} className="p-3 sm:p-4 flex items-center gap-2 mb-4 sm:mb-0">
               <input type="text" placeholder="Type @ to mention..." className="flex-1 bg-white sm:bg-slate-50 dark:bg-[#0f172a] border border-slate-300 sm:border-slate-200 dark:border-slate-700 rounded-full sm:rounded-xl px-5 py-3.5 text-xs font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 ring-indigo-500/20 shadow-sm" value={newTeamMessage} onChange={handleChatInputChange} disabled={isRecordingNote} />
               
+              {/* ഫോട്ടോ അപ്‌ലോഡ് ചെയ്യാനുള്ള അറ്റാച്ച്മെന്റ് ബട്ടൺ */}
+              <label className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-indigo-600 rounded-xl cursor-pointer transition-colors shrink-0" title="Attach Image">
+                <ImageIcon size={18} />
+                <input type="file" accept="image/*" className="hidden" onChange={handleSendImageMessage} />
+              </label>
+
               {newTeamMessage.trim() ? (
                 <button type="button" onClick={handleSendTeamMessage} className="p-3.5 bg-indigo-600 text-white rounded-full sm:rounded-xl hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-500/30 shrink-0"><ArrowRightCircle size={20} /></button>
               ) : (
