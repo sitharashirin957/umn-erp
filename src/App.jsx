@@ -3890,9 +3890,9 @@ const handleSave = async (e) => {
         </div>
       </div>
 
-      {/* Floating Chat Trigger Button with Badge */}
+      {/* Floating Chat Trigger Button with Badge (FIXED CSS Position) */}
       {!isTeamChatOpen && (
-        <button onClick={() => setIsTeamChatOpen(true)} className="fixed bottom-28 right-5 sm:bottom-32 sm:right-8 z-[99997] w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 hover:shadow-indigo-500/20 relative" title="Team Chat">
+        <button onClick={() => setIsTeamChatOpen(true)} className="fixed bottom-28 right-5 sm:bottom-32 sm:right-8 z-[99997] w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 hover:shadow-indigo-500/20" title="Team Chat">
           <MessageSquare size={24} className="sm:w-7 sm:h-7" />
           {unreadTeamCount > 0 && (
             <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800 animate-bounce shadow-md">{unreadTeamCount}</span>
