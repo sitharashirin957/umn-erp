@@ -222,6 +222,36 @@ const App = () => {
   const [teamMessages, setTeamMessages] = useState([]);
   const [isTeamChatOpen, setIsTeamChatOpen] = useState(false);
   const [newTeamMessage, setNewTeamMessage] = useState('');
+  // 1. ആപ്പ് ഓപ്പൺ ചെയ്യുമ്പോൾ പെർമിഷൻ ചോദിക്കാൻ
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // 2. പുതിയ മെസ്സേജ് വരുമ്പോൾ കോയിൻ സൗണ്ടും നോട്ടിഫിക്കേഷനും ട്രിഗർ ചെയ്യാൻ
+  useEffect(() => {
+    if (teamMessages.length > 0 && activeUserSession) {
+      const latestMsg = teamMessages[teamMessages.length - 1];
+      const isMe = latestMsg.senderName === activeUserSession.name;
+      const msgTime = latestMsg.timestamp?.toDate ? latestMsg.timestamp.toDate().getTime() : Date.now();
+      const now = Date.now();
+      
+      if (!isMe && (now - msgTime < 5000)) {
+        const audio = new Audio('/coin.mp3');
+        audio.play().catch(e => console.log("Audio play blocked by browser"));
+
+        if ('Notification' in window && Notification.permission === 'granted') {
+          if (document.hidden || !isTeamChatOpen) {
+            new Notification(`New message from ${latestMsg.senderName}`, {
+              body: latestMsg.type === 'audio' ? '🎤 Voice message' : latestMsg.text,
+              icon: '/vite.svg' 
+            });
+          }
+        }
+      }
+    }
+  }, [teamMessages, activeUserSession, isTeamChatOpen]);
   
   const teamChatEndRef = useRef(null);
   const chatContainerRef = useRef(null);
