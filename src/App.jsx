@@ -1630,6 +1630,8 @@ const handleSave = async (e) => {
 
       {/* ഐഫോണിൽ സൗണ്ട് പ്ലേ ആവാൻ ഇന്റർനെറ്റ് ഓഡിയോ ലിങ്ക് ഉപയോഗിക്കുന്നു */}
 <audio id="notification-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+{/* ഫോൺ റിംഗ് ചെയ്യുമ്പോൾ കേൾക്കാനുള്ള സൗണ്ട് */}
+<audio id="phone-ringtone" src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3" preload="auto" loop></audio>
       
       <div className="flex h-screen overflow-hidden">
         
@@ -3076,7 +3078,14 @@ const handleSave = async (e) => {
       roomId={callRoomId} 
       userName={activeUserSession?.name || "Team Member"} 
       userId={activeUserSession?.id || Math.random().toString()} 
-      onLeave={() => setIsInCall(false)} 
+      onLeave={() => {
+  const ringtoneEl = document.getElementById('phone-ringtone');
+  if (ringtoneEl) {
+    ringtoneEl.pause();
+    ringtoneEl.currentTime = 0;
+  }
+  setIsInCall(false);
+}} 
   />
 )}
         </main>

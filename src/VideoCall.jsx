@@ -34,18 +34,28 @@ export default function VideoCall({ roomId, userName, userId, onLeave }) {
             },
             showPreJoinView: false, 
             onLeaveRoom: () => {
-                if(onLeave) onLeave(); 
+                stopRingtoneAndLeave();
             }
         });
+    };
+
+    // റിംഗ്‌ടോൺ ഓഫ് ചെയ്ത് കോൾ ലീവ് ചെയ്യാനുള്ള ഫംഗ്ഷൻ
+    const stopRingtoneAndLeave = () => {
+        const ringtoneEl = document.getElementById('phone-ringtone');
+        if (ringtoneEl) {
+            ringtoneEl.pause();
+            ringtoneEl.currentTime = 0;
+        }
+        if (onLeave) {
+            onLeave();
+        }
     };
 
     const handleEndCall = () => {
         if (zpInstance) {
             zpInstance.destroy(); // Zego റൂം കംപ്ലീറ്റ് ക്ലോസ് ചെയ്യുന്നു
         }
-        if (onLeave) {
-            onLeave(); // ആപ്പിലേക്ക് തിരിച്ച് പോകുന്നു
-        }
+        stopRingtoneAndLeave();
     };
 
     return (
