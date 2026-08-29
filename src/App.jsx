@@ -208,6 +208,17 @@ const startVideoCall = (mode = 'room', targetUser = null, callType = 'video') =>
     roomId = `OXAD-CALL-${[myName, otherName].sort().join('-')}`;
   }
 
+  // കോൾ വിളിക്കുന്ന വിവരം ഫയർബേസിലെ ടീം ചാറ്റ് വഴി മറ്റുള്ളവർക്ക് റിംഗ് നോട്ടിഫിക്കേഷൻ ആയി അയക്കാം
+  if (activeUserSession) {
+    addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'team_chats'), {
+      text: `📞 ${activeUserSession.name} started a ${callType === 'video' ? 'Video' : 'Audio'} Call (${mode === 'room' ? 'Team Meeting' : `Direct with ${targetUser?.name}`}). Tap to Join!`,
+      senderName: activeUserSession.name,
+      senderId: activeUserSession.id || activeUserSession.name,
+      timestamp: serverTimestamp(),
+      type: 'system'
+    }).catch(e => console.log(e));
+  }
+
   setCallRoomId(roomId);
   setIsInCall(true);
 };
@@ -4170,10 +4181,13 @@ const handleSave = async (e) => {
       {/* ഫ്ലോട്ടിങ് വീഡിയോ കോൾ ബട്ടൺ */}
       <button 
         onClick={() => setShowCallChoiceModal(true)}
-        className="fixed bottom-44 right-5 sm:bottom-48 sm:right-8 z-[99996] w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-blue-500/40 hover:shadow-blue-500/60 cursor-pointer touch-manipulation"
+        className="fixed bottom-44 right-5 sm:bottom-48 sm:right-8 z-[99996] w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-blue-500/40 hover:shadow-blue-500/60 cursor-pointer touch-manipulation group"
         title="Start Team Video Call"
       >
         📹
+        <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 text-white text-[9px] font-black flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800 animate-pulse shadow-md">
+          ●
+        </span>
       </button>
 
       {/* വീഡിയോ/ഓഡിയോ കോൾ ചോയ്സ് മോഡൽ */}
@@ -4243,7 +4257,9 @@ const handleSave = async (e) => {
       )}
 
     </div>  
+
   );
+
 }
 
 export default App;
