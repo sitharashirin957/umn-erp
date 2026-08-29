@@ -3870,9 +3870,10 @@ const handleSave = async (e) => {
           </div>
           
           <div 
+           
             ref={chatContainerRef}
             onScroll={handleChatScroll}
-            className="flex-1 p-4 overflow-y-auto custom-scrollbar flex flex-col space-y-4 bg-slate-100 sm:bg-transparent dark:bg-[#0b1120] sm:dark:bg-transparent relative pb-24"
+            className="flex-1 p-4 overflow-y-auto custom-scrollbar flex flex-col space-y-4 bg-slate-100 sm:bg-transparent dark:bg-[#0b1120] sm:dark:bg-transparent relative pb-6"
           >
             {(teamMessages || []).length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-slate-400 opacity-50">
@@ -3984,7 +3985,7 @@ const handleSave = async (e) => {
             </button>
           )}
 
-          <div className="absolute bottom-0 left-0 w-full border-t border-slate-200 dark:border-slate-800 bg-slate-50 sm:bg-white dark:bg-[#1e293b] sm:rounded-b-[2rem] z-40 pb-safe">
+          <div className="w-full shrink-0 relative border-t border-slate-200 dark:border-slate-800 bg-slate-50 sm:bg-white dark:bg-[#1e293b] sm:rounded-b-[2rem] z-40 pb-safe">
             {mentionSearch !== null && (
               <div className="absolute bottom-full left-0 w-full bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shadow-lg max-h-40 overflow-y-auto z-50">
                 <div className="p-2 text-[9px] font-black uppercase text-slate-400 bg-slate-50 dark:bg-slate-900">Select Team Member</div>
