@@ -174,9 +174,8 @@ const generateZatcaTLV = (sellerName, vatNo, timestamp, total, vatTotal) => {
   for (let i = 0; i < bytes.byteLength; i++) { binary += String.fromCharCode(bytes[i]); }
   return btoa(binary);
 };
-
 const App = () => {
-   const handleToggleTaskComplete = async (taskId, currentStatus) => {
+  const handleToggleTaskComplete = async (taskId, currentStatus) => {
     if (!user) return;
     try {
       await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', taskId), {
@@ -186,9 +185,59 @@ const App = () => {
       console.error("Error updating task status:", error);
     }
   };
+
   const [user, setUser] = useState(null);
 
-  // 🌟 ഫയർബേസിൽ നിന്ന് എല്ലാ ഡാറ്റയും തത്സമയം (Real-time) സിങ്ക് ചെയ്യാൻ
+  // 1. LocalStorage വഴി യൂസറെ ഓർമിച്ചു വെക്കുന്നു
+  const [activeUserSession, setActiveUserSession] = useState(() => { 
+    if (typeof window !== 'undefined') { const stored = localStorage.getItem('erp_active_user'); return stored ? JSON.parse(stored) : null; } 
+    return null; 
+  });
+
+  // 2. ആപ്പ് അൺലോക്ക് ചെയ്തതും മറ്റ് സ്റ്റേറ്റുകളും
+  const [isAppUnlocked, setIsAppUnlocked] = useState(() => { if (typeof window !== 'undefined') return localStorage.getItem('erp_unlocked') === 'true'; return false; });
+  const [appPinInput, setAppPinInput] = useState(''); const [appPinError, setAppPinError] = useState(false);
+  const [adminAuth, setAdminAuth] = useState({ isOpen: false, callback: null }); const [adminPinInput, setAdminPinInput] = useState(''); const [adminPinError, setAdminPinError] = useState(false);
+
+  const [isDarkMode, setIsDarkMode] = useState(() => { if (typeof window !== 'undefined') { const storedTheme = localStorage.getItem('erp_theme'); if (storedTheme) return storedTheme === 'dark'; if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return true; } return false; });
+  const [activeTab, setActiveTab] = useState('dashboard'); const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024); const [showOnlyDueSales, setShowOnlyDueSales] = useState(false); const [showOnlyDuePurchases, setShowOnlyDuePurchases] = useState(false);
+  const [hideZeroAging, setHideZeroAging] = useState(true); const [searchTerm, setSearchTerm] = useState(''); const [isNotifOpen, setIsNotifOpen] = useState(false); const notifRef = useRef(null);
+  const [voiceActionPrompt, setVoiceActionPrompt] = useState(null);
+  const [viewReceiptModal, setViewReceiptModal] = useState({ isOpen: false, image: null });
+  const [lockNotifications, setLockNotifications] = useState([]);
+
+  // ഡാറ്റാ സ്റ്റേറ്റുകൾ (Data States) - useEffect-ൽ ഉപയോഗിക്കുന്നതിന് മുമ്പ് നിർബന്ധമായും മുകളിൽ വേണം
+  const [customers, setCustomers] = useState([]); 
+  const [suppliers, setSuppliers] = useState([]); 
+  const [products, setProducts] = useState([]);
+  const [sales, setSales] = useState([]); 
+  const [purchases, setPurchases] = useState([]); 
+  const [quotations, setQuotations] = useState([]);
+  const [collections, setCollections] = useState([]); 
+  const [expenses, setExpenses] = useState([]); 
+  const [salesmen, setSalesmen] = useState([]); 
+  const [crms, setCrms] = useState([]);
+  const [crmDropdownOpen, setCrmDropdownOpen] = useState(null);
+  const [tasks, setTasks] = useState([]);
+
+  // കോൾ സ്റ്റേറ്റുകൾ
+  const [showCallChoiceModal, setShowCallChoiceModal] = useState(false);
+  const [isInCall, setIsInCall] = useState(false);
+  const [callRoomId, setCallRoomId] = useState('');
+  const [incomingCallAlert, setIncomingCallAlert] = useState(null);
+
+  // നോട്ടിഫിക്കേഷൻ കാണിക്കാനുള്ള ഫംഗ്ഷൻ
+  const showLockNotification = (title, message) => {
+    const id = Date.now();
+    setLockNotifications((prev) => [{ id, title, message }, ...prev]); 
+  };
+
+  const removeNotification = (id) => {
+    setLockNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  // 🌟 ഫയർബേസിൽ നിന്ന് എല്ലാ ഡാറ്റയും തത്സമയം സിങ്ക് ചെയ്യാനുള്ള useEffect (ഇത് സ്റ്റേറ്റുകൾക്ക് ശേഷമാണ് വെച്ചിരിക്കുന്നത്)
   useEffect(() => {
     if (!user || !isAppUnlocked) return;
 
@@ -239,48 +288,35 @@ const App = () => {
 
     return () => { unsubs.forEach(unsub => unsub()); };
   }, [user, isAppUnlocked]);
-  
-  // 1. LocalStorage വഴി യൂസറെ ഓർമിച്ചു വെക്കുന്നു
-  const [activeUserSession, setActiveUserSession] = useState(() => { 
-    if (typeof window !== 'undefined') { const stored = localStorage.getItem('erp_active_user'); return stored ? JSON.parse(stored) : null; } 
-    return null; 
-  });
-   const [showCallChoiceModal, setShowCallChoiceModal] = useState(false);
-const [isInCall, setIsInCall] = useState(false);
-const [callRoomId, setCallRoomId] = useState('');
-const [incomingCallAlert, setIncomingCallAlert] = useState(null); // 👉 ഇവിടെ പുതിയത് ചേർക്കുക
 
-// കോൾ സ്റ്റാർട്ട് ചെയ്യാനുള്ള ഫംഗ്ഷൻ
-// മോഡ് അനുസരിച്ച് കോൾ സ്റ്റാർട്ട് ചെയ്യാനുള്ള ഫംഗ്ഷൻ (Room അല്ലെങ്കിൽ 1-to-1)
+  // കോൾ സ്റ്റാർട്ട് ചെയ്യാനുള്ള ഫംഗ്ഷൻ
   const startVideoCall = (mode = 'room', targetUser = null, callType = 'video') => {
-  let roomId = "OXAD-TEAM-MEETING"; 
+    let roomId = "OXAD-TEAM-MEETING"; 
 
-  if (mode === 'direct' && targetUser) {
-    const myName = activeUserSession?.name || 'User';
-    const otherName = targetUser.name || 'Member';
-    roomId = `OXAD-CALL-${[myName, otherName].sort().join('-')}`;
-  }
+    if (mode === 'direct' && targetUser) {
+      const myName = activeUserSession?.name || 'User';
+      const otherName = targetUser.name || 'Member';
+      roomId = `OXAD-CALL-${[myName, otherName].sort().join('-')}`;
+    }
 
-  // റിങ്‌ടോൺ പ്ലേ ചെയ്യുന്നു
-  const ringtoneEl = document.getElementById('phone-ringtone');
-  if (ringtoneEl) {
-    ringtoneEl.currentTime = 0;
-    ringtoneEl.play().catch(e => console.log(e));
-  }
+    const ringtoneEl = document.getElementById('phone-ringtone');
+    if (ringtoneEl) {
+      ringtoneEl.currentTime = 0;
+      ringtoneEl.play().catch(e => console.log(e));
+    }
 
-  // ഫയർബേസിൽ ആക്ടീവ് കോൾ അലേർട്ട് സ്റ്റോർ ചെയ്യുന്നു
-  const callData = {
-    roomId: roomId,
-    callerName: activeUserSession?.name || 'Team Member',
-    callType: callType,
-    mode: mode,
-    timestamp: Date.now()
+    const callData = {
+      roomId: roomId,
+      callerName: activeUserSession?.name || 'Team Member',
+      callType: callType,
+      mode: mode,
+      timestamp: Date.now()
+    };
+    setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call'), callData).catch(e => console.log(e));
+
+    setCallRoomId(roomId);
+    setIsInCall(true);
   };
-  setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call'), callData).catch(e => console.log(e));
-
-  setCallRoomId(roomId);
-  setIsInCall(true);
-};
 
   const handleUserSelect = (selectedUser) => {
     setActiveUserSession(selectedUser);
@@ -291,35 +327,6 @@ const [incomingCallAlert, setIncomingCallAlert] = useState(null); // 👉 ഇവ
     setActiveUserSession(null);
     localStorage.removeItem('erp_active_user');
   };
-
-  // 2. ആപ്പ് അൺലോക്ക് ചെയ്തതും ഓർമിച്ചു വെക്കുന്നു
-  const [isAppUnlocked, setIsAppUnlocked] = useState(() => { if (typeof window !== 'undefined') return localStorage.getItem('erp_unlocked') === 'true'; return false; });
-  const [appPinInput, setAppPinInput] = useState(''); const [appPinError, setAppPinError] = useState(false);
-  const [adminAuth, setAdminAuth] = useState({ isOpen: false, callback: null }); const [adminPinInput, setAdminPinInput] = useState(''); const [adminPinError, setAdminPinError] = useState(false);
-
-  const [isDarkMode, setIsDarkMode] = useState(() => { if (typeof window !== 'undefined') { const storedTheme = localStorage.getItem('erp_theme'); if (storedTheme) return storedTheme === 'dark'; if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return true; } return false; });
-  const [activeTab, setActiveTab] = useState('dashboard'); const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); const [isSidebarHovered, setIsSidebarHovered] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024); const [showOnlyDueSales, setShowOnlyDueSales] = useState(false); const [showOnlyDuePurchases, setShowOnlyDuePurchases] = useState(false);
-  const [hideZeroAging, setHideZeroAging] = useState(true); const [searchTerm, setSearchTerm] = useState(''); const [isNotifOpen, setIsNotifOpen] = useState(false); const notifRef = useRef(null);
-  const [voiceActionPrompt, setVoiceActionPrompt] = useState(null);
-  const [viewReceiptModal, setViewReceiptModal] = useState({ isOpen: false, image: null });
-  const [lockNotifications, setLockNotifications] = useState([]);
-
-  // നോട്ടിഫിക്കേഷൻ കാണിക്കാനുള്ള ഫംഗ്ഷൻ (ഇത് തനിയെ മാഞ്ഞുപോകില്ല)
-  const showLockNotification = (title, message) => {
-    const id = Date.now();
-    setLockNotifications((prev) => [{ id, title, message }, ...prev]); 
-  };
-
-  // നോട്ടിഫിക്കേഷനിൽ ടാപ്പ് ചെയ്യുമ്പോൾ അത് ക്ലോസ് ആവാൻ
-  const removeNotification = (id) => {
-    setLockNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
-  const [customers, setCustomers] = useState([]); const [suppliers, setSuppliers] = useState([]); const [products, setProducts] = useState([]);
-  const [sales, setSales] = useState([]); const [purchases, setPurchases] = useState([]); const [quotations, setQuotations] = useState([]);
-  const [collections, setCollections] = useState([]); const [expenses, setExpenses] = useState([]); const [salesmen, setSalesmen] = useState([]); const [crms, setCrms] = useState([]);
-  const [crmDropdownOpen, setCrmDropdownOpen] = useState(null);
-  const [tasks, setTasks] = useState([]);
   
   // =====================================================================
   // 🌟 THE ULTIMATE TEAM CHAT HUB (VOICE, DELETE, UNREAD PILL & PRESENCE)
