@@ -193,14 +193,14 @@ const App = () => {
     if (typeof window !== 'undefined') { const stored = localStorage.getItem('erp_active_user'); return stored ? JSON.parse(stored) : null; } 
     return null; 
   });
-   
+   const [showCallChoiceModal, setShowCallChoiceModal] = useState(false);
 const [isInCall, setIsInCall] = useState(false);
 const [callRoomId, setCallRoomId] = useState('');
 
 // കോൾ സ്റ്റാർട്ട് ചെയ്യാനുള്ള ഫംഗ്ഷൻ
 // മോഡ് അനുസരിച്ച് കോൾ സ്റ്റാർട്ട് ചെയ്യാനുള്ള ഫംഗ്ഷൻ (Room അല്ലെങ്കിൽ 1-to-1)
-const startVideoCall = (mode = 'room', targetUser = null) => {
-  let roomId = "OXAD-TEAM-MEETING"; // ഡീഫോൾട്ട് ടീം റൂം
+const startVideoCall = (mode = 'room', targetUser = null, callType = 'video') => {
+  let roomId = "OXAD-TEAM-MEETING"; 
 
   if (mode === 'direct' && targetUser) {
     const myName = activeUserSession?.name || 'User';
@@ -1721,12 +1721,7 @@ const handleSave = async (e) => {
             </div>
 
             <div className="flex items-center space-x-4 sm:space-x-6">
-            <button 
-  onClick={startVideoCall}
-  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 font-bold shadow-lg transition-all cursor-pointer"
->
-  📹 Video Call
-</button>
+             
               <div className="hidden md:flex items-center bg-slate-50 dark:bg-[#0f172a] rounded-full px-4 py-2 w-80 border border-slate-200 dark:border-slate-700 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 ring-blue-100 dark:ring-blue-900/30 transition-all">
                 <Search size={18} className="text-slate-400 mr-2" />
                 <input type="text" placeholder="Global Entity Search..." className="bg-transparent border-none text-sm font-bold w-full focus:outline-none uppercase dark:text-white dark:placeholder-slate-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
@@ -4172,8 +4167,83 @@ const handleSave = async (e) => {
         </button>
       </div>
 
+      {/* ഫ്ലോട്ടിങ് വീഡിയോ കോൾ ബട്ടൺ */}
+      <button 
+        onClick={() => setShowCallChoiceModal(true)}
+        className="fixed bottom-44 right-5 sm:bottom-48 sm:right-8 z-[99996] w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-blue-500/40 hover:shadow-blue-500/60 cursor-pointer touch-manipulation"
+        title="Start Team Video Call"
+      >
+        📹
+      </button>
+
+      {/* വീഡിയോ/ഓഡിയോ കോൾ ചോയ്സ് മോഡൽ */}
+      {showCallChoiceModal && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl border border-slate-200 dark:border-slate-800 animate-fade-in-up">
+            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2 text-center">Start Call</h3>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6 text-center">Choose call mode & type</p>
+            
+            <div className="space-y-6">
+              {/* 1. കോമൺ ടീം റൂം */}
+              <div className="p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border border-slate-200 dark:border-slate-700">
+                <p className="text-xs font-black uppercase text-slate-700 dark:text-slate-200 mb-3">👥 Team Meeting (Common)</p>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => { setShowCallChoiceModal(false); startVideoCall('room', null, 'video'); }}
+                    className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer"
+                  >
+                    📹 Video Call
+                  </button>
+                  <button 
+                    onClick={() => { setShowCallChoiceModal(false); startVideoCall('room', null, 'audio'); }}
+                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer"
+                  >
+                    📞 Audio Call
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. പ്രൈവറ്റ് 1-to-1 കോൾ (സ്റ്റാഫുകൾക്കായി) */}
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400 mb-3">Direct 1-to-1 Call with Staff:</p>
+                <div className="space-y-3 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                  {salesmen.map(staff => (
+                    <div key={staff.id} className="p-3 bg-slate-50 dark:bg-[#0f172a] rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                      <span className="font-bold text-xs text-slate-800 dark:text-white uppercase">{staff.name}</span>
+                      <div className="flex gap-1.5">
+                        <button 
+                          onClick={() => { setShowCallChoiceModal(false); startVideoCall('direct', staff, 'video'); }}
+                          className="p-2 bg-blue-500/10 hover:bg-blue-500 text-blue-600 hover:text-white rounded-lg transition-colors text-xs font-black cursor-pointer"
+                          title="Video Call"
+                        >
+                          📹
+                        </button>
+                        <button 
+                          onClick={() => { setShowCallChoiceModal(false); startVideoCall('direct', staff, 'audio'); }}
+                          className="p-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 hover:text-white rounded-lg transition-colors text-xs font-black cursor-pointer"
+                          title="Audio Call"
+                        >
+                          📞
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setShowCallChoiceModal(false)}
+                className="w-full py-3 text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-rose-500 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>  
   );
-};
+}
 
 export default App;
