@@ -198,10 +198,17 @@ const [isInCall, setIsInCall] = useState(false);
 const [callRoomId, setCallRoomId] = useState('');
 
 // കോൾ സ്റ്റാർട്ട് ചെയ്യാനുള്ള ഫംഗ്ഷൻ
-const startVideoCall = () => {
-  // ഓരോ കോളിലും പുതിയ റൂം ഐഡി ഉണ്ടാക്കാൻ
-  const newRoomId = "OXAD-" + Math.floor(Math.random() * 10000); 
-  setCallRoomId(newRoomId);
+// മോഡ് അനുസരിച്ച് കോൾ സ്റ്റാർട്ട് ചെയ്യാനുള്ള ഫംഗ്ഷൻ (Room അല്ലെങ്കിൽ 1-to-1)
+const startVideoCall = (mode = 'room', targetUser = null) => {
+  let roomId = "OXAD-TEAM-MEETING"; // ഡീഫോൾട്ട് ടീം റൂം
+
+  if (mode === 'direct' && targetUser) {
+    const myName = activeUserSession?.name || 'User';
+    const otherName = targetUser.name || 'Member';
+    roomId = `OXAD-CALL-${[myName, otherName].sort().join('-')}`;
+  }
+
+  setCallRoomId(roomId);
   setIsInCall(true);
 };
 
