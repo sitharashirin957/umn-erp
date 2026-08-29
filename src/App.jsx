@@ -196,10 +196,11 @@ const App = () => {
    const [showCallChoiceModal, setShowCallChoiceModal] = useState(false);
 const [isInCall, setIsInCall] = useState(false);
 const [callRoomId, setCallRoomId] = useState('');
+const [incomingCallAlert, setIncomingCallAlert] = useState(null); // 👉 ഇവിടെ പുതിയത് ചേർക്കുക
 
 // കോൾ സ്റ്റാർട്ട് ചെയ്യാനുള്ള ഫംഗ്ഷൻ
 // മോഡ് അനുസരിച്ച് കോൾ സ്റ്റാർട്ട് ചെയ്യാനുള്ള ഫംഗ്ഷൻ (Room അല്ലെങ്കിൽ 1-to-1)
-const startVideoCall = (mode = 'room', targetUser = null, callType = 'video') => {
+  const startVideoCall = (mode = 'room', targetUser = null, callType = 'video') => {
   let roomId = "OXAD-TEAM-MEETING"; 
 
   if (mode === 'direct' && targetUser) {
@@ -208,16 +209,22 @@ const startVideoCall = (mode = 'room', targetUser = null, callType = 'video') =>
     roomId = `OXAD-CALL-${[myName, otherName].sort().join('-')}`;
   }
 
-  // കോൾ വിളിക്കുന്ന വിവരം ഫയർബേസിലെ ടീം ചാറ്റ് വഴി മറ്റുള്ളവർക്ക് റിംഗ് നോട്ടിഫിക്കേഷൻ ആയി അയക്കാം
-  if (activeUserSession) {
-    addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'team_chats'), {
-      text: `📞 ${activeUserSession.name} started a ${callType === 'video' ? 'Video' : 'Audio'} Call (${mode === 'room' ? 'Team Meeting' : `Direct with ${targetUser?.name}`}). Tap to Join!`,
-      senderName: activeUserSession.name,
-      senderId: activeUserSession.id || activeUserSession.name,
-      timestamp: serverTimestamp(),
-      type: 'system'
-    }).catch(e => console.log(e));
+  // റിങ്‌ടോൺ പ്ലേ ചെയ്യുന്നു
+  const ringtoneEl = document.getElementById('phone-ringtone');
+  if (ringtoneEl) {
+    ringtoneEl.currentTime = 0;
+    ringtoneEl.play().catch(e => console.log(e));
   }
+
+  // ഫയർബേസിൽ ആക്ടീവ് കോൾ അലേർട്ട് സ്റ്റോർ ചെയ്യുന്നു
+  const callData = {
+    roomId: roomId,
+    callerName: activeUserSession?.name || 'Team Member',
+    callType: callType,
+    mode: mode,
+    timestamp: Date.now()
+  };
+  setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call'), callData).catch(e => console.log(e));
 
   setCallRoomId(roomId);
   setIsInCall(true);
@@ -776,15 +783,26 @@ const startVideoCall = (mode = 'room', targetUser = null, callType = 'video') =>
     };
   }, [isAppUnlocked, isDesktop]);
 
-  useEffect(() => {
-    if (!user || !isAppUnlocked) return; 
-    const collectionsMap = { customers: setCustomers, suppliers: setSuppliers, products: setProducts, sales: setSales, purchases: setPurchases, quotations: setQuotations, collections: setCollections, expenses: setExpenses, salesmen: setSalesmen, crms: setCrms, estimator_items: setEstimatorItems, tasks: setTasks, team_chats: setTeamMessages };
-    const unsubscribers = Object.entries(collectionsMap).map(([colName, setter]) => 
-      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', colName), (snap) => { const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })); setter(data.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0))); }, (error) => { console.error(`Error syncing ${colName}:`, error); if (error.code === 'permission-denied') setDbError(true); })
-    );
-    const unsubSettings = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'profile'), (snap) => { if (snap.exists()) setSettings(snap.data()); });
-    return () => { unsubscribers.forEach(unsub => unsub()); unsubSettings(); };
-  }, [user, isAppUnlocked]);
+    useEffect(() => {
+  if (!user || !isAppUnlocked) return;
+  const unsubCall = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call'), (snap) => {
+    if (snap.exists()) {
+      const data = snap.data();
+      // താനല്ല മറ്റാരെങ്കിലും ആണ് കോൾ ഇട്ടതെങ്കിൽ മാത്രം അലേർട്ട് കാണിക്കുക
+      if (data && data.callerName !== activeUserSession?.name && !isInCall) {
+        setIncomingCallAlert(data);
+        // റിംഗ്‌ടോൺ പ്ലേ ചെയ്യാം
+        const ringtoneEl = document.getElementById('phone-ringtone');
+        if (ringtoneEl) {
+          ringtoneEl.play().catch(e => console.log(e));
+        }
+      } else if (!data) {
+        setIncomingCallAlert(null);
+      }
+    }
+  });
+  return () => unsubCall();
+}, [user, isAppUnlocked, activeUserSession, isInCall]);
 
   const handleAppUnlock = (e) => { e.preventDefault(); if (appPinInput === APP_PIN) { setIsAppUnlocked(true); localStorage.setItem('erp_unlocked', 'true'); setAppPinError(false); } else { setAppPinError(true); setAppPinInput(''); } };
   
@@ -4186,6 +4204,7 @@ const handleSave = async (e) => {
           <Mic size={24} className="sm:w-7 sm:h-7" />
         </button>
       </div>
+
 
       {/* ഫ്ലോട്ടിങ് വീഡിയോ കോൾ ബട്ടൺ */}
       <button 
