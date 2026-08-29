@@ -209,6 +209,18 @@ const App = () => {
   const [hideZeroAging, setHideZeroAging] = useState(true); const [searchTerm, setSearchTerm] = useState(''); const [isNotifOpen, setIsNotifOpen] = useState(false); const notifRef = useRef(null);
   const [voiceActionPrompt, setVoiceActionPrompt] = useState(null);
   const [viewReceiptModal, setViewReceiptModal] = useState({ isOpen: false, image: null });
+  const [lockNotifications, setLockNotifications] = useState([]);
+
+  // നോട്ടിഫിക്കേഷൻ കാണിക്കാനുള്ള ഫംഗ്ഷൻ (ഇത് തനിയെ മാഞ്ഞുപോകില്ല)
+  const showLockNotification = (title, message) => {
+    const id = Date.now();
+    setLockNotifications((prev) => [{ id, title, message }, ...prev]); 
+  };
+
+  // നോട്ടിഫിക്കേഷനിൽ ടാപ്പ് ചെയ്യുമ്പോൾ അത് ക്ലോസ് ആവാൻ
+  const removeNotification = (id) => {
+    setLockNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
   const [customers, setCustomers] = useState([]); const [suppliers, setSuppliers] = useState([]); const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]); const [purchases, setPurchases] = useState([]); const [quotations, setQuotations] = useState([]);
   const [collections, setCollections] = useState([]); const [expenses, setExpenses] = useState([]); const [salesmen, setSalesmen] = useState([]); const [crms, setCrms] = useState([]);
@@ -3769,13 +3781,12 @@ const handleSave = async (e) => {
             </div>
           </div>
         )}
-
 {/* --- CONFIRM DELETE MODAL --- */}
-        {confirmDelete.isOpen && (
+        {confirmDelete?.isOpen && (
           <div className="fixed inset-0 bg-slate-900/80 dark:bg-black/80 backdrop-blur-md z-[300] flex items-center justify-center p-4 no-print transition-all">
             <div className="max-w-md w-full bg-white dark:bg-[#1e293b] rounded-[2.5rem] p-10 shadow-2xl text-center border border-slate-200 dark:border-slate-800">
               <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2 uppercase">Delete Record?</h2>
-              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-8 uppercase">Permanently remove <span className="text-slate-900 dark:text-white font-black">"{String(confirmDelete.title)}"</span>?</p>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-8 uppercase">Permanently remove <span className="text-slate-900 dark:text-white font-black">"{String(confirmDelete?.title || '')}"</span>?</p>
               <div className="grid grid-cols-2 gap-4">
                 <button onClick={() => setConfirmDelete({ isOpen: false })} className="py-4 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">Cancel</button>
                 <button onClick={executeDelete} className="py-4 bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:scale-95 transition-transform">Confirm</button>
@@ -3786,8 +3797,33 @@ const handleSave = async (e) => {
 
       </div> {/* <-- ഇതാണ് Flex കണ്ടെയ്നർ ക്ലോസ് ചെയ്യുന്നത് --> */}
 
-        {/* --- View Receipt Modal (FIXED Z-INDEX) --- */}
-{viewReceiptModal.isOpen && (
+    {/* --- WhatsApp Style Lock Screen Notifications --- */}
+    <div className="fixed top-12 left-0 right-0 z-[9999999] flex flex-col items-center gap-3 pointer-events-none px-4">
+      {(lockNotifications || []).map((notif) => (
+        <div 
+          key={notif.id} 
+          onClick={() => removeNotification(notif.id)}
+          className="w-full max-w-sm bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 shadow-2xl rounded-[1.5rem] p-4 pointer-events-auto cursor-pointer transition-all duration-300 animate-in fade-in slide-in-from-top-5 hover:bg-white/95 dark:hover:bg-slate-800/95"
+          title="Tap to dismiss"
+        >
+          <div className="flex justify-between items-center mb-1.5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
+                <span className="text-[12px] text-white font-bold">W</span>
+              </div>
+              <span className="text-sm font-bold text-slate-800 dark:text-white">{notif.title}</span>
+            </div>
+            <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">now</span>
+          </div>
+          <p className="text-[15px] font-medium text-slate-700 dark:text-slate-300 mt-1 leading-snug pl-8">
+            {notif.message}
+          </p>
+        </div>
+      ))}
+    </div>
+
+{/* --- View Receipt Modal (FIXED Z-INDEX) --- */}
+{viewReceiptModal?.isOpen && (
   <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[999999] flex items-center justify-center p-3 sm:p-6" onClick={() => setViewReceiptModal({ isOpen: false, image: null })}>
     <div className="bg-white dark:bg-[#1e293b] p-4 sm:p-6 rounded-[2.5rem] max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
       
@@ -3809,12 +3845,11 @@ const handleSave = async (e) => {
       <button onClick={() => setViewReceiptModal({ isOpen: false, image: null })} className="mt-4 w-full py-3 bg-slate-900 dark:bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors shrink-0 text-xs uppercase tracking-wider">
         Close Preview
       </button>
-
     </div>
   </div>
 )}
 
-      {/* --- FLOATING TEAM CHAT HUB UI (UPGRADED NATIVE MOBILE & WHATSAPP DATES & TYPING) --- */}
+      {/* --- FLOATING TEAM CHAT HUB UI --- */}
       <div className={`fixed z-[99998] transition-all duration-300 origin-bottom-right flex flex-col no-print pointer-events-auto ${
           isTeamChatOpen 
             ? 'inset-0 sm:inset-auto sm:bottom-32 sm:right-8 sm:w-[380px] sm:h-[600px] scale-100 opacity-100' 
@@ -3839,18 +3874,18 @@ const handleSave = async (e) => {
             onScroll={handleChatScroll}
             className="flex-1 p-4 overflow-y-auto custom-scrollbar flex flex-col space-y-4 bg-slate-100 sm:bg-transparent dark:bg-[#0b1120] sm:dark:bg-transparent relative pb-24"
           >
-            {teamMessages.length === 0 ? (
+            {(teamMessages || []).length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-slate-400 opacity-50">
                 <MessageSquare size={40} className="mb-2"/>
                 <p className="text-[10px] font-black uppercase tracking-widest">Start the conversation</p>
               </div>
             ) : (
-              teamMessages
+              (teamMessages || [])
                 .slice()
                 .sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0))
                 .map((msg, index, array) => {
                   const isMe = msg.senderName === activeUserSession?.name;
-                  const isUserOnline = onlineUsers[msg.senderId]?.isOnline;
+                  const isUserOnline = (onlineUsers || {})[msg.senderId]?.isOnline;
                   
                   const msgDate = msg.timestamp?.toDate ? msg.timestamp.toDate() : new Date();
                   const prevMsg = array[index - 1];
@@ -3920,15 +3955,15 @@ const handleSave = async (e) => {
                 })
             )}
 
-            {/* --- Typing Indicator Animation with Auto-Scroll --- */}
-            {Object.values(onlineUsers).some(u => u.isTyping && u.userName !== activeUserSession?.name) && (
+            {/* --- Typing Indicator Animation --- */}
+            {Object.values(onlineUsers || {}).some(u => u?.isTyping && u?.userName !== activeUserSession?.name) && (
               <div 
                 className="flex justify-start animate-fade-in-up mt-2 mb-2"
                 ref={(el) => { if (el && !showScrollBottom) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }}
               >
                 <div className="bg-white dark:bg-slate-800 p-3 sm:p-4 rounded-2xl rounded-tl-sm shadow-sm flex flex-col border border-slate-200 dark:border-slate-700">
                   <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-2">
-                    {Object.values(onlineUsers).find(u => u.isTyping && u.userName !== activeUserSession?.name)?.userName} is typing...
+                    {Object.values(onlineUsers || {}).find(u => u?.isTyping && u?.userName !== activeUserSession?.name)?.userName || 'Someone'} is typing...
                   </span>
                   <div className="flex items-center gap-1.5 h-2 ml-1">
                     <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></div>
@@ -3951,10 +3986,12 @@ const handleSave = async (e) => {
 
           <div className="absolute bottom-0 left-0 w-full border-t border-slate-200 dark:border-slate-800 bg-slate-50 sm:bg-white dark:bg-[#1e293b] sm:rounded-b-[2rem] z-40 pb-safe">
             {mentionSearch !== null && (
-              <div className="absolute bottom-full left-0 w-full bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shadow-lg max-h-40 overflow-y-auto">
+              <div className="absolute bottom-full left-0 w-full bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shadow-lg max-h-40 overflow-y-auto z-50">
                 <div className="p-2 text-[9px] font-black uppercase text-slate-400 bg-slate-50 dark:bg-slate-900">Select Team Member</div>
-                {[{id: 'admin', name: 'System Admin'}, ...salesmen].filter(c => c.name.toLowerCase().includes(mentionSearch)).map(member => (
-                    <button key={member.id} type="button" onClick={() => insertMention(member.name)} className="w-full text-left p-3 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 text-xs font-bold text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700/50 transition-colors uppercase">@{member.name}</button>
+                {[{id: 'admin', name: 'System Admin'}, ...(salesmen || [])]
+                  .filter(c => c?.name?.toLowerCase().includes((mentionSearch || '').toLowerCase()))
+                  .map(member => (
+                    <button key={member.id} type="button" onClick={() => insertMention(member?.name)} className="w-full text-left p-3 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 text-xs font-bold text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700/50 transition-colors uppercase">@{member?.name}</button>
                 ))}
               </div>
             )}
@@ -3963,14 +4000,12 @@ const handleSave = async (e) => {
                 <input 
                   type="text" 
                   placeholder="Type @ to mention..." 
-                  /* text-[16px] ഐഫോൺ ഓട്ടോ-സൂം തടയുന്നു */
                   className="flex-1 bg-white sm:bg-slate-50 dark:bg-[#0f172a] border border-slate-300 sm:border-slate-200 dark:border-slate-700 rounded-full sm:rounded-xl px-5 py-3.5 text-[16px] sm:text-xs font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 ring-indigo-500/20 shadow-sm" 
-                  value={newTeamMessage} 
+                  value={newTeamMessage || ''} 
                   onChange={handleChatInputChange} 
-                  disabled={isRecordingNote} 
+                  disabled={!!isRecordingNote} 
                 />
                 
-                {/* 100% Cross-Platform Attachment Button (ID Linked) */}
                 <label htmlFor="chat-image-upload" className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-indigo-600 rounded-xl cursor-pointer transition-colors shrink-0 flex items-center justify-center" title="Attach Image">
                   <ImageIcon size={18} />
                 </label>
@@ -3982,7 +4017,7 @@ const handleSave = async (e) => {
                   onChange={handleSendImageMessage} 
                 />
 
-                {newTeamMessage.trim() ? (
+                {(newTeamMessage || '').trim() ? (
                   <button type="button" onClick={handleSendTeamMessage} className="p-3.5 bg-indigo-600 text-white rounded-full sm:rounded-xl shadow-md hover:bg-indigo-700 transition-colors shrink-0 flex items-center justify-center">
                     <Send size={18} />
                   </button>
@@ -3995,7 +4030,7 @@ const handleSave = async (e) => {
           </div>
         </div>
       </div>
-
+      
       {/* Floating Chat Trigger Button with Badge (FIXED CSS Position) */}
       {!isTeamChatOpen && (
         <button onClick={() => setIsTeamChatOpen(true)} className="fixed bottom-28 right-5 sm:bottom-32 sm:right-8 z-[99997] w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 hover:shadow-indigo-500/20" title="Team Chat">
