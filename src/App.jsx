@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getMessaging, getToken } from "firebase/messaging";
+import VideoCall from './VideoCall';
 import { QRCodeSVG } from 'qrcode.react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend 
@@ -192,6 +193,17 @@ const App = () => {
     if (typeof window !== 'undefined') { const stored = localStorage.getItem('erp_active_user'); return stored ? JSON.parse(stored) : null; } 
     return null; 
   });
+   
+const [isInCall, setIsInCall] = useState(false);
+const [callRoomId, setCallRoomId] = useState('');
+
+// കോൾ സ്റ്റാർട്ട് ചെയ്യാനുള്ള ഫംഗ്ഷൻ
+const startVideoCall = () => {
+  // ഓരോ കോളിലും പുതിയ റൂം ഐഡി ഉണ്ടാക്കാൻ
+  const newRoomId = "OXAD-" + Math.floor(Math.random() * 10000); 
+  setCallRoomId(newRoomId);
+  setIsInCall(true);
+};
 
   const handleUserSelect = (selectedUser) => {
     setActiveUserSession(selectedUser);
@@ -1702,6 +1714,12 @@ const handleSave = async (e) => {
             </div>
 
             <div className="flex items-center space-x-4 sm:space-x-6">
+            <button 
+  onClick={startVideoCall}
+  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 font-bold shadow-lg transition-all cursor-pointer"
+>
+  📹 Video Call
+</button>
               <div className="hidden md:flex items-center bg-slate-50 dark:bg-[#0f172a] rounded-full px-4 py-2 w-80 border border-slate-200 dark:border-slate-700 focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 ring-blue-100 dark:ring-blue-900/30 transition-all">
                 <Search size={18} className="text-slate-400 mr-2" />
                 <input type="text" placeholder="Global Entity Search..." className="bg-transparent border-none text-sm font-bold w-full focus:outline-none uppercase dark:text-white dark:placeholder-slate-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
@@ -3039,6 +3057,15 @@ const handleSave = async (e) => {
             </div>
 
           </div>
+          {/* കോൾ ആക്ടീവ് ആണെങ്കിൽ മാത്രം വീഡിയോ കോൾ സ്ക്രീൻ കാണിക്കുക */}
+{isInCall && (
+  <VideoCall 
+      roomId={callRoomId} 
+      userName={activeUserSession?.name || "Team Member"} 
+      userId={activeUserSession?.id || Math.random().toString()} 
+      onLeave={() => setIsInCall(false)} 
+  />
+)}
         </main>
 
         {/* --- ESTIMATOR PUSH MODAL --- */}
