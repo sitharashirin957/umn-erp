@@ -3869,29 +3869,30 @@ const handleSave = async (e) => {
       </div> {/* <-- ഇതാണ് Flex കണ്ടെയ്നർ ക്ലോസ് ചെയ്യുന്നത് --> */}
 
     {/* --- WhatsApp Style Lock Screen Notifications --- */}
-    <div className="fixed top-12 left-0 right-0 z-[9999999] flex flex-col items-center gap-3 pointer-events-none px-4">
-      {(lockNotifications || []).map((notif) => (
-        <div 
-          key={notif.id} 
-          onClick={() => removeNotification(notif.id)}
-          className="w-full max-w-sm bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 shadow-2xl rounded-[1.5rem] p-4 pointer-events-auto cursor-pointer transition-all duration-300 animate-in fade-in slide-in-from-top-5 hover:bg-white/95 dark:hover:bg-slate-800/95"
-          title="Tap to dismiss"
-        >
-          <div className="flex justify-between items-center mb-1.5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
-                <span className="text-[12px] text-white font-bold">W</span>
-              </div>
-              <span className="text-sm font-bold text-slate-800 dark:text-white">{notif.title}</span>
-            </div>
-            <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">now</span>
+    {/* z-index പരമാവധി കൂട്ടി കൊടുത്തിരിക്കുന്നു */}
+<div className="fixed top-12 left-0 right-0 z-[99999999] flex flex-col items-center gap-3 pointer-events-none px-4">
+  {(lockNotifications || []).map((notif) => (
+    <div 
+      key={notif.id} 
+      onClick={() => removeNotification(notif.id)}
+      className="w-full max-w-sm bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200 dark:border-slate-700/50 shadow-2xl rounded-[1.5rem] p-4 pointer-events-auto cursor-pointer transition-all duration-300 animate-in fade-in slide-in-from-top-5 hover:bg-white dark:hover:bg-slate-800"
+      title="Tap to dismiss"
+    >
+      <div className="flex justify-between items-center mb-1.5">
+        <div className="flex items-center gap-2.5">
+          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
+            <span className="text-[12px] text-white font-bold">W</span>
           </div>
-          <p className="text-[15px] font-medium text-slate-700 dark:text-slate-300 mt-1 leading-snug pl-8">
-            {notif.message}
-          </p>
+          <span className="text-sm font-bold text-slate-800 dark:text-white">{notif.title}</span>
         </div>
-      ))}
+        <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">now</span>
+      </div>
+      <p className="text-[15px] font-medium text-slate-700 dark:text-slate-300 mt-1 leading-snug pl-8">
+        {notif.message}
+      </p>
     </div>
+  ))}
+</div>
 
 {/* --- View Receipt Modal (FIXED Z-INDEX) --- */}
 {viewReceiptModal?.isOpen && (
