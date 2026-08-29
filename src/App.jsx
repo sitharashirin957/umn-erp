@@ -427,8 +427,8 @@ const App = () => {
   };
 
   // ചാറ്റിൽ ഫോട്ടോ അപ്‌ലോഡ് ചെയ്ത് അയക്കാനുള്ള ഫംഗ്ഷൻ
+  // ഐഫോൺ ക്യാമറ സപ്പോർട്ടും ഓട്ടോ-കംപ്രഷനും ഉള്ള പുതിയ ഫംഗ്ഷൻ
   const handleSendImageMessage = async (e) => {
-    // മൊബൈൽ കീബോർഡ് ഓട്ടോമാറ്റിക് ആയി ഹൈഡ് ചെയ്യാൻ
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
@@ -438,19 +438,52 @@ const App = () => {
 
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onloadend = async () => {
-      try {
-        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'team_chats'), {
-          imageData: reader.result,
-          senderName: activeUserSession.name,
-          senderId: activeUserSession.id || activeUserSession.name,
-          timestamp: serverTimestamp(),
-          type: 'image',
-          text: 'Shared an image'
-        });
-        scrollToBottom();
-      } catch (err) { console.error("Image Send Error", err); }
+    
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+        } else {
+          if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+        try {
+          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'team_chats'), {
+            imageData: compressedDataUrl,
+            senderName: activeUserSession.name,
+            senderId: activeUserSession.id || activeUserSession.name,
+            timestamp: serverTimestamp(),
+            type: 'image',
+            text: 'Shared an image'
+          });
+          scrollToBottom();
+          
+          if (typeof showLockNotification === 'function') {
+            showLockNotification('Image Sent', 'Your photo has been shared successfully.');
+          }
+        } catch (err) { 
+          console.error("Image Send Error", err); 
+          alert("Error sending image. Please try again.");
+        }
+      };
     };
+    
     e.target.value = '';
   };
   
