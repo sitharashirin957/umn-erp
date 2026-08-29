@@ -1598,7 +1598,8 @@ const handleSave = async (e) => {
     <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-500/30`}>
       {/* ഐഫോണിൽ സൗണ്ട് പ്ലേ ആവാൻ ഒളിപ്പിച്ചു വെക്കുന്ന ഓഡിയോ ഫയൽ */}
 
-      <audio id="notification-sound" src="/coin.wav" preload="auto"></audio>
+      {/* ഐഫോണിൽ സൗണ്ട് പ്ലേ ആവാൻ ഇന്റർനെറ്റ് ഓഡിയോ ലിങ്ക് ഉപയോഗിക്കുന്നു */}
+<audio id="notification-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
       
       <div className="flex h-screen overflow-hidden">
         
