@@ -242,7 +242,7 @@ const App = () => {
         }
       }, []);
 
-      // 2. പുതിയ മെസ്സേജ് വരുമ്പോൾ സൗണ്ടും നോട്ടിഫിക്കേഷനും നൽകാൻ (Updated)
+      // 2. പുതിയ മെസ്സേജ് വരുമ്പോൾ സൗണ്ടും നോട്ടിഫിക്കേഷനും നൽകാൻ (Updated with Lock Screen Notif)
       useEffect(() => {
         if (teamMessages.length > 0 && activeUserSession) {
           const latestMsg = teamMessages[teamMessages.length - 1];
@@ -251,9 +251,17 @@ const App = () => {
           const now = Date.now();
           
           if (!isMe && (now - msgTime < 5000)) {
+            // 1. സൗണ്ട് പ്ലേ ചെയ്യുന്നു
             const audio = new Audio('/coin.mp3');
             audio.play().catch(e => console.log("Audio play blocked by browser"));
 
+            // 2. 👇 ഇതാണ് പുതിയ വാട്സാപ്പ് മോഡൽ കസ്റ്റം നോട്ടിഫിക്കേഷൻ 👇
+            showLockNotification(
+              latestMsg.senderName, 
+              latestMsg.type === 'image' ? '📷 Photo attached' : latestMsg.type === 'audio' ? '🎤 Voice message' : latestMsg.text
+            );
+
+            // 3. സിസ്റ്റം ഡീഫോൾട്ട് നോട്ടിഫിക്കേഷൻ
             if ('Notification' in window) {
               if (Notification.permission === 'granted') {
                 new Notification(`New message from ${latestMsg.senderName}`, {
