@@ -1597,7 +1597,8 @@ const handleSave = async (e) => {
   return (
     <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-500/30`}>
       {/* ഐഫോണിൽ സൗണ്ട് പ്ലേ ആവാൻ ഒളിപ്പിച്ചു വെക്കുന്ന ഓഡിയോ ഫയൽ */}
-      <audio id="notification-sound" src="/coin.mp3" preload="auto"></audio>
+
+      <audio id="notification-sound" src="/coin.wav" preload="auto"></audio>
       
       <div className="flex h-screen overflow-hidden">
         
