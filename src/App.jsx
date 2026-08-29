@@ -686,12 +686,32 @@ const App = () => {
     } 
   }, [settings?.logo]);
 
-   // 👇 ഈ പഴയ കോഡ് ആയിരിക്കും അവിടെ ഉണ്ടാവുക (ഇത് ഡിലീറ്റ് ചെയ്യണം) 👇
+   // കമ്പ്യൂട്ടറുകളിൽ (isDesktop) മാത്രം 1 മണിക്കൂർ കഴിഞ്ഞാൽ ഓട്ടോ-ലോക്ക് ആവാൻ
   useEffect(() => {
-    if (!isAppUnlocked) return; let timer; const resetTimer = () => { clearTimeout(timer); timer = setTimeout(() => { setIsAppUnlocked(false); sessionStorage.removeItem('erp_unlocked'); }, 60 * 60 * 1000); };
-    window.addEventListener('mousemove', resetTimer); window.addEventListener('keypress', resetTimer); window.addEventListener('click', resetTimer); resetTimer(); 
-    return () => { window.removeEventListener('mousemove', resetTimer); window.removeEventListener('keypress', resetTimer); window.removeEventListener('click', resetTimer); clearTimeout(timer); };
-  }, [isAppUnlocked]);
+    // ആപ്പ് ലോക്ക് ആണെങ്കിലോ, അല്ലെങ്കിൽ മൊബൈൽ ബ്രൗസർ ആണെങ്കിലോ ടൈമർ വർക്ക് ചെയ്യില്ല
+    if (!isAppUnlocked || !isDesktop) return; 
+    
+    let timer; 
+    const resetTimer = () => { 
+      clearTimeout(timer); 
+      timer = setTimeout(() => { 
+        setIsAppUnlocked(false); 
+        localStorage.removeItem('erp_unlocked'); 
+      }, 60 * 60 * 1000); // 1 മണിക്കൂർ ഇൻ-ആക്ടിവിറ്റി കഴിഞ്ഞാൽ ലോക്ക് ആകും
+    };
+    
+    window.addEventListener('mousemove', resetTimer); 
+    window.addEventListener('keypress', resetTimer); 
+    window.addEventListener('click', resetTimer); 
+    resetTimer(); 
+    
+    return () => { 
+      window.removeEventListener('mousemove', resetTimer); 
+      window.removeEventListener('keypress', resetTimer); 
+      window.removeEventListener('click', resetTimer); 
+      clearTimeout(timer); 
+    };
+  }, [isAppUnlocked, isDesktop]);
 
   useEffect(() => {
     if (!user || !isAppUnlocked) return; 
