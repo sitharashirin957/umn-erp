@@ -187,6 +187,58 @@ const App = () => {
     }
   };
   const [user, setUser] = useState(null);
+
+  // 🌟 ഫയർബേസിൽ നിന്ന് എല്ലാ ഡാറ്റയും തത്സമയം (Real-time) സിങ്ക് ചെയ്യാൻ
+  useEffect(() => {
+    if (!user || !isAppUnlocked) return;
+
+    const unsubs = [
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'customers'), (snap) => {
+        setCustomers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'suppliers'), (snap) => {
+        setSuppliers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'products'), (snap) => {
+        setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'sales'), (snap) => {
+        setSales(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'purchases'), (snap) => {
+        setPurchases(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'quotations'), (snap) => {
+        setQuotations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'collections'), (snap) => {
+        setCollections(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'expenses'), (snap) => {
+        setExpenses(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'salesmen'), (snap) => {
+        setSalesmen(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'crms'), (snap) => {
+        setCrms(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tasks'), (snap) => {
+        setTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estimator_items'), (snap) => {
+        setEstimatorItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'team_chats'), (snap) => {
+        setTeamMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }),
+      onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'profile'), (snap) => {
+        if (snap.exists()) setSettings(snap.data());
+      })
+    ];
+
+    return () => { unsubs.forEach(unsub => unsub()); };
+  }, [user, isAppUnlocked]);
   
   // 1. LocalStorage വഴി യൂസറെ ഓർമിച്ചു വെക്കുന്നു
   const [activeUserSession, setActiveUserSession] = useState(() => { 
