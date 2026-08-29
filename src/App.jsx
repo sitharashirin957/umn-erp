@@ -186,23 +186,28 @@ const App = () => {
     }
   };
   const [user, setUser] = useState(null);
+  
+  // 1. LocalStorage വഴി യൂസറെ ഓർമിച്ചു വെക്കുന്നു
   const [activeUserSession, setActiveUserSession] = useState(() => { 
-    if (typeof window !== 'undefined') { const stored = sessionStorage.getItem('erp_active_user'); return stored ? JSON.parse(stored) : null; } 
+    if (typeof window !== 'undefined') { const stored = localStorage.getItem('erp_active_user'); return stored ? JSON.parse(stored) : null; } 
     return null; 
   });
 
   const handleUserSelect = (selectedUser) => {
     setActiveUserSession(selectedUser);
-    sessionStorage.setItem('erp_active_user', JSON.stringify(selectedUser));
+    localStorage.setItem('erp_active_user', JSON.stringify(selectedUser));
   };
 
   const handleSwitchUser = () => {
     setActiveUserSession(null);
-    sessionStorage.removeItem('erp_active_user');
+    localStorage.removeItem('erp_active_user');
   };
-  const [isAppUnlocked, setIsAppUnlocked] = useState(() => { if (typeof window !== 'undefined') return sessionStorage.getItem('erp_unlocked') === 'true'; return false; });
+
+  // 2. ആപ്പ് അൺലോക്ക് ചെയ്തതും ഓർമിച്ചു വെക്കുന്നു
+  const [isAppUnlocked, setIsAppUnlocked] = useState(() => { if (typeof window !== 'undefined') return localStorage.getItem('erp_unlocked') === 'true'; return false; });
   const [appPinInput, setAppPinInput] = useState(''); const [appPinError, setAppPinError] = useState(false);
   const [adminAuth, setAdminAuth] = useState({ isOpen: false, callback: null }); const [adminPinInput, setAdminPinInput] = useState(''); const [adminPinError, setAdminPinError] = useState(false);
+
   const [isDarkMode, setIsDarkMode] = useState(() => { if (typeof window !== 'undefined') { const storedTheme = localStorage.getItem('erp_theme'); if (storedTheme) return storedTheme === 'dark'; if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return true; } return false; });
   const [activeTab, setActiveTab] = useState('dashboard'); const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024); const [showOnlyDueSales, setShowOnlyDueSales] = useState(false); const [showOnlyDuePurchases, setShowOnlyDuePurchases] = useState(false);
@@ -242,7 +247,7 @@ const App = () => {
         }
       }, []);
 
-      // 2. പുതിയ മെസ്സേജ് വരുമ്പോൾ സൗണ്ടും നോട്ടിഫിക്കേഷനും നൽകാൻ (Updated with Lock Screen Notif)
+      // 2. പുതിയ മെസ്സേജ് വരുമ്പോൾ സൗണ്ടും നോട്ടിഫിക്കേഷനും നൽകാൻ (iPhone Sound Fixed)
       useEffect(() => {
         if (teamMessages.length > 0 && activeUserSession) {
           const latestMsg = teamMessages[teamMessages.length - 1];
@@ -251,26 +256,25 @@ const App = () => {
           const now = Date.now();
           
           if (!isMe && (now - msgTime < 5000)) {
-            // 1. സൗണ്ട് പ്ലേ ചെയ്യുന്നു
-            const audio = new Audio('/coin.mp3');
-            audio.play().catch(e => console.log("Audio play blocked by browser"));
+            // 1. ഐഫോൺ സപ്പോർട്ട് ചെയ്യുന്ന ഓഡിയോ പ്ലേ രീതി
+            const audioEl = document.getElementById('notification-sound');
+            if (audioEl) {
+              audioEl.currentTime = 0; // വീണ്ടും വീണ്ടും കേൾക്കാൻ
+              audioEl.play().catch(e => console.log("Audio play blocked by browser. User interaction needed first."));
+            }
 
-            // 2. 👇 ഇതാണ് പുതിയ വാട്സാപ്പ് മോഡൽ കസ്റ്റം നോട്ടിഫിക്കേഷൻ 👇
+            // 2. കസ്റ്റം വാട്സാപ്പ് നോട്ടിഫിക്കേഷൻ
             showLockNotification(
               latestMsg.senderName, 
               latestMsg.type === 'image' ? '📷 Photo attached' : latestMsg.type === 'audio' ? '🎤 Voice message' : latestMsg.text
             );
 
             // 3. സിസ്റ്റം ഡീഫോൾട്ട് നോട്ടിഫിക്കേഷൻ
-            if ('Notification' in window) {
-              if (Notification.permission === 'granted') {
-                new Notification(`New message from ${latestMsg.senderName}`, {
-                  body: latestMsg.type === 'image' ? '📷 Photo' : latestMsg.type === 'audio' ? '🎤 Voice message' : latestMsg.text,
-                  icon: '/vite.svg' 
-                });
-              } else if (Notification.permission === 'default') {
-                Notification.requestPermission();
-              }
+            if ('Notification' in window && Notification.permission === 'granted') {
+               new Notification(`New message from ${latestMsg.senderName}`, {
+                 body: latestMsg.type === 'image' ? '📷 Photo' : latestMsg.type === 'audio' ? '🎤 Voice message' : latestMsg.text,
+                 icon: '/vite.svg' 
+               });
             }
           }
         }
@@ -682,6 +686,7 @@ const App = () => {
     } 
   }, [settings?.logo]);
 
+   // 👇 ഈ പഴയ കോഡ് ആയിരിക്കും അവിടെ ഉണ്ടാവുക (ഇത് ഡിലീറ്റ് ചെയ്യണം) 👇
   useEffect(() => {
     if (!isAppUnlocked) return; let timer; const resetTimer = () => { clearTimeout(timer); timer = setTimeout(() => { setIsAppUnlocked(false); sessionStorage.removeItem('erp_unlocked'); }, 60 * 60 * 1000); };
     window.addEventListener('mousemove', resetTimer); window.addEventListener('keypress', resetTimer); window.addEventListener('click', resetTimer); resetTimer(); 
@@ -698,8 +703,10 @@ const App = () => {
     return () => { unsubscribers.forEach(unsub => unsub()); unsubSettings(); };
   }, [user, isAppUnlocked]);
 
-  const handleAppUnlock = (e) => { e.preventDefault(); if (appPinInput === APP_PIN) { setIsAppUnlocked(true); sessionStorage.setItem('erp_unlocked', 'true'); setAppPinError(false); } else { setAppPinError(true); setAppPinInput(''); } };
-  const handleManualLock = () => { setIsAppUnlocked(false); setActiveUserSession(null); sessionStorage.removeItem('erp_unlocked'); sessionStorage.removeItem('erp_active_user'); setAppPinInput(''); };
+  const handleAppUnlock = (e) => { e.preventDefault(); if (appPinInput === APP_PIN) { setIsAppUnlocked(true); localStorage.setItem('erp_unlocked', 'true'); setAppPinError(false); } else { setAppPinError(true); setAppPinInput(''); } };
+  
+  const handleManualLock = () => { setIsAppUnlocked(false); setActiveUserSession(null); localStorage.removeItem('erp_unlocked'); localStorage.removeItem('erp_active_user'); setAppPinInput(''); };
+
   const requestAdminAuth = (callback) => { setAdminAuth({ isOpen: true, callback }); setAdminPinInput(''); setAdminPinError(false); };
   const handleAdminAuthSubmit = (e) => { e.preventDefault(); if (adminPinInput === ADMIN_PIN) { if (adminAuth.callback) adminAuth.callback(); setAdminAuth({ isOpen: false, callback: null }); } else { setAdminPinError(true); setAdminPinInput(''); } };
   const triggerDelete = (type, id, title) => { requestAdminAuth(() => { setConfirmDelete({ isOpen: true, type, id, title }); }); };
@@ -1536,6 +1543,9 @@ const handleSave = async (e) => {
 
   return (
     <div className={`transition-colors duration-300 ${isDarkMode ? 'dark' : ''} bg-slate-50 dark:bg-[#0f172a] min-h-screen text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-500/30`}>
+      {/* ഐഫോണിൽ സൗണ്ട് പ്ലേ ആവാൻ ഒളിപ്പിച്ചു വെക്കുന്ന ഓഡിയോ ഫയൽ */}
+      <audio id="notification-sound" src="/coin.mp3" preload="auto"></audio>
+      
       <div className="flex h-screen overflow-hidden">
         
         {dbError && (
