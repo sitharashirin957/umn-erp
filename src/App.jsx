@@ -221,11 +221,22 @@ const App = () => {
   const [crmDropdownOpen, setCrmDropdownOpen] = useState(null);
   const [tasks, setTasks] = useState([]);
 
-  // കോൾ സ്റ്റേറ്റുകൾ
+ // കോൾ സ്റ്റേറ്റുകൾ
   const [showCallChoiceModal, setShowCallChoiceModal] = useState(false);
   const [isInCall, setIsInCall] = useState(false);
   const [callRoomId, setCallRoomId] = useState('');
   const [incomingCallAlert, setIncomingCallAlert] = useState(null);
+
+  // 👉 പുതിയ റിംഗ്‌ടോൺ കൺട്രോൾ ഫംഗ്ഷനുകൾ
+  const stopRingtone = () => {
+    const ringtoneEl = document.getElementById('phone-ringtone');
+    if (ringtoneEl) { ringtoneEl.pause(); ringtoneEl.currentTime = 0; }
+  };
+
+  const playRingtone = () => {
+    const ringtoneEl = document.getElementById('phone-ringtone');
+    if (ringtoneEl) { ringtoneEl.currentTime = 0; ringtoneEl.play().catch(e => console.log("Audio play blocked:", e)); }
+  };
 
   // നോട്ടിഫിക്കേഷൻ കാണിക്കാനുള്ള ഫംഗ്ഷൻ
   const showLockNotification = (title, message) => {
@@ -283,39 +294,69 @@ const App = () => {
       }),
       onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'profile'), (snap) => {
         if (snap.exists()) setSettings(snap.data());
+      }),
+      // 👉 ഇൻകമിംഗ് കോൾ ലിസണറും റിംഗ്‌ടോൺ കൺട്രോളും (Professional Update)
+      onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call'), (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          const isTargetMe = !data.targetUserId || data.targetUserId === activeUserSession?.id || data.targetUserName === activeUserSession?.name;
+          const isCallerMe = data.callerName === activeUserSession?.name;
+
+          if (data && !isCallerMe && isTargetMe && !isInCall) {
+            setIncomingCallAlert(data);
+            playRingtone();
+          } else if (!data || isInCall) {
+            setIncomingCallAlert(null);
+            stopRingtone();
+          }
+        } else {
+          setIncomingCallAlert(null);
+          stopRingtone();
+        }
       })
     ];
 
     return () => { unsubs.forEach(unsub => unsub()); };
-  }, [user, isAppUnlocked]);
+  }, [user, isAppUnlocked, activeUserSession, isInCall]);
 
-  // കോൾ സ്റ്റാർട്ട് ചെയ്യാനുള്ള ഫംഗ്ഷൻ
-  const startVideoCall = (mode = 'room', targetUser = null, callType = 'video') => {
+  // കോൾ സ്റ്റാർട്ട് ചെയ്യാനുള്ള ഫംഗ്ഷൻ (Professional Update)
+  const startVideoCall = async (mode = 'room', targetUser = null, callType = 'video') => {
     let roomId = "OXAD-TEAM-MEETING"; 
+    const myName = activeUserSession?.name || 'User';
 
     if (mode === 'direct' && targetUser) {
-      const myName = activeUserSession?.name || 'User';
       const otherName = targetUser.name || 'Member';
       roomId = `OXAD-CALL-${[myName, otherName].sort().join('-')}`;
     }
 
-    const ringtoneEl = document.getElementById('phone-ringtone');
-    if (ringtoneEl) {
-      ringtoneEl.currentTime = 0;
-      ringtoneEl.play().catch(e => console.log(e));
-    }
-
     const callData = {
       roomId: roomId,
-      callerName: activeUserSession?.name || 'Team Member',
+      callerName: myName,
+      callerId: activeUserSession?.id || 'admin',
       callType: callType,
       mode: mode,
+      targetUserId: targetUser ? targetUser.id : null,
+      targetUserName: targetUser ? targetUser.name : null,
       timestamp: Date.now()
     };
-    setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call'), callData).catch(e => console.log(e));
 
+    try {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call'), callData);
+    } catch(e) { console.error("Error setting call doc:", e); }
+
+    stopRingtone(); // കോൾ വിളിക്കുന്ന ആൾക്ക് ബെൽ അടിക്കരുത്
     setCallRoomId(roomId);
     setIsInCall(true);
+  };
+
+  // 👉 കോൾ അവസാനിക്കുമ്പോൾ വർക്ക് ആവാൻ (പുതിയത്)
+  const handleEndCall = async () => {
+    stopRingtone();
+    setIsInCall(false);
+    setIncomingCallAlert(null);
+    try {
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call'));
+    } catch(e) {}
   };
 
   const handleUserSelect = (selectedUser) => {
@@ -3149,22 +3190,7 @@ const handleSave = async (e) => {
             </div>
 
           </div>
-          {/* കോൾ ആക്ടീവ് ആണെങ്കിൽ മാത്രം വീഡിയോ കോൾ സ്ക്രീൻ കാണിക്കുക */}
-{isInCall && (
-  <VideoCall 
-      roomId={callRoomId} 
-      userName={activeUserSession?.name || "Team Member"} 
-      userId={activeUserSession?.id || Math.random().toString()} 
-      onLeave={() => {
-  const ringtoneEl = document.getElementById('phone-ringtone');
-  if (ringtoneEl) {
-    ringtoneEl.pause();
-    ringtoneEl.currentTime = 0;
-  }
-  setIsInCall(false);
-}} 
-  />
-)}
+          
         </main>
 
         {/* --- ESTIMATOR PUSH MODAL --- */}
@@ -4265,10 +4291,67 @@ const handleSave = async (e) => {
       </div>
 
 
-      {/* ഫ്ലോട്ടിങ് വീഡിയോ കോൾ ബട്ടൺ */}
+      {/* ========================================== */}
+      {/* 📞 CALLING SYSTEM UI (Professional Update) */}
+      {/* ========================================== */}
+
+      {/* 1. കോൾ ആക്ടീവ് ആണെങ്കിൽ മാത്രം വീഡിയോ കോൾ സ്ക്രീൻ കാണിക്കുക */}
+      {isInCall && (
+        <VideoCall 
+          roomId={callRoomId} 
+          userName={activeUserSession?.name || "Team Member"} 
+          userId={activeUserSession?.id || Math.random().toString()} 
+          onLeave={handleEndCall} 
+        />
+      )}
+
+      {/* 2. 🔴 ഇൻകമിംഗ് കോൾ അലേർട്ട് കാർഡ് (Join & Reject) */}
+      {incomingCallAlert && !isInCall && (
+        <div className="fixed bottom-36 right-5 sm:right-8 z-[999999] bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-emerald-500/50 shadow-2xl rounded-3xl p-5 w-80 animate-bounce no-print">
+          <div className="flex items-center space-x-3 mb-3">
+            <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black animate-pulse text-lg">
+              📞
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase text-emerald-400 tracking-widest">
+                {incomingCallAlert.callType === 'audio' ? 'Incoming Audio Call' : 'Incoming Video Call'}
+              </p>
+              <h4 className="font-black text-sm text-white uppercase truncate w-48">
+                {incomingCallAlert.callerName} is calling...
+              </h4>
+            </div>
+          </div>
+          
+          <div className="flex gap-2 mt-4">
+            <button 
+              onClick={async () => {
+                stopRingtone();
+                setIncomingCallAlert(null);
+                try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call')); } catch(e) {}
+              }}
+              className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer flex items-center justify-center gap-1"
+            >
+              ❌ Reject
+            </button>
+            <button 
+              onClick={() => {
+                stopRingtone();
+                setCallRoomId(incomingCallAlert.roomId);
+                setIsInCall(true);
+                setIncomingCallAlert(null);
+              }}
+              className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer flex items-center justify-center gap-1 animate-pulse"
+            >
+              ✅ Join Call
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 3. ഫ്ലോട്ടിങ് വീഡിയോ കോൾ ബട്ടൺ */}
       <button 
         onClick={() => setShowCallChoiceModal(true)}
-        className="fixed bottom-44 right-5 sm:bottom-48 sm:right-8 z-[99996] w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-blue-500/40 hover:shadow-blue-500/60 cursor-pointer touch-manipulation group"
+        className="fixed bottom-44 right-5 sm:bottom-48 sm:right-8 z-[99996] w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-blue-500/40 hover:shadow-blue-500/60 cursor-pointer touch-manipulation group no-print"
         title="Start Team Video Call"
       >
         📹
@@ -4277,15 +4360,14 @@ const handleSave = async (e) => {
         </span>
       </button>
 
-      {/* വീഡിയോ/ഓഡിയോ കോൾ ചോയ്സ് മോഡൽ */}
+      {/* 4. കോൾ മോഡ് സെലക്ട് ചെയ്യാനുള്ള മോഡൽ കാർഡ് (1-to-1 & Group) */}
       {showCallChoiceModal && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[99999] flex items-center justify-center p-4 no-print">
           <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl border border-slate-200 dark:border-slate-800 animate-fade-in-up">
             <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2 text-center">Start Call</h3>
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6 text-center">Choose call mode & type</p>
             
             <div className="space-y-6">
-              {/* 1. കോമൺ ടീം റൂം */}
               <div className="p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border border-slate-200 dark:border-slate-700">
                 <p className="text-xs font-black uppercase text-slate-700 dark:text-slate-200 mb-3">👥 Team Meeting (Common)</p>
                 <div className="flex gap-2">
@@ -4304,7 +4386,6 @@ const handleSave = async (e) => {
                 </div>
               </div>
 
-              {/* 2. പ്രൈവറ്റ് 1-to-1 കോൾ (സ്റ്റാഫുകൾക്കായി) */}
               <div>
                 <p className="text-[10px] font-black uppercase text-slate-400 mb-3">Direct 1-to-1 Call with Staff:</p>
                 <div className="space-y-3 max-h-48 overflow-y-auto custom-scrollbar pr-1">
@@ -4342,11 +4423,8 @@ const handleSave = async (e) => {
           </div>
         </div>
       )}
-
-    </div>  
-
+    </div>
   );
-
-}
+};
 
 export default App;
