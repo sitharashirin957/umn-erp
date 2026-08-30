@@ -4279,23 +4279,26 @@ const handleSave = async (e) => {
 
         {/* 1. കോൾ ആക്ടീവ് ആണെങ്കിൽ മാത്രം വീഡിയോ/ഓഡിയോ കോൾ സ്ക്രീൻ കാണിക്കുക */}
         {isInCall && (
-          <div className="fixed inset-0 z-[9999999] bg-slate-900">
-            {/* 🔴 കോൾ കട്ട് ചെയ്ത് ആപ്പിലേക്ക് തിരിച്ചു വരാനുള്ള ഫോഴ്സ് ക്ലോസ് ബട്ടൺ */}
+          <>
+            {/* 🔴 ZegoCloud ന്റെ സ്ക്രീൻ മുഴുവനായി കാണിക്കാൻ */}
+            <div className="fixed inset-0 z-[999998] bg-slate-900">
+              <VideoCall 
+                roomId={String(callRoomId).replace(/[^a-zA-Z0-9_]/g, '')} 
+                userName={activeUserSession?.name || "Team Member"} 
+                userId={String(activeUserSession?.id || Date.now()).replace(/[^a-zA-Z0-9_]/g, '')} 
+                callType={activeCallType} 
+                onLeave={handleEndCall} 
+              />
+            </div>
+            
+            {/* 🔴 ഏറ്റവും മുകളിൽ നിൽക്കുന്ന ഫോഴ്സ് ക്ലോസ് ബട്ടൺ (Back Button) */}
             <button 
               onClick={handleEndCall}
-              className="absolute top-4 sm:top-6 left-4 sm:left-6 z-[99999999] px-4 sm:px-6 py-2 sm:py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-full font-black text-[10px] sm:text-xs uppercase tracking-widest shadow-2xl flex items-center gap-2 transition-all hover:scale-95 border-2 border-white/20"
+              className="fixed top-6 left-6 z-[999999] px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-full font-black text-xs uppercase tracking-widest shadow-2xl shadow-rose-900/50 flex items-center gap-2 transition-all hover:scale-95 border-2 border-white/20 animate-fade-in-up"
             >
                ⬅ Back to ERP
             </button>
-            
-            <VideoCall 
-              roomId={String(callRoomId).replace(/[^a-zA-Z0-9_]/g, '')} 
-              userName={activeUserSession?.name || "Team Member"} 
-              userId={String(activeUserSession?.id || Date.now()).replace(/[^a-zA-Z0-9_]/g, '')} 
-              callType={activeCallType} 
-              onLeave={handleEndCall} 
-            />
-          </div>
+          </>
         )}
 
         {/* 2. 🔴 ഇൻകമിംഗ് കോൾ അലേർട്ട് കാർഡ് (Join & Reject) */}
