@@ -225,9 +225,9 @@ const App = () => {
   const [showCallChoiceModal, setShowCallChoiceModal] = useState(false);
   const [isInCall, setIsInCall] = useState(false);
   const [callRoomId, setCallRoomId] = useState('');
+  const [activeCallType, setActiveCallType] = useState('video'); // 👉 പുതിയത്: ഓഡിയോ ആണോ വീഡിയോ ആണോ എന്ന് തിരിച്ചറിയാൻ
   const [incomingCallAlert, setIncomingCallAlert] = useState(null);
 
-  // 👉 പുതിയ റിംഗ്‌ടോൺ കൺട്രോൾ ഫംഗ്ഷനുകൾ
   const stopRingtone = () => {
     const ringtoneEl = document.getElementById('phone-ringtone');
     if (ringtoneEl) { ringtoneEl.pause(); ringtoneEl.currentTime = 0; }
@@ -237,6 +237,15 @@ const App = () => {
     const ringtoneEl = document.getElementById('phone-ringtone');
     if (ringtoneEl) { ringtoneEl.currentTime = 0; ringtoneEl.play().catch(e => console.log("Audio play blocked:", e)); }
   };
+
+  // 🌟 പുതിയത്: റിംഗ്‌ടോൺ കറക്റ്റ് ആയി പ്ലേ ചെയ്യാനും നിർത്താനുമുള്ള Effect
+  useEffect(() => {
+    if (incomingCallAlert && !isInCall) {
+      playRingtone();
+    } else {
+      stopRingtone();
+    }
+  }, [incomingCallAlert, isInCall]);
 
   // നോട്ടിഫിക്കേഷൻ കാണിക്കാനുള്ള ഫംഗ്ഷൻ
   const showLockNotification = (title, message) => {
@@ -248,78 +257,57 @@ const App = () => {
     setLockNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
-  // 🌟 ഫയർബേസിൽ നിന്ന് എല്ലാ ഡാറ്റയും തത്സമയം സിങ്ക് ചെയ്യാനുള്ള useEffect (ഇത് സ്റ്റേറ്റുകൾക്ക് ശേഷമാണ് വെച്ചിരിക്കുന്നത്)
+  // 🌟 ഫയർബേസിൽ നിന്ന് ബാക്കി ഡാറ്റ സിങ്ക് ചെയ്യാനുള്ള useEffect (ഇതിൽ നിന്ന് Call മാറ്റി)
   useEffect(() => {
     if (!user || !isAppUnlocked) return;
 
     const unsubs = [
-      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'customers'), (snap) => {
-        setCustomers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }),
-      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'suppliers'), (snap) => {
-        setSuppliers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }),
-      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'products'), (snap) => {
-        setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }),
-      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'sales'), (snap) => {
-        setSales(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }),
-      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'purchases'), (snap) => {
-        setPurchases(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }),
-      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'quotations'), (snap) => {
-        setQuotations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }),
-      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'collections'), (snap) => {
-        setCollections(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }),
-      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'expenses'), (snap) => {
-        setExpenses(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }),
-      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'salesmen'), (snap) => {
-        setSalesmen(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }),
-      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'crms'), (snap) => {
-        setCrms(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }),
-      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tasks'), (snap) => {
-        setTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }),
-      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estimator_items'), (snap) => {
-        setEstimatorItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }),
-      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'team_chats'), (snap) => {
-        setTeamMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      }),
-      onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'profile'), (snap) => {
-        if (snap.exists()) setSettings(snap.data());
-      }),
-      // 👉 ഇൻകമിംഗ് കോൾ ലിസണറും റിംഗ്‌ടോൺ കൺട്രോളും (Professional Update)
-      onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call'), (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
-          const isTargetMe = !data.targetUserId || data.targetUserId === activeUserSession?.id || data.targetUserName === activeUserSession?.name;
-          const isCallerMe = data.callerName === activeUserSession?.name;
-
-          if (data && !isCallerMe && isTargetMe && !isInCall) {
-            setIncomingCallAlert(data);
-            playRingtone();
-          } else if (!data || isInCall) {
-            setIncomingCallAlert(null);
-            stopRingtone();
-          }
-        } else {
-          setIncomingCallAlert(null);
-          stopRingtone();
-        }
-      })
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'customers'), (snap) => setCustomers(snap.docs.map(d => ({ id: d.id, ...d.data() })))),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'suppliers'), (snap) => setSuppliers(snap.docs.map(d => ({ id: d.id, ...d.data() })))),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'products'), (snap) => setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })))),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'sales'), (snap) => setSales(snap.docs.map(d => ({ id: d.id, ...d.data() })))),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'purchases'), (snap) => setPurchases(snap.docs.map(d => ({ id: d.id, ...d.data() })))),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'quotations'), (snap) => setQuotations(snap.docs.map(d => ({ id: d.id, ...d.data() })))),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'collections'), (snap) => setCollections(snap.docs.map(d => ({ id: d.id, ...d.data() })))),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'expenses'), (snap) => setExpenses(snap.docs.map(d => ({ id: d.id, ...d.data() })))),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'salesmen'), (snap) => setSalesmen(snap.docs.map(d => ({ id: d.id, ...d.data() })))),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'crms'), (snap) => setCrms(snap.docs.map(d => ({ id: d.id, ...d.data() })))),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tasks'), (snap) => setTasks(snap.docs.map(d => ({ id: d.id, ...d.data() })))),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'estimator_items'), (snap) => setEstimatorItems(snap.docs.map(d => ({ id: d.id, ...d.data() })))),
+      onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'team_chats'), (snap) => setTeamMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })))),
+      onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'profile'), (snap) => { if (snap.exists()) setSettings(snap.data()); })
     ];
 
     return () => { unsubs.forEach(unsub => unsub()); };
-  }, [user, isAppUnlocked, activeUserSession, isInCall]);
+  }, [user, isAppUnlocked]);
 
-  // കോൾ സ്റ്റാർട്ട് ചെയ്യാനുള്ള ഫംഗ്ഷൻ (Professional Update)
+  // 👉 പുതിയത്: കോൾ സിസ്റ്റത്തിന് മാത്രമുള്ള Real-time Listener (ഉടൻ പോപ്പ്-അപ്പ് വരാൻ)
+  useEffect(() => {
+    if (!isAppUnlocked || !activeUserSession) return;
+    
+    const callDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call');
+    const unsubCall = onSnapshot(callDocRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        const isTargetMe = !data.targetUserId || data.targetUserId === activeUserSession?.id || data.targetUserName === activeUserSession?.name;
+        const isCallerMe = data.callerName === activeUserSession?.name;
+
+        if (data && !isCallerMe && isTargetMe) {
+          setIncomingCallAlert(data);
+        } else {
+          setIncomingCallAlert(null);
+        }
+      } else {
+        // കോൾ കട്ട് ആകുമ്പോൾ സ്ക്രീൻ തനിയെ ക്ലോസ് ആവാൻ
+        setIncomingCallAlert(null);
+        setIsInCall(false); 
+      }
+    });
+
+    return () => unsubCall();
+  }, [isAppUnlocked, activeUserSession]);
+
+  // കോൾ സ്റ്റാർട്ട് ചെയ്യാനുള്ള ഫംഗ്ഷൻ
   const startVideoCall = async (mode = 'room', targetUser = null, callType = 'video') => {
     let roomId = "OXAD-TEAM-MEETING"; 
     const myName = activeUserSession?.name || 'User';
@@ -340,35 +328,24 @@ const App = () => {
       timestamp: Date.now()
     };
 
-    try {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call'), callData);
-    } catch(e) { console.error("Error setting call doc:", e); }
+    try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call'), callData); } 
+    catch(e) { console.error("Error setting call doc:", e); }
 
-    stopRingtone(); // കോൾ വിളിക്കുന്ന ആൾക്ക് ബെൽ അടിക്കരുത്
+    stopRingtone();
+    setActiveCallType(callType);
     setCallRoomId(roomId);
     setIsInCall(true);
   };
 
-  // 👉 കോൾ അവസാനിക്കുമ്പോൾ വർക്ക് ആവാൻ (പുതിയത്)
+  // കോൾ അവസാനിക്കുമ്പോൾ വർക്ക് ആവാൻ
   const handleEndCall = async () => {
     stopRingtone();
     setIsInCall(false);
     setIncomingCallAlert(null);
-    try {
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call'));
-    } catch(e) {}
+    try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call')); } 
+    catch(e) {}
   };
 
-  const handleUserSelect = (selectedUser) => {
-    setActiveUserSession(selectedUser);
-    localStorage.setItem('erp_active_user', JSON.stringify(selectedUser));
-  };
-
-  const handleSwitchUser = () => {
-    setActiveUserSession(null);
-    localStorage.removeItem('erp_active_user');
-  };
-  
   // =====================================================================
   // 🌟 THE ULTIMATE TEAM CHAT HUB (VOICE, DELETE, UNREAD PILL & PRESENCE)
   // =====================================================================
@@ -4290,139 +4267,149 @@ const handleSave = async (e) => {
         </button>
       </div>
 
+</main>
 
-      {/* ========================================== */}
-      {/* 📞 CALLING SYSTEM UI (Professional Update) */}
-      {/* ========================================== */}
+        {/* ========================================== */}
+        {/* 📞 CALLING SYSTEM UI (Professional Update) */}
+        {/* ========================================== */}
 
-      {/* 1. കോൾ ആക്ടീവ് ആണെങ്കിൽ മാത്രം വീഡിയോ കോൾ സ്ക്രീൻ കാണിക്കുക */}
-      {isInCall && (
-        <VideoCall 
-          roomId={callRoomId} 
-          userName={activeUserSession?.name || "Team Member"} 
-          userId={activeUserSession?.id || Math.random().toString()} 
-          onLeave={handleEndCall} 
-        />
-      )}
+        {/* 1. കോൾ ആക്ടീവ് ആണെങ്കിൽ മാത്രം വീഡിയോ/ഓഡിയോ കോൾ സ്ക്രീൻ കാണിക്കുക */}
+        {isInCall && (
+          <VideoCall 
+            roomId={callRoomId} 
+            userName={activeUserSession?.name || "Team Member"} 
+            userId={activeUserSession?.id || Math.random().toString()} 
+            callType={activeCallType} 
+            onLeave={handleEndCall} 
+          />
+        )}
 
-      {/* 2. 🔴 ഇൻകമിംഗ് കോൾ അലേർട്ട് കാർഡ് (Join & Reject) */}
-      {incomingCallAlert && !isInCall && (
-        <div className="fixed bottom-36 right-5 sm:right-8 z-[999999] bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-emerald-500/50 shadow-2xl rounded-3xl p-5 w-80 animate-bounce no-print">
-          <div className="flex items-center space-x-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black animate-pulse text-lg">
-              📞
+        {/* 2. 🔴 ഇൻകമിംഗ് കോൾ അലേർട്ട് കാർഡ് (Join & Reject) */}
+        {incomingCallAlert && !isInCall && (
+          <div className="fixed bottom-36 right-5 sm:right-8 z-[999999] bg-slate-900/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-indigo-500/50 shadow-2xl shadow-indigo-900/50 rounded-3xl p-5 w-[340px] animate-bounce no-print">
+            <div className="flex items-center space-x-4 mb-4">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black animate-pulse text-xl shadow-inner ${incomingCallAlert.callType === 'audio' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                {incomingCallAlert.callType === 'audio' ? '📞' : '📹'}
+              </div>
+              <div className="flex-1">
+                <p className={`text-[10px] font-black uppercase tracking-widest ${incomingCallAlert.callType === 'audio' ? 'text-emerald-400' : 'text-blue-400'}`}>
+                  {incomingCallAlert.callType === 'audio' ? 'Incoming Audio' : 'Incoming Video'}
+                  <span className="text-slate-400 ml-1">
+                    {incomingCallAlert.mode === 'direct' ? '(Private)' : '(Group)'}
+                  </span>
+                </p>
+                <h4 className="font-black text-sm text-white uppercase truncate w-48 mt-0.5">
+                  {incomingCallAlert.callerName}
+                </h4>
+                <p className="text-[10px] text-slate-400 uppercase mt-0.5 font-bold">
+                  {incomingCallAlert.mode === 'direct' ? 'is calling you...' : 'started a team meeting'}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-black uppercase text-emerald-400 tracking-widest">
-                {incomingCallAlert.callType === 'audio' ? 'Incoming Audio Call' : 'Incoming Video Call'}
-              </p>
-              <h4 className="font-black text-sm text-white uppercase truncate w-48">
-                {incomingCallAlert.callerName} is calling...
-              </h4>
-            </div>
-          </div>
-          
-          <div className="flex gap-2 mt-4">
-            <button 
-              onClick={async () => {
-                stopRingtone();
-                setIncomingCallAlert(null);
-                try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call')); } catch(e) {}
-              }}
-              className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer flex items-center justify-center gap-1"
-            >
-              ❌ Reject
-            </button>
-            <button 
-              onClick={() => {
-                stopRingtone();
-                setCallRoomId(incomingCallAlert.roomId);
-                setIsInCall(true);
-                setIncomingCallAlert(null);
-              }}
-              className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer flex items-center justify-center gap-1 animate-pulse"
-            >
-              ✅ Join Call
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 3. ഫ്ലോട്ടിങ് വീഡിയോ കോൾ ബട്ടൺ */}
-      <button 
-        onClick={() => setShowCallChoiceModal(true)}
-        className="fixed bottom-44 right-5 sm:bottom-48 sm:right-8 z-[99996] w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-blue-500/40 hover:shadow-blue-500/60 cursor-pointer touch-manipulation group no-print"
-        title="Start Team Video Call"
-      >
-        📹
-        <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 text-white text-[9px] font-black flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800 animate-pulse shadow-md">
-          ●
-        </span>
-      </button>
-
-      {/* 4. കോൾ മോഡ് സെലക്ട് ചെയ്യാനുള്ള മോഡൽ കാർഡ് (1-to-1 & Group) */}
-      {showCallChoiceModal && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[99999] flex items-center justify-center p-4 no-print">
-          <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl border border-slate-200 dark:border-slate-800 animate-fade-in-up">
-            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2 text-center">Start Call</h3>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6 text-center">Choose call mode & type</p>
             
-            <div className="space-y-6">
-              <div className="p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border border-slate-200 dark:border-slate-700">
-                <p className="text-xs font-black uppercase text-slate-700 dark:text-slate-200 mb-3">👥 Team Meeting (Common)</p>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => { setShowCallChoiceModal(false); startVideoCall('room', null, 'video'); }}
-                    className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer"
-                  >
-                    📹 Video Call
-                  </button>
-                  <button 
-                    onClick={() => { setShowCallChoiceModal(false); startVideoCall('room', null, 'audio'); }}
-                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer"
-                  >
-                    📞 Audio Call
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-[10px] font-black uppercase text-slate-400 mb-3">Direct 1-to-1 Call with Staff:</p>
-                <div className="space-y-3 max-h-48 overflow-y-auto custom-scrollbar pr-1">
-                  {salesmen.map(staff => (
-                    <div key={staff.id} className="p-3 bg-slate-50 dark:bg-[#0f172a] rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                      <span className="font-bold text-xs text-slate-800 dark:text-white uppercase">{staff.name}</span>
-                      <div className="flex gap-1.5">
-                        <button 
-                          onClick={() => { setShowCallChoiceModal(false); startVideoCall('direct', staff, 'video'); }}
-                          className="p-2 bg-blue-500/10 hover:bg-blue-500 text-blue-600 hover:text-white rounded-lg transition-colors text-xs font-black cursor-pointer"
-                          title="Video Call"
-                        >
-                          📹
-                        </button>
-                        <button 
-                          onClick={() => { setShowCallChoiceModal(false); startVideoCall('direct', staff, 'audio'); }}
-                          className="p-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 hover:text-white rounded-lg transition-colors text-xs font-black cursor-pointer"
-                          title="Audio Call"
-                        >
-                          📞
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
+            <div className="flex gap-3 mt-4">
               <button 
-                onClick={() => setShowCallChoiceModal(false)}
-                className="w-full py-3 text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-rose-500 transition-colors cursor-pointer"
+                onClick={async () => {
+                  stopRingtone();
+                  setIncomingCallAlert(null);
+                  try { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call')); } catch(e) {}
+                }}
+                className="flex-1 py-3 bg-rose-600/20 border border-rose-500/50 hover:bg-rose-600 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
               >
-                Cancel
+                ❌ Reject
+              </button>
+              <button 
+                onClick={() => {
+                  stopRingtone();
+                  setActiveCallType(incomingCallAlert.callType);
+                  setCallRoomId(incomingCallAlert.roomId);
+                  setIsInCall(true);
+                  setIncomingCallAlert(null);
+                }}
+                className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/30 transition-all cursor-pointer flex items-center justify-center gap-2 animate-pulse"
+              >
+                ✅ Accept
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* 3. ഫ്ലോട്ടിങ് കോൾ സ്റ്റാർട്ട് ബട്ടൺ */}
+        <button 
+          onClick={() => setShowCallChoiceModal(true)}
+          className="fixed bottom-44 right-5 sm:bottom-48 sm:right-8 z-[99996] w-14 h-14 sm:w-16 sm:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-blue-500/40 hover:shadow-blue-500/60 cursor-pointer touch-manipulation group no-print"
+          title="Start Team Video Call"
+        >
+          📹
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 text-white text-[9px] font-black flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800 animate-pulse shadow-md">
+            ●
+          </span>
+        </button>
+
+        {/* 4. കോൾ മോഡ് സെലക്ട് ചെയ്യാനുള്ള മോഡൽ കാർഡ് (1-to-1 & Group) */}
+        {showCallChoiceModal && (
+          <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[99999] flex items-center justify-center p-4 no-print">
+            <div className="bg-white dark:bg-[#1e293b] w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl border border-slate-200 dark:border-slate-800 animate-fade-in-up">
+              <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2 text-center">Start Call</h3>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6 text-center">Choose call mode & type</p>
+              
+              <div className="space-y-6">
+                <div className="p-4 bg-slate-50 dark:bg-[#0f172a] rounded-2xl border border-slate-200 dark:border-slate-700">
+                  <p className="text-xs font-black uppercase text-slate-700 dark:text-slate-200 mb-3">👥 Team Meeting (Common)</p>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => { setShowCallChoiceModal(false); startVideoCall('room', null, 'video'); }}
+                      className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer"
+                    >
+                      📹 Video
+                    </button>
+                    <button 
+                      onClick={() => { setShowCallChoiceModal(false); startVideoCall('room', null, 'audio'); }}
+                      className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-md transition-all cursor-pointer"
+                    >
+                      📞 Audio
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400 mb-3">Direct 1-to-1 Call with Staff:</p>
+                  <div className="space-y-3 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                    {salesmen.map(staff => (
+                      <div key={staff.id} className="p-3 bg-slate-50 dark:bg-[#0f172a] rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                        <span className="font-bold text-xs text-slate-800 dark:text-white uppercase">{staff.name}</span>
+                        <div className="flex gap-1.5">
+                          <button 
+                            onClick={() => { setShowCallChoiceModal(false); startVideoCall('direct', staff, 'video'); }}
+                            className="p-2 bg-blue-500/10 hover:bg-blue-500 text-blue-600 hover:text-white rounded-lg transition-colors text-xs font-black cursor-pointer"
+                            title="Video Call"
+                          >
+                            📹
+                          </button>
+                          <button 
+                            onClick={() => { setShowCallChoiceModal(false); startVideoCall('direct', staff, 'audio'); }}
+                            className="p-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-600 hover:text-white rounded-lg transition-colors text-xs font-black cursor-pointer"
+                            title="Audio Call"
+                          >
+                            📞
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setShowCallChoiceModal(false)}
+                  className="w-full py-3 text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-rose-500 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
