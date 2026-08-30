@@ -307,18 +307,21 @@ const App = () => {
     return () => unsubCall();
   }, [isAppUnlocked, activeUserSession]);
 
-  // കോൾ സ്റ്റാർട്ട് ചെയ്യാനുള്ള ഫംഗ്ഷൻ
+  // കോൾ സ്റ്റാർട്ട് ചെയ്യാനുള്ള ഫംഗ്ഷൻ (Professional Update - Fixed 1002012 Error)
   const startVideoCall = async (mode = 'room', targetUser = null, callType = 'video') => {
-    let roomId = "OXAD-TEAM-MEETING"; 
+    let baseRoomId = "OXAD_TEAM_MEETING"; 
     const myName = activeUserSession?.name || 'User';
 
     if (mode === 'direct' && targetUser) {
       const otherName = targetUser.name || 'Member';
-      roomId = `OXAD-CALL-${[myName, otherName].sort().join('-')}`;
+      baseRoomId = `OXAD_CALL_${[myName, otherName].sort().join('_')}`;
     }
 
+    // 🔴 ZegoCloud Error 1002012 ഒഴിവാക്കാൻ Room ID യിലെ സ്പേസുകൾ മാറ്റുന്നു
+    const cleanRoomId = baseRoomId.replace(/[^a-zA-Z0-9_]/g, '');
+
     const callData = {
-      roomId: roomId,
+      roomId: cleanRoomId,
       callerName: myName,
       callerId: activeUserSession?.id || 'admin',
       callType: callType,
@@ -328,12 +331,13 @@ const App = () => {
       timestamp: Date.now()
     };
 
-    try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call'), callData); } 
-    catch(e) { console.error("Error setting call doc:", e); }
+    try {
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', 'active_call'), callData);
+    } catch(e) { console.error("Error setting call doc:", e); }
 
-    stopRingtone();
+    stopRingtone(); 
     setActiveCallType(callType);
-    setCallRoomId(roomId);
+    setCallRoomId(cleanRoomId);
     setIsInCall(true);
   };
 
@@ -4275,13 +4279,23 @@ const handleSave = async (e) => {
 
         {/* 1. കോൾ ആക്ടീവ് ആണെങ്കിൽ മാത്രം വീഡിയോ/ഓഡിയോ കോൾ സ്ക്രീൻ കാണിക്കുക */}
         {isInCall && (
-          <VideoCall 
-            roomId={callRoomId} 
-            userName={activeUserSession?.name || "Team Member"} 
-            userId={activeUserSession?.id || Math.random().toString()} 
-            callType={activeCallType} 
-            onLeave={handleEndCall} 
-          />
+          <div className="fixed inset-0 z-[9999999] bg-slate-900">
+            {/* 🔴 കോൾ കട്ട് ചെയ്ത് ആപ്പിലേക്ക് തിരിച്ചു വരാനുള്ള ഫോഴ്സ് ക്ലോസ് ബട്ടൺ */}
+            <button 
+              onClick={handleEndCall}
+              className="absolute top-4 sm:top-6 left-4 sm:left-6 z-[99999999] px-4 sm:px-6 py-2 sm:py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-full font-black text-[10px] sm:text-xs uppercase tracking-widest shadow-2xl flex items-center gap-2 transition-all hover:scale-95 border-2 border-white/20"
+            >
+               ⬅ Back to ERP
+            </button>
+            
+            <VideoCall 
+              roomId={String(callRoomId).replace(/[^a-zA-Z0-9_]/g, '')} 
+              userName={activeUserSession?.name || "Team Member"} 
+              userId={String(activeUserSession?.id || Date.now()).replace(/[^a-zA-Z0-9_]/g, '')} 
+              callType={activeCallType} 
+              onLeave={handleEndCall} 
+            />
+          </div>
         )}
 
         {/* 2. 🔴 ഇൻകമിംഗ് കോൾ അലേർട്ട് കാർഡ് (Join & Reject) */}
